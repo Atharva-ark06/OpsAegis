@@ -30,7 +30,7 @@ def normalize_indicator(kind:str,value:str)->tuple[str,str]:
         try:
             address=ipaddress.ip_address(host)
             if not address.is_global: raise ValueError("Private or reserved IPs cannot be used as URL indicators")
-            host=address.compressed
+            host=f"[{address.compressed}]" if address.version==6 else address.compressed
         except ValueError as exc:
             if "Private or reserved" in str(exc): raise
             if not re.fullmatch(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}",host): raise ValueError("URL hostname is invalid") from None
@@ -45,6 +45,12 @@ def normalize_indicator(kind:str,value:str)->tuple[str,str]:
         if not re.fullmatch(r"(?:[a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64}|[a-f0-9]{128})",digest): raise ValueError("File hash must be a valid MD5, SHA-1, SHA-256 or SHA-512 digest")
         return kind,digest
     raise ValueError("Indicator type must be ip, domain, url or hash")
+
+def _bounded_int(value,maximum:int)->int:
+    if isinstance(value,bool): return 0
+    try: number=int(value or 0)
+    except (TypeError,ValueError,OverflowError): return 0
+    return max(0,min(number,maximum))
 
 class VirusTotalAdapter:
     BASE_URL="https://www.virustotal.com/api/v3"
@@ -61,10 +67,12 @@ class VirusTotalAdapter:
             if response.status_code in (401,403): return {"status":"auth_error","verdict":"unknown","risk_score":None,"details":{}}
             response.raise_for_status(); payload=response.json()
         except (httpx.HTTPError,ValueError): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
-        attrs=payload.get("data",{}).get("attributes",{}) if isinstance(payload,dict) else {}
+        data=payload.get("data") if isinstance(payload,dict) else None
+        attrs=data.get("attributes") if isinstance(data,dict) else None
+        if not isinstance(attrs,dict): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
         stats=attrs.get("last_analysis_stats",{})
         if not isinstance(stats,dict): stats={}
-        counts={key:max(0,min(int(stats.get(key,0) or 0),10000)) for key in ("malicious","suspicious","harmless","undetected")}
+        counts={key:_bounded_int(stats.get(key,0),10000) for key in ("malicious","suspicious","harmless","undetected")}
         total=sum(counts.values()); risk=round(100*(counts["malicious"]+0.5*counts["suspicious"])/total) if total else None
         verdict="malicious" if counts["malicious"] else "suspicious" if counts["suspicious"] else "clean" if total else "unknown"
         details={"analysis":counts}
@@ -85,10 +93,12 @@ class AbuseIPDBAdapter:
             if response.status_code in (401,403): return {"status":"auth_error","verdict":"unknown","risk_score":None,"details":{}}
             response.raise_for_status(); payload=response.json()
         except (httpx.HTTPError,ValueError): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
-        data=payload.get("data",{}) if isinstance(payload,dict) else {}; score=data.get("abuseConfidenceScore")
+        data=payload.get("data") if isinstance(payload,dict) else None
+        if not isinstance(data,dict): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
+        score=data.get("abuseConfidenceScore")
         if not isinstance(score,int): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
         score=max(0,min(score,100)); verdict="malicious" if score>=75 else "suspicious" if score>=25 else "clean"
-        details={"total_reports":max(0,min(int(data.get("totalReports",0) or 0),1000000))}
+        details={"total_reports":_bounded_int(data.get("totalReports",0),1000000)}
         for key in ("countryCode","usageType","isp","lastReportedAt"):
             if isinstance(data.get(key),str): details[key]=data[key][:160]
         return {"status":"ok","verdict":verdict,"risk_score":score,"details":details}

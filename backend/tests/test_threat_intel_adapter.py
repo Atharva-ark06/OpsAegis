@@ -7,7 +7,7 @@ def config(**overrides):
     values.update(overrides);return SimpleNamespace(**values)
 
 @pytest.mark.parametrize("kind,value,expected",[("ip","8.8.8.8","8.8.8.8"),("domain","Example.COM.","example.com"),
-    ("url","https://Example.com/a?b=1","https://example.com/a?b=1"),("hash","A"*64,"a"*64)])
+    ("url","https://Example.com/a?b=1","https://example.com/a?b=1"),("url","https://[2001:4860:4860::8888]/","https://[2001:4860:4860::8888]/"),("hash","A"*64,"a"*64)])
 def test_normalizes_supported_ioc_types(kind,value,expected): assert normalize_indicator(kind,value)==(kind,expected)
 
 @pytest.mark.parametrize("kind,value",[("ip","127.0.0.1"),("ip","192.168.1.10"),("domain","host.local"),

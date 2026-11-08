@@ -12,7 +12,7 @@ from app.routers.shannon import router as shannon_router
 from app.routers.detections import router as detections_router
 from app.routers.threat_intel import router as threat_intel_router
 
-app = FastAPI(title="OpsAegis API", version="0.6.0",
+app = FastAPI(title="OpsAegis API", version="0.7.0",
     description="Integration and incident-management API for OpsAegis.",
     docs_url="/docs" if settings.environment == "development" else None, redoc_url=None)
 app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins,
