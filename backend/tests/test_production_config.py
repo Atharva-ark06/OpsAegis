@@ -7,9 +7,9 @@ from app.config import Settings
 def production_settings(**overrides):
     values = {
         "OPS_AEGIS_ENV": "production",
-        "OPS_AEGIS_SECRET_KEY": "a" * 48,
+        "OPS_AEGIS_SECRET_KEY": "OpsAegis-production-signing-key-2026-unique!",
         "DATABASE_URL": "postgresql+psycopg://opsaegis:strong-password-123@postgres:5432/opsaegis",
-        "REDIS_URL": "redis://redis:6379/0",
+        "REDIS_URL": "redis://:unique-redis-password-2026@redis:6379/0",
         "CORS_ORIGINS": "https://soc.example.com",
         "NUCLEI_ENABLED": "false",
     }
@@ -28,6 +28,15 @@ def test_valid_production_configuration_is_accepted():
     [
         ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "short"}, "OPS_AEGIS_SECRET_KEY"),
+        ({"OPS_AEGIS_SECRET_KEY": "a" * 48}, "OPS_AEGIS_SECRET_KEY"),
+        ({"OPS_AEGIS_SECRET_KEY": "CHANGE_ME_GENERATE_WITH_PYTHON_SECRETS_123456"}, "OPS_AEGIS_SECRET_KEY"),
+        ({"DATABASE_URL": "postgresql+psycopg://opsaegis:strong-password-123@localhost:5432/opsaegis"}, "non-loopback PostgreSQL host"),
+        ({"DATABASE_URL": "postgresql+psycopg://opsaegis:CHANGE_ME_USE_UNIQUE_URL_SAFE_PASSWORD@postgres:5432/opsaegis"}, "unique database password"),
+        ({"REDIS_URL": "redis://redis:6379/0"}, "unique Redis password"),
+        ({"REDIS_URL": "redis://:short@redis:6379/0"}, "unique Redis password"),
+        ({"REDIS_URL": "redis://:CHANGE_ME_USE_UNIQUE_URL_SAFE_PASSWORD@redis:6379/0"}, "unique Redis password"),
+        ({"REDIS_URL": "redis://:change-me-change-me@redis:6379/0"}, "unique Redis password"),
+        ({"REDIS_URL": "redis://:unique-redis-password-2026@localhost:6379/0"}, "loopback Redis"),
         ({"DATABASE_URL": "sqlite:///./opsaegis.db"}, "PostgreSQL"),
         ({"DATABASE_URL": "postgresql+psycopg://opsaegis:change-me@postgres:5432/opsaegis"}, "database password"),
         ({"REDIS_URL": "redis://localhost:6379/0"}, "loopback Redis"),
@@ -48,3 +57,11 @@ def test_development_keeps_local_sqlite_and_loopback_defaults():
     assert settings.environment == "development"
     assert settings.database_url.startswith("sqlite:")
     assert settings.allowed_origins == ["http://localhost:5173"]
+
+
+def test_url_encoded_database_and_redis_passwords_are_validated_after_decoding():
+    settings = production_settings(
+        DATABASE_URL="postgresql+psycopg://opsaegis:strong%2Dpassword%2D123@postgres:5432/opsaegis",
+        REDIS_URL="redis://:unique%2Dredis%2Dpassword%2D2026@redis:6379/0",
+    )
+    assert settings.environment == "production"
