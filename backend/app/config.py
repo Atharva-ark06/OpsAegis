@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite:///./opsaegis.db", validation_alias="DATABASE_URL")
     redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="REDIS_URL")
     cors_origins: str = Field(default="http://localhost:5173", validation_alias="CORS_ORIGINS")
+    wazuh_manager_url: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_URL")
+    wazuh_manager_username: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_USERNAME")
+    wazuh_manager_password: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_PASSWORD")
+    wazuh_manager_ca_cert: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_CA_CERT")
+    wazuh_manager_timeout_seconds: int = Field(default=10, validation_alias="WAZUH_MANAGER_TIMEOUT_SECONDS")
+    wazuh_manager_max_agents: int = Field(default=500, validation_alias="WAZUH_MANAGER_MAX_AGENTS")
     wazuh_indexer_url: str | None = Field(default=None, validation_alias="WAZUH_INDEXER_URL")
     wazuh_indexer_username: str | None = Field(default=None, validation_alias="WAZUH_INDEXER_USERNAME")
     wazuh_indexer_password: str | None = Field(default=None, validation_alias="WAZUH_INDEXER_PASSWORD")
@@ -44,9 +50,12 @@ class Settings(BaseSettings):
             raise ValueError("OPS_AEGIS_ACCESS_TOKEN_MINUTES must be between 5 and 60")
         if self.environment.lower() == "production" and (len(self.secret_key) < 32 or self.secret_key == "development-only-change-this"):
             raise ValueError("Production requires a unique OPS_AEGIS_SECRET_KEY of at least 32 characters")
-        for name, value in (("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
+        for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
+                            ("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
                             ("CROWDSEC_TIMEOUT_SECONDS", self.crowdsec_timeout_seconds)):
             if not 1 <= value <= 60: raise ValueError(f"{name} must be between 1 and 60")
+        if not 1 <= self.wazuh_manager_max_agents <= 2000: raise ValueError("WAZUH_MANAGER_MAX_AGENTS must be between 1 and 2000")
+        if self.wazuh_manager_url and not self.wazuh_manager_url.startswith("https://"): raise ValueError("WAZUH_MANAGER_URL must use HTTPS")
         for name, value in (("WAZUH_INDEXER_MAX_RESULTS", self.wazuh_indexer_max_results),
                             ("CROWDSEC_MAX_RESULTS", self.crowdsec_max_results)):
             if not 1 <= value <= 1000: raise ValueError(f"{name} must be between 1 and 1000")
