@@ -79,7 +79,8 @@ describe("OpsAegis API client", () => {
   it("reports a useful error when the API cannot be reached", async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new TypeError("network down"));
 
-    await expect(getAssets()).rejects.toBeInstanceOf(ApiError);
-    await expect(getAssets()).rejects.toMatchObject({ status: 0 });
+    const request = getAssets();
+    await expect(request).rejects.toBeInstanceOf(ApiError);
+    await expect(request).rejects.toMatchObject({ status: 0 });
   });
 });
