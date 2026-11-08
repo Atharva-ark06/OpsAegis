@@ -8,7 +8,7 @@ from app.config import settings
 from app.database import get_db
 from app.integrations.crowdsec import CrowdSecAdapterError, CrowdSecLapiAdapter
 from app.integrations.wazuh import WazuhAdapterError, WazuhIndexerAdapter
-from app.models.entities import AuditLog, Finding, FindingSeverity, User, UserRole
+from app.models.entities import Asset, AuditLog, Finding, FindingSeverity, User, UserRole
 from app.security import require_roles
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 OPERATORS = (UserRole.admin, UserRole.analyst)
@@ -56,6 +56,37 @@ async def collect_crowdsec_decisions(db: Session=Depends(get_db),
     return {"integration":"crowdsec-lapi","received":len(incoming),"inserted":inserted,"updated":updated,
         "truncated_possible":len(incoming)>=limit,"max_results":limit,"data_scope":"active_decisions_only"}
 
+def _upsert_wazuh_asset(db: Session, item) -> Asset | None:
+    evidence = item.evidence if isinstance(item.evidence, dict) else {}
+    agent_id = evidence.get("agent_id")
+    if item.source_engine != "wazuh" or agent_id is None:
+        return None
+    external_id = str(agent_id).strip()[:255]
+    if not external_id:
+        return None
+    asset = db.scalar(select(Asset).where(
+        Asset.source_engine == "wazuh", Asset.external_id == external_id
+    ))
+    name = str(evidence.get("agent_name") or item.asset_reference or ("Wazuh agent " + external_id))[:255]
+    ip_address = str(evidence.get("agent_ip") or "").strip()[:64] or None
+    if asset is None:
+        asset = Asset(name=name, asset_type="endpoint", environment="unknown",
+            source_engine="wazuh", external_id=external_id, ip_address=ip_address,
+            agent_status="observed", last_seen_at=item.observed_at)
+        db.add(asset)
+        db.flush()
+    else:
+        asset.name = name
+        if ip_address:
+            asset.ip_address = ip_address
+        previous = asset.last_seen_at
+        if previous is not None and previous.tzinfo is None:
+            previous = previous.replace(tzinfo=timezone.utc)
+        asset.last_seen_at = max(previous, item.observed_at) if previous else item.observed_at
+        asset.agent_status = "observed"
+    return asset
+
+
 def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_action: str,target: str,
     since: datetime | None) -> tuple[int,int]:
     inserted=updated=0
@@ -63,12 +94,16 @@ def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_a
         for item in incoming:
             existing=db.scalar(select(Finding).where(Finding.source_engine==engine,Finding.source_native_id==item.source_native_id))
             severity=FindingSeverity(item.severity) if item.severity in FindingSeverity._value2member_map_ else FindingSeverity.unknown
+            asset = _upsert_wazuh_asset(db, item) if engine == "wazuh" else None
             if existing is None:
                 db.add(Finding(source_engine=engine,source_native_id=item.source_native_id,title=item.title,
-                    description=item.description,severity=severity,first_seen_at=item.observed_at,last_seen_at=item.observed_at,evidence=item.evidence))
+                    description=item.description,severity=severity,asset_id=asset.id if asset else None,
+                    first_seen_at=item.observed_at,last_seen_at=item.observed_at,evidence=item.evidence))
                 inserted+=1
             else:
                 existing.title,existing.description,existing.severity=item.title,item.description,severity
+                if existing.asset_id is None and asset is not None:
+                    existing.asset_id = asset.id
                 previous=existing.last_seen_at
                 if previous.tzinfo is None: previous=previous.replace(tzinfo=timezone.utc)
                 existing.last_seen_at=max(previous,item.observed_at); existing.evidence=item.evidence

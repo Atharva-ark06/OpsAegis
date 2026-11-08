@@ -58,3 +58,11 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Provider errors, rate limits, missing records and missing configuration remain distinct; unavailable provider data is never presented as clean.
 - Lookups do not submit URLs/files for scanning, fetch the indicator itself, block traffic or execute response actions.
 - Live provider calls require operator-supplied API keys; no keys or live lookup validation are included.
+
+
+## Asset and endpoint identity (PR #14)
+- Wazuh findings with an identified agent ID create or update one source-scoped endpoint asset.
+- New findings link to the corresponding endpoint; existing analyst-selected asset assignments are preserved.
+- Asset API exposes source engine, external ID, observed IP, agent observation state and last-seen time.
+- Source refresh does not overwrite analyst-managed asset type or environment.
+- Alert-observed inventory only: no claim of Wazuh Manager online status, OS inventory or silent-agent discovery. CrowdSec IP-only records are not auto-mapped.

@@ -138,3 +138,10 @@ Run the Alembic migration before using the workspace. Authenticated users can vi
 The integration performs lookup requests only: it does not submit files or URLs for scanning, visit the indicator URL, block traffic or change firewall controls. Private, loopback, link-local, reserved IPs and local/reserved domains are rejected. AbuseIPDB is marked not applicable for non-IP indicators. Provider errors/rate limits are not converted into clean verdicts. The overall risk score is the maximum score reported by successful providers; it is a source-derived indicator, not an OpsAegis probability or guarantee.
 
 No provider key or live provider lookup is included. Without credentials the workspace reports providers as not configured and enrichment returns HTTP 503.
+
+
+## Asset and endpoint identity (PR #14)
+
+Wazuh alert collection resolves upstream agent identity from alert evidence and upserts one endpoint asset per Wazuh agent ID. New findings link to that asset; existing analyst-selected asset associations are preserved. Repeated collection refreshes the endpoint name, observed IP and last-seen timestamp without overwriting its environment or asset type.
+
+This is alert-observed inventory, not a substitute for the Wazuh Manager agents API. It does not prove current online status, collect OS inventory, or discover agents that have not generated an ingested alert. CrowdSec IP-only records are not automatically mapped because an IP match can be ambiguous.
