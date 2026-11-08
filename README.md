@@ -20,7 +20,7 @@ A built adapter is not proof of a live connection. Configure and verify each aut
 |---|---|---|
 | Wazuh | Endpoint telemetry and SIEM alerts | Indexer read-only adapter |
 | CrowdSec | Behavioural threat decisions | LAPI active-decision adapter |
-| Nuclei | Authorized vulnerability scanning | Planned |
+| Nuclei | Authorized vulnerability scanning | Authorized target registry and safe-profile scans |
 | Shannon | Authorized AI-assisted application testing | Planned |
 
 ## CrowdSec Local API integration
@@ -71,3 +71,11 @@ Configure backend-only WAZUH_INDEXER_URL, WAZUH_INDEXER_USERNAME, WAZUH_INDEXER_
 - Nuclei and Shannon workers require target allowlists, explicit authorization, isolation, resource limits and audit trails before execution is enabled.
 
 See docs/PROJECT_STATUS.md and docs/SECURITY_BASELINE.md for implementation boundaries.
+
+## Nuclei authorized scanning
+
+Nuclei is disabled by default. Install the Nuclei binary in the backend runtime and set NUCLEI_ENABLED=true only after deployment hardening. Admins register exact HTTPS targets with an authorization reference; admins and analysts can list targets and scan history and start the fixed safe profile. API endpoints: GET /api/v1/integrations/nuclei/health, GET /targets, POST /targets, POST /targets/{id}/scans and GET /scans under the integrations/nuclei prefix.
+
+The API accepts no arbitrary CLI flags, template paths or free-form scan URLs. The fixed profile disables Interactsh and update checks, bounds rate/concurrency/runtime/output and excludes DoS, fuzzing, intrusive and headless template tags. Findings are deduplicated; analyst triage state is preserved. Only scan systems for which you have written authorization.
+
+Deployment limitation: Nuclei currently runs as a subprocess inside the backend runtime, not a hardened isolated worker. Keep it disabled until deployed in a dedicated unprivileged container with resource limits and network egress restrictions. No live scan is claimed.
