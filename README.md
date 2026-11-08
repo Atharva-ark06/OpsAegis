@@ -50,6 +50,23 @@ Collection imports active decisions, not the complete CrowdSec alert history. It
 
 Configure backend-only WAZUH_INDEXER_URL, WAZUH_INDEXER_USERNAME, WAZUH_INDEXER_PASSWORD, optional WAZUH_INDEXER_CA_CERT, WAZUH_INDEXER_TIMEOUT_SECONDS and WAZUH_INDEXER_MAX_RESULTS. Use a dedicated read-only Indexer account, HTTPS and certificate verification. Endpoints: GET /api/v1/integrations/wazuh/health and POST /api/v1/integrations/wazuh/collect.
 
+## Production configuration guardrails (PR #19)
+
+Set `OPS_AEGIS_ENV=production` before starting the API or detection worker in a production deployment. The application now fails during startup when production settings contain:
+- The development JWT secret, a short secret, or a known placeholder.
+- SQLite instead of PostgreSQL, or a database URL with a weak/short password.
+- A loopback Redis URL.
+- Wildcard, HTTP, loopback or path-bearing CORS origins; configure exact HTTPS origins only.
+- `NUCLEI_ENABLED=true`. Nuclei currently executes inside the API container and is intentionally blocked in production until it is moved to an isolated scanner worker.
+
+Generate a unique application signing key (never commit it):
+
+    python -c "import secrets; print(secrets.token_urlsafe(48))"
+
+Use a unique database password of at least 16 characters and encode reserved URL characters when placing it in `DATABASE_URL`. Keep all values in an untracked deployment environment file or a secrets manager. The checked-in `.env.example` values are development examples, not production credentials.
+
+The existing `docker-compose.yml` is a local development stack, not a production deployment recipe. Production still requires a reviewed deployment topology, TLS termination, secrets management, network policy, backups, monitoring and isolated scanner/runner infrastructure. These configuration checks do not constitute a production deployment or live integration validation.
+
 ## Development checks
 
     cd backend
