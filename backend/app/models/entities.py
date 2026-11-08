@@ -205,3 +205,18 @@ class DetectionNotification(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ThreatIntelIOC(Base):
+    __tablename__="threat_intel_iocs"
+    __table_args__=(UniqueConstraint("indicator_hash",name="uq_threat_intel_iocs_indicator_hash"),)
+    id:Mapped[int]=mapped_column(Integer,primary_key=True)
+    indicator_type:Mapped[str]=mapped_column(String(16),nullable=False,index=True)
+    indicator_value:Mapped[str]=mapped_column(String(2048),nullable=False)
+    indicator_hash:Mapped[str]=mapped_column(String(64),nullable=False)
+    verdict:Mapped[str]=mapped_column(String(24),nullable=False,default="unknown")
+    risk_score:Mapped[int|None]=mapped_column(Integer,nullable=True)
+    provider_results:Mapped[dict[str,Any]]=mapped_column(JSON,nullable=False)
+    enriched_at:Mapped[datetime|None]=mapped_column(DateTime(timezone=True),nullable=True)
+    created_by_user_id:Mapped[int|None]=mapped_column(ForeignKey("users.id",ondelete="SET NULL"),nullable=True)
+    created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=utc_now,nullable=False,index=True)
