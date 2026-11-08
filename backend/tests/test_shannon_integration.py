@@ -53,7 +53,7 @@ def test_finding_ingestion_requires_exploit_proof(db_session):
         sh.persist_validated_findings(db_session, [{
             "fingerprint": "abc", "title": "Potential issue", "severity": "high",
             "affected_url": "https://staging.example.test/path",
-            "validation_status": "suspected", "proof": ""}])
+            "validation_status": "suspected", "proof": ""}], "https://staging.example.test")
 
 def test_finding_dedup_preserves_analyst_status(db_session):
     user = User(email="shannon-owner@example.test", password_hash=hash_password("Strong-Test-Password-2026!"),
@@ -67,6 +67,6 @@ def test_finding_dedup_preserves_analyst_status(db_session):
     finding = db_session.query(Finding).filter_by(source_engine="shannon").one()
     finding.status = "triaged"
     db_session.commit()
-    assert sh.persist_validated_findings(db_session, [record]) == (0, 1)
+    assert sh.persist_validated_findings(db_session, [record], "https://staging.example.test") == (0, 1)
     db_session.refresh(finding)
     assert finding.status == "triaged"
