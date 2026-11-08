@@ -11,6 +11,7 @@ def production_settings(**overrides):
         "DATABASE_URL": "postgresql+psycopg://opsaegis:strong-password-123@postgres:5432/opsaegis",
         "REDIS_URL": "redis://:unique-redis-password-2026@redis:6379/0",
         "CORS_ORIGINS": "https://soc.example.com",
+        "OPS_AEGIS_ALLOWED_HOSTS": "soc.example.com,127.0.0.1",
         "NUCLEI_ENABLED": "false",
     }
     values.update(overrides)
@@ -21,6 +22,7 @@ def test_valid_production_configuration_is_accepted():
     settings = production_settings()
     assert settings.environment == "production"
     assert settings.allowed_origins == ["https://soc.example.com"]
+    assert settings.allowed_hosts == ["soc.example.com", "127.0.0.1"]
 
 
 @pytest.mark.parametrize(
@@ -44,6 +46,11 @@ def test_valid_production_configuration_is_accepted():
         ({"CORS_ORIGINS": "http://soc.example.com"}, "HTTPS origin"),
         ({"CORS_ORIGINS": "https://localhost:5173"}, "loopback hosts"),
         ({"CORS_ORIGINS": "https://soc.example.com/app"}, "without a path"),
+        ({"OPS_AEGIS_ALLOWED_HOSTS": "*"}, "wildcards are forbidden"),
+        ({"OPS_AEGIS_ALLOWED_HOSTS": "*.example.com"}, "wildcards are forbidden"),
+        ({"OPS_AEGIS_ALLOWED_HOSTS": "https://soc.example.com"}, "hostnames or IP addresses"),
+        ({"OPS_AEGIS_ALLOWED_HOSTS": "soc.example.com:443"}, "hostnames or IP addresses"),
+        ({"OPS_AEGIS_ALLOWED_HOSTS": ""}, "at least one host"),
         ({"NUCLEI_ENABLED": "true"}, "isolated worker"),
     ],
 )
@@ -57,6 +64,7 @@ def test_development_keeps_local_sqlite_and_loopback_defaults():
     assert settings.environment == "development"
     assert settings.database_url.startswith("sqlite:")
     assert settings.allowed_origins == ["http://localhost:5173"]
+    assert settings.allowed_hosts == ["localhost", "127.0.0.1", "testserver"]
 
 
 def test_url_encoded_database_and_redis_passwords_are_validated_after_decoding():
