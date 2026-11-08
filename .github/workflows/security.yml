@@ -1,0 +1,51 @@
+name: OpsAegis Security Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  secret-scan:
+    name: Full-history secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete Git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect committed credentials and tokens
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: \${{ github.token }}
+
+  dependency-audit:
+    name: Python dependency vulnerability audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip-audit
+      - name: Audit backend dependencies
+        run: pip-audit --strict -r backend/requirements.txt
+      - name: Audit Shannon bridge dependencies
+        run: pip-audit --strict -r runner/shannon-bridge/requirements.txt
+
+  dependency-review:
+    name: Review introduced dependency vulnerabilities
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never
