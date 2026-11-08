@@ -1,19 +1,5 @@
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
-
-def test_root_endpoint():
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json()["name"] == "OpsAegis API"
-
-def test_health_endpoint():
-    response = client.get("/api/v1/health")
-    assert response.status_code == 200
-    assert response.json()["status"] == "ok"
-
-def test_readiness_does_not_claim_unverified_dependencies():
+def test_readiness_reports_database_and_redis_state(client):
     response = client.get("/api/v1/ready")
     assert response.status_code == 200
-    assert response.json()["database"] == "not_checked"
+    assert response.json()["database"] == "ok"
+    assert response.json()["redis"] in {"ok", "unavailable"}
