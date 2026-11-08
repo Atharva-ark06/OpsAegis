@@ -10,7 +10,33 @@ permissions:
   contents: read
 
 jobs:
+  preflight:
+    name: Preflight configuration and deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Verify application configuration exports and API startup imports
+        working-directory: backend
+        run: python -c "from app.config import Settings, settings; from app.main import app; assert isinstance(settings, Settings); assert app.title == 'OpsAegis API'; print('Application settings and API imports are valid')"
+      - name: Verify Alembic environment and complete migration chain
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///./preflight-migrations.db
+        run: alembic upgrade head
+      - name: Check Docker Compose availability
+        run: docker compose version
+      - name: Prepare placeholder environment file for Compose validation
+        run: cp .env.production.example .env.production
+      - name: Validate production Compose YAML and service configuration
+        run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+
   backend:
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +52,7 @@ jobs:
         working-directory: backend
 
   frontend:
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +67,7 @@ jobs:
         working-directory: frontend
 
   runner:
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +80,7 @@ jobs:
         working-directory: runner/shannon-bridge
 
   production-container:
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
