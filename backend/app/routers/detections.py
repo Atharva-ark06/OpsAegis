@@ -78,7 +78,9 @@ def _finding_out(item: CorrelatedDetection) -> dict:
         "title": item.title, "description": item.description, "severity": item.severity.value,
         "finding_ids": item.finding_ids, "evidence": item.evidence,
         "incident_id": item.incident_id, "created_at": item.created_at.isoformat(),
-        "last_seen_at": item.last_seen_at.isoformat(),
+        "last_seen_at": item.last_seen_at.isoformat(), "status": item.status,
+        "acknowledged_at": item.acknowledged_at.isoformat() if item.acknowledged_at else None,
+        "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None,
     }
 
 
@@ -112,7 +114,7 @@ def evaluate_detections(
     window_minutes: int = Query(default=15, ge=1, le=1440),
     auth_threshold: int = Query(default=3, ge=3, le=20),
     db: Session = Depends(get_db),
-    actor: User = Depends(require_roles(*OPERATORS)),
+    actor: User | None = Depends(require_roles(*OPERATORS)),
 ) -> dict:
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=window_minutes)
@@ -220,6 +222,7 @@ def evaluate_detections(
             ))
             if record is not None:
                 record.last_seen_at = now
+                record.updated_at = now
                 record.finding_ids = sorted(set(record.finding_ids).union(ids))
                 record.evidence = evidence
                 record.description = description
@@ -242,14 +245,25 @@ def evaluate_detections(
             )
             db.add(record)
             db.flush()
+            if severity in {FindingSeverity.high, FindingSeverity.critical}:
+                recipients = db.scalars(select(User).where(
+                    User.is_active.is_(True), User.role.in_((UserRole.admin, UserRole.analyst))
+                )).all()
+                for recipient in recipients:
+                    db.add(DetectionNotification(
+                        user_id=recipient.id, detection_id=record.id, severity=severity,
+                        title=f"{severity.value.upper()} detection: {title}"[:500],
+                        message=f"{rule_key} generated detection {record.id} from finding IDs {ids}.",
+                        created_at=now,
+                    ))
             db.add(AuditLog(
-                actor_user_id=actor.id, action="detection.correlate",
+                actor_user_id=actor.id if actor else None, action="detection.correlate",
                 target=f"detection:{record.id}",
                 detail=json.dumps({"rule_key": rule_key, "finding_ids": ids,
                                    "incident_id": incident.id, "severity": severity.value}),
             ))
             db.add(AuditLog(
-                actor_user_id=actor.id, action="incident.auto_create",
+                actor_user_id=actor.id if actor else None, action="incident.auto_create",
                 target=f"incident:{incident.id}",
                 detail=json.dumps({"detection_id": record.id, "rule_key": rule_key,
                                    "finding_ids": ids}),
@@ -258,7 +272,7 @@ def evaluate_detections(
             created += 1
             incidents_created += 1
         db.add(AuditLog(
-            actor_user_id=actor.id, action="detection.evaluate", target="detection-engine",
+            actor_user_id=actor.id if actor else None, action="detection.evaluate", target="detection-engine",
             detail=json.dumps({"window_minutes": window_minutes, "auth_threshold": auth_threshold,
                                "candidates": len(candidates), "created": created,
                                "refreshed": refreshed}),
