@@ -44,6 +44,10 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
 def schedule_due(db, client, now: datetime) -> int:
     config = db.get(DetectionSchedule, 1)
     if config is None:
@@ -52,9 +56,12 @@ def schedule_due(db, client, now: datetime) -> int:
         db.add(config)
         db.commit()
         return 0
-    if not config.enabled or config.next_run_at is None or config.next_run_at > now:
+    if not config.enabled or config.next_run_at is None:
         return 0
-    slot = config.next_run_at.astimezone(timezone.utc).isoformat()
+    due_at = as_utc(config.next_run_at)
+    if due_at > now:
+        return 0
+    slot = due_at.isoformat()
     run = db.scalar(select(ScheduledDetectionRun).where(ScheduledDetectionRun.schedule_slot == slot))
     if run is None:
         run = ScheduledDetectionRun(schedule_slot=slot, status="queued", attempts=0,
@@ -96,7 +103,7 @@ def process_run(run_id: int) -> None:
         run.started_at = now
         run.error_code = None
         db.commit()
-        result = evaluate_detections(run.window_minutes, run.auth_threshold, db, None)
+        result = evaluate_detections(run.window_minutes, run.auth_threshold, db, None, as_utc(run.created_at))
         run = db.get(ScheduledDetectionRun, run_id)
         if run is None:
             return

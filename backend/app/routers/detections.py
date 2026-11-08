@@ -115,8 +115,9 @@ def evaluate_detections(
     auth_threshold: int = Query(default=3, ge=3, le=20),
     db: Session = Depends(get_db),
     actor: User | None = Depends(require_roles(*OPERATORS)),
+    evaluation_time: datetime | None = Query(default=None, include_in_schema=False),
 ) -> dict:
-    now = datetime.now(timezone.utc)
+    now = evaluation_time if actor is None and evaluation_time is not None else datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=window_minutes)
     findings = db.scalars(select(Finding).where(
         Finding.last_seen_at >= cutoff,
