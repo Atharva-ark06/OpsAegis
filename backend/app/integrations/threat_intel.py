@@ -27,13 +27,14 @@ def normalize_indicator(kind:str,value:str)->tuple[str,str]:
         if parsed.fragment: raise ValueError("URL indicators must not contain fragments")
         try: host=parsed.hostname.encode("idna").decode("ascii").lower().rstrip(".")
         except UnicodeError: raise ValueError("URL hostname is invalid") from None
+        if host.endswith((".local",".localhost",".internal",".test",".invalid")): raise ValueError("Private or reserved domains cannot be used as URL indicators")
         try:
             address=ipaddress.ip_address(host)
             if not address.is_global: raise ValueError("Private or reserved IPs cannot be used as URL indicators")
             host=f"[{address.compressed}]" if address.version==6 else address.compressed
         except ValueError as exc:
             if "Private or reserved" in str(exc): raise
-            if not re.fullmatch(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}",host): raise ValueError("URL hostname is invalid") from None
+            if not re.fullmatch(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}",host): raise ValueError("URL hostname is invalid") from None
         try: port=f":{parsed.port}" if parsed.port else ""
         except ValueError: raise ValueError("URL port is invalid") from None
         normalized=f"{parsed.scheme.lower()}://{host}{port}{parsed.path or '/'}"

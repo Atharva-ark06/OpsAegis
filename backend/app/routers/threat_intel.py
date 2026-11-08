@@ -47,7 +47,7 @@ async def enrich_indicator(payload:EnrichmentRequest,db:Session=Depends(get_db),
     vt,abuse=await asyncio.gather(VirusTotalAdapter().enrich(kind,value),AbuseIPDBAdapter().enrich(kind,value))
     results={"virustotal":vt,"abuseipdb":abuse}; successful=[v for v in results.values() if v["status"]=="ok"]
     scores=[v["risk_score"] for v in successful if v["risk_score"] is not None]; verdicts=[v["verdict"] for v in successful]
-    failed_configured = ((bool(settings.virustotal_api_key) and vt["status"] in {"error","auth_error","rate_limited"}) or
+    failed_configured = ((bool(settings.virustotal_api_key) and vt["status"] in {"error","auth_error","rate_limited","not_found"}) or
                          (bool(settings.abuseipdb_api_key) and abuse["status"] in {"error","auth_error","rate_limited"}))
     verdict="malicious" if "malicious" in verdicts else "suspicious" if "suspicious" in verdicts else "clean" if successful and all(v=="clean" for v in verdicts) and not failed_configured else "unknown"
     score=max(scores) if scores else None
