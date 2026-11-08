@@ -41,7 +41,14 @@ def test_authentication_burst_creates_audited_incident_once(client, db_session):
     assert second.json()["created"] == 0
     assert second.json()["refreshed"] == 1
     assert db_session.query(Incident).count() == 1
-    assert db_session.query(AuditLog).filter_by(action="detection.correlate").count() == 1\n    add_finding(db_session, "wazuh", "auth-3", "Authentication failure",\n                {"groups": ["authentication"], "agent_id": "004", "agent_name": "web-01"})\n    third = client.post("/api/v1/detections/evaluate?window_minutes=15&auth_threshold=3", headers=headers)\n    assert third.status_code == 200 and third.json()["created"] == 0\n    assert db_session.query(Incident).count() == 1\n    db_session.refresh(detection)\n    assert len(detection.finding_ids) == 4
+    assert db_session.query(AuditLog).filter_by(action="detection.correlate").count() == 1
+    add_finding(db_session, "wazuh", "auth-3", "Authentication failure",
+                {"groups": ["authentication"], "agent_id": "004", "agent_name": "web-01"})
+    third = client.post("/api/v1/detections/evaluate?window_minutes=15&auth_threshold=3", headers=headers)
+    assert third.status_code == 200 and third.json()["created"] == 0
+    assert db_session.query(Incident).count() == 1
+    db_session.refresh(detection)
+    assert len(detection.finding_ids) == 4
 
 
 def test_cross_engine_ip_corroboration_requires_both_sources(client, db_session):

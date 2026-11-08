@@ -25,10 +25,6 @@ SEVERITY_RANK = {
 }
 
 
-def _aware(value: datetime) -> datetime:
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
-
-
 def _severity(items: list[Finding]) -> FindingSeverity:
     return max((item.severity for item in items), key=lambda value: SEVERITY_RANK[value], default=FindingSeverity.medium)
 
@@ -171,7 +167,7 @@ def evaluate_detections(
                 refreshed += 1
                 continue
 
-            severity = _severity(group)
+            severity = max((_severity(group), FindingSeverity.high), key=lambda value: SEVERITY_RANK[value])
             incident = Incident(
                 title=f"[{rule_key}] {title}"[:500], severity=severity, status="open",
                 description=(description + " Source finding IDs: " + ", ".join(map(str, ids)))[:10000],
