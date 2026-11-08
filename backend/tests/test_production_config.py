@@ -29,6 +29,7 @@ def test_valid_production_configuration_is_accepted():
         ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "short"}, "OPS_AEGIS_SECRET_KEY"),
         ({"DATABASE_URL": "sqlite:///./opsaegis.db"}, "PostgreSQL"),
+        ({"DATABASE_URL": "postgresql+psycopg://opsaegis:change-me@postgres:5432/opsaegis"}, "database password"),
         ({"REDIS_URL": "redis://localhost:6379/0"}, "loopback Redis"),
         ({"CORS_ORIGINS": "*"}, "wildcards are forbidden"),
         ({"CORS_ORIGINS": "http://soc.example.com"}, "HTTPS origin"),
