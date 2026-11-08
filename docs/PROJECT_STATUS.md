@@ -48,3 +48,13 @@ No live Nuclei scan or engine connection is claimed. Live validation requires ex
 
 See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon remains disabled until the external HTTPS runner is configured and health-checked.
 \n\nThe Shannon bridge is not production-ready. Do not enable it until independent egress enforcement, DNS-rebinding defenses, VM isolation, provider budget limits and written staging authorization have been verified.\n
+
+## Threat intelligence / IOC enrichment (PR #13)
+- Read-only, on-demand VirusTotal and AbuseIPDB adapters with server-side credentials, TLS verification, fixed provider origins, no redirects, disabled environment proxy inheritance and bounded timeouts.
+- Supported indicators: public IP, domain, HTTP(S) URL and MD5/SHA-1/SHA-256/SHA-512 file hash. Private/reserved addresses, local domains and malformed indicators are rejected.
+- AbuseIPDB is IP-only; it explicitly reports not-applicable for other IOC types.
+- Provider responses are reduced to normalized verdicts, source-derived scores and selected metadata; raw provider payloads and secrets are not returned.
+- IOC records are deduplicated by type/value hash, cached for a configurable TTL, force-refreshable by operators and audit logged.
+- Provider errors, rate limits, missing records and missing configuration remain distinct; unavailable provider data is never presented as clean.
+- Lookups do not submit URLs/files for scanning, fetch the indicator itself, block traffic or execute response actions.
+- Live provider calls require operator-supplied API keys; no keys or live lookup validation are included.
