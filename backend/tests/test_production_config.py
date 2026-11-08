@@ -28,9 +28,13 @@ def test_valid_production_configuration_is_accepted():
     [
         ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "short"}, "OPS_AEGIS_SECRET_KEY"),
+        ({"OPS_AEGIS_SECRET_KEY": "a" * 48}, "OPS_AEGIS_SECRET_KEY"),
+        ({"OPS_AEGIS_SECRET_KEY": "CHANGE_ME_GENERATE_WITH_PYTHON_SECRETS_123456"}, "OPS_AEGIS_SECRET_KEY"),
         ({"DATABASE_URL": "postgresql+psycopg://opsaegis:strong-password-123@localhost:5432/opsaegis"}, "non-loopback PostgreSQL host"),
+        ({"DATABASE_URL": "postgresql+psycopg://opsaegis:CHANGE_ME_USE_UNIQUE_URL_SAFE_PASSWORD@postgres:5432/opsaegis"}, "unique database password"),
         ({"REDIS_URL": "redis://redis:6379/0"}, "unique Redis password"),
         ({"REDIS_URL": "redis://:short@redis:6379/0"}, "unique Redis password"),
+        ({"REDIS_URL": "redis://:CHANGE_ME_USE_UNIQUE_URL_SAFE_PASSWORD@redis:6379/0"}, "unique Redis password"),
         ({"REDIS_URL": "redis://:change-me-change-me@redis:6379/0"}, "unique Redis password"),
         ({"REDIS_URL": "redis://:unique-redis-password-2026@localhost:6379/0"}, "loopback Redis"),
         ({"DATABASE_URL": "sqlite:///./opsaegis.db"}, "PostgreSQL"),
