@@ -7,16 +7,19 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+import redis as redis_lib
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.entities import (
-    AuditLog, CorrelatedDetection, Finding, FindingSeverity, FindingStatus,
-    Incident, User, UserRole,
+    AuditLog, CorrelatedDetection, DetectionNotification, DetectionSchedule, DetectionStatus,
+    Finding, FindingSeverity, FindingStatus, Incident, ScheduledDetectionRun, User, UserRole,
 )
 from app.security import get_current_user, require_roles
+from app.config import settings
 
 router = APIRouter(prefix="/detections", tags=["detections"])
 OPERATORS = (UserRole.admin, UserRole.analyst)

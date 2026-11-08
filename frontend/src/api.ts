@@ -186,7 +186,7 @@ export interface DetectionRule {
   default_threshold: number; default_window_minutes: number; severity: string; enabled: boolean;
 }
 export interface Detection {
-  id: number; rule_key: string; fingerprint: string; title: string; description: string;
+  id: number; status: DetectionStatus; acknowledged_at: string | null; resolved_at: string | null; rule_key: string; fingerprint: string; title: string; description: string;
   severity: Severity; finding_ids: number[]; evidence: Record<string, unknown>;
   incident_id: number | null; created_at: string; last_seen_at: string;
 }
@@ -197,3 +197,29 @@ export interface DetectionEvaluation {
 export const getDetections = (): Promise<Detection[]> => request("/detections?skip=0&limit=100");
 export const getDetectionRules = (): Promise<DetectionRule[]> => request("/detections/rules");
 export const evaluateDetections = (): Promise<DetectionEvaluation> => request("/detections/evaluate?window_minutes=15&auth_threshold=3", { method: "POST" });
+
+export type DetectionStatus = "new" | "acknowledged" | "investigating" | "resolved";
+export interface DetectionScheduler {
+  enabled: boolean; interval_seconds: number; window_minutes: number; auth_threshold: number;
+  updated_at: string; next_run_at: string | null; last_scheduled_at: string | null;
+  worker_status: "online" | "offline" | "unknown"; redis_status: "connected" | "unavailable" | "unknown";
+}
+export interface ScheduledDetectionRun {
+  id: number; status: "queued" | "running" | "retrying" | "succeeded" | "failed";
+  attempts: number; window_minutes: number; auth_threshold: number;
+  next_attempt_at: string; started_at: string | null; finished_at: string | null;
+  error_code: string | null; created_at: string;
+}
+export interface DetectionNotification {
+  id: number; detection_id: number; severity: Severity; title: string;
+  message: string; created_at: string; read_at: string | null;
+}
+export const getDetectionScheduler = (): Promise<DetectionScheduler> => request("/detections/scheduler");
+export const updateDetectionScheduler = (payload: Pick<DetectionScheduler, "enabled" | "interval_seconds" | "window_minutes" | "auth_threshold">): Promise<DetectionScheduler> =>
+  request("/detections/scheduler", { method: "PUT", body: JSON.stringify(payload) });
+export const getScheduledDetectionRuns = (): Promise<ScheduledDetectionRun[]> => request("/detections/runs?limit=20");
+export const getDetectionNotifications = (): Promise<DetectionNotification[]> => request("/detections/notifications?limit=50");
+export const markDetectionNotificationRead = (id: number): Promise<DetectionNotification> =>
+  request("/detections/notifications/" + id + "/read", { method: "PATCH" });
+export const updateDetectionStatus = (id: number, status: DetectionStatus): Promise<Detection> =>
+  request("/detections/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
