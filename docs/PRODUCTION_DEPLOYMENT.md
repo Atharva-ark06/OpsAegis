@@ -18,7 +18,7 @@ Copy-Item .env.production.example .env.production
 notepad .env.production
 ```
 
-Replace every `REPLACE_...` value. Generate the application signing key with:
+Replace every `CHANGE_ME` value. The template intentionally fails the API's production secret/password checks until you replace them. Generate the application signing key with:
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(48))"
