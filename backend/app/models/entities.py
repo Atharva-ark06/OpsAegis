@@ -52,10 +52,17 @@ class AuditLog(Base):
 
 class Asset(Base):
     __tablename__ = "assets"
+    __table_args__ = (UniqueConstraint("source_engine", "external_id", name="uq_assets_source_external_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     asset_type: Mapped[str] = mapped_column(String(80), nullable=False)
     environment: Mapped[str] = mapped_column(String(80), nullable=False, default="unknown")
+    source_engine: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    os_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    agent_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 class Finding(Base):

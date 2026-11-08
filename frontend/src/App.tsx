@@ -96,7 +96,7 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
   if (view === "assets") {
     const rows = assets.filter((item) => [item.name, item.asset_type, item.environment].join(" ").toLowerCase().includes(needle));
     if (!rows.length) return <EmptyState title={needle ? "No matching assets" : "No assets registered"} detail={needle ? "Try another search term." : "Assets will appear here when they are added through the OpsAegis API."} />;
-    return <div className="table-wrap"><table><thead><tr><th>Asset</th><th>Type</th><th>Environment</th><th>Created</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.name}</strong><small>ASSET-{item.id}</small></td><td>{titleCase(item.asset_type)}</td><td><span className="tag">{titleCase(item.environment)}</span></td><td>{formatDate(item.created_at)}</td></tr>)}</tbody></table></div>;
+    return <div className="table-wrap"><table><thead><tr><th>Asset</th><th>Type</th><th>IP address</th><th>Agent source</th><th>Environment</th><th>Last observed</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.name}</strong><small>ASSET-{item.id}</small></td><td>{titleCase(item.asset_type)}</td><td>{item.ip_address ?? "—"}</td><td>{item.source_engine ? titleCase(item.source_engine) + (item.external_id ? " · " + item.external_id : "") : "Manual"}</td><td><span className="tag">{titleCase(item.environment)}</span></td><td>{item.last_seen_at ? formatDate(item.last_seen_at) : "—"}</td></tr>)}</tbody></table></div>;
   }
   if (view === "findings") {
     const rows = findings.filter((item) => [item.title, item.source_engine, item.status, item.severity].join(" ").toLowerCase().includes(needle));

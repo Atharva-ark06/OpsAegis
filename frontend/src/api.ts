@@ -14,6 +14,12 @@ export interface Asset {
   name: string;
   asset_type: string;
   environment: string;
+  source_engine: string | null;
+  external_id: string | null;
+  ip_address: string | null;
+  os_name: string | null;
+  agent_status: string | null;
+  last_seen_at: string | null;
   created_at: string;
 }
 export interface Finding {
