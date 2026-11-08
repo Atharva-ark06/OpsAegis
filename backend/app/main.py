@@ -2,23 +2,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers.health import router as health_router
-
-app = FastAPI(
-    title="OpsAegis API",
-    version="0.1.0",
+from app.routers.assets import router as assets_router
+from app.routers.findings import router as findings_router
+from app.routers.incidents import router as incidents_router
+app = FastAPI(title="OpsAegis API", version="0.2.0",
     description="Integration and incident-management API for OpsAegis.",
-    docs_url="/docs" if settings.environment == "development" else None,
-    redoc_url=None,
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
-)
-app.include_router(health_router, prefix="/api/v1")
-
+    docs_url="/docs" if settings.environment == "development" else None, redoc_url=None)
+app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins,
+    allow_credentials=True, allow_methods=["GET","POST","PUT","PATCH","DELETE"],
+    allow_headers=["Authorization","Content-Type"])
+for router in (health_router, assets_router, findings_router, incidents_router):
+    app.include_router(router, prefix="/api/v1")
 @app.get("/", tags=["root"])
-def root() -> dict[str, str]:
-    return {"name": "OpsAegis API", "status": "running", "version": "0.1.0"}
+def root() -> dict[str,str]:
+    return {"name":"OpsAegis API","status":"running","version":"0.2.0"}
