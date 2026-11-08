@@ -18,6 +18,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r backend/requirements.txt
+      - run: alembic upgrade head
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///./ci-migrations.db
       - run: pytest
         working-directory: backend
 
