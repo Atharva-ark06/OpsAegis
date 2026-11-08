@@ -71,3 +71,12 @@ def test_finding_dedup_preserves_analyst_status(db_session):
     assert sh.persist_validated_findings(db_session, [record], "https://staging.example.test") == (0, 1)
     db_session.refresh(finding)
     assert finding.status == "triaged"
+
+
+def test_finding_ingestion_rejects_out_of_scope_url(db_session):
+    from fastapi import HTTPException
+    record = {"fingerprint": "out-of-scope-1", "title": "Unexpected finding",
+              "severity": "high", "affected_url": "https://other.example.test/admin",
+              "validation_status": "exploited", "proof": "A proof string is not enough to bypass target scope"}
+    with pytest.raises(HTTPException):
+        sh.persist_validated_findings(db_session, [record], "https://staging.example.test")
