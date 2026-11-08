@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
-from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, ForeignKey, Integer, String, Text
+from typing import Any
+from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, ForeignKey, Integer, JSON, String, Text, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -59,6 +60,9 @@ class Asset(Base):
 
 class Finding(Base):
     __tablename__ = "findings"
+    __table_args__ = (
+        Index("uq_findings_source_native_id", "source_engine", "source_native_id", unique=True),
+    )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     source_engine: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     source_native_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -70,6 +74,7 @@ class Finding(Base):
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     evidence_uri: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    evidence: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     asset: Mapped[Asset | None] = relationship()
 
 class Incident(Base):
