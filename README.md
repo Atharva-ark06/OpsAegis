@@ -79,7 +79,6 @@ Configure these variables in the backend `.env`:
 | `WAZUH_INDEXER_USERNAME` | Dedicated read-only Indexer username |
 | `WAZUH_INDEXER_PASSWORD` | Read-only account password |
 | `WAZUH_INDEXER_INDEX_PATTERN` | Defaults to `wazuh-alerts-*` |
-| `WAZUH_INDEXER_VERIFY_TLS` | Defaults to `true`; keep enabled |
 | `WAZUH_INDEXER_CA_CERT` | Optional trusted CA certificate path |
 | `WAZUH_INDEXER_TIMEOUT_SECONDS` | Request timeout, 1–60 seconds |
 | `WAZUH_INDEXER_MAX_RESULTS` | Maximum alerts per collection, 1–1000 |
