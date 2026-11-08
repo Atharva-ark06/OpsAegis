@@ -40,7 +40,7 @@ def test_incident_lifecycle_assignment_and_resolution(client, analyst_headers, d
     assert assigned.status_code == 200
     assert assigned.json()["assigned_to_user_id"] == analyst.id
     blocked = client.patch(f"/api/v1/incidents/{incident_id}", json={
-        "status": "closed"
+        "status": "resolved"
     }, headers=analyst_headers)
     assert blocked.status_code == 422
     resolved = client.patch(f"/api/v1/incidents/{incident_id}", json={
