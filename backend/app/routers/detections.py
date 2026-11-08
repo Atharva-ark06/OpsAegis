@@ -157,7 +157,8 @@ def evaluate_detections(
     try:
         for rule_key, identity, title, description, group, evidence in candidates:
             ids = sorted({item.id for item in group})
-            bucket = int(now.timestamp() // (window_minutes * 60))\n            fingerprint = _fingerprint(rule_key, identity, bucket)
+            bucket = int(now.timestamp() // (window_minutes * 60))
+            fingerprint = _fingerprint(rule_key, identity, bucket)
             record = db.scalar(select(CorrelatedDetection).where(
                 CorrelatedDetection.fingerprint == fingerprint
             ))
