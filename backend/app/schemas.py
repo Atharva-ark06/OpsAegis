@@ -9,6 +9,12 @@ class AssetCreate(BaseModel):
     environment: str = Field(default="unknown", max_length=80)
 class AssetRead(AssetCreate):
     id: int
+    source_engine: str | None = None
+    external_id: str | None = None
+    ip_address: str | None = None
+    os_name: str | None = None
+    agent_status: str | None = None
+    last_seen_at: datetime | None = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 class FindingCreate(BaseModel):
