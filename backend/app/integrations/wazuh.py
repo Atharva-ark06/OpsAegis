@@ -60,7 +60,7 @@ class WazuhIndexerAdapter:
 
     def _client(self) -> httpx.AsyncClient:
         url, username, password = self._validate_configuration()
-        verify: bool | str = self.config.wazuh_indexer_ca_cert or self.config.wazuh_indexer_verify_tls
+        verify: bool | str = self.config.wazuh_indexer_ca_cert or True
         return httpx.AsyncClient(
             base_url=url,
             auth=(username, password),
