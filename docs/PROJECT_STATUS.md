@@ -30,6 +30,14 @@
 - Detection evaluation and automatic incident creation are audited; viewers can read detections/rules but cannot run evaluation.
 - No AI/ML inference, raw event stream, scheduled evaluation, editable rule administration or live engine verification is included. Nuclei/Shannon origin overlap is target-level corroboration, not proof of an identical vulnerability.
 
+## Scheduled detection and alert lifecycle (PR #12)
+- Dedicated Redis-backed worker schedules evaluations from a persisted administrator-controlled configuration; disabled by default.
+- Queue uses a renewable single-worker lease, durable run rows, startup recovery and up to three attempts with exponential backoff.
+- Detection lifecycle: new → acknowledged → investigating → resolved, with audited transitions.
+- High/critical detections create per-user in-app notifications for active administrators and analysts; notification reads are user-scoped.
+- Worker evaluates only already-persisted findings; it does not collect telemetry, execute scans or send email/SMS/external pages.
+- Live Redis worker operation and production scheduling have not been independently validated.
+
 ## Remaining
 - Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.

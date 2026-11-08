@@ -108,6 +108,10 @@ class CorrelatedDetection(Base):
     finding_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False)
     evidence: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     incident_id: Mapped[int | None] = mapped_column(ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="new")
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
 
