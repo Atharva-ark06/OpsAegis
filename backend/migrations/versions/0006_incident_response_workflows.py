@@ -13,6 +13,7 @@ def upgrade():
     op.add_column("incidents", sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("incidents", sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True))
     op.execute("UPDATE incidents SET updated_at = created_at WHERE updated_at IS NULL")
+    op.execute("UPDATE incidents SET status = 'open' WHERE status NOT IN ('open', 'investigating', 'contained', 'resolved', 'closed')")
     with op.batch_alter_table("incidents") as batch:
         batch.alter_column("updated_at", existing_type=sa.DateTime(timezone=True), nullable=False)
         batch.create_foreign_key("fk_incidents_assigned_to_user_id_users", "users",

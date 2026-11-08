@@ -52,6 +52,8 @@ def update_incident(incident_id: int, payload: IncidentUpdate, db: Session = Dep
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise HTTPException(422, "At least one incident field must be supplied")
+    if "status" in changes and changes["status"] is None:
+        raise HTTPException(422, "Incident status cannot be null")
     if "assigned_to_user_id" in changes and changes["assigned_to_user_id"] is not None:
         assignee = db.get(User, changes["assigned_to_user_id"])
         if assignee is None or not assignee.is_active or assignee.role not in {UserRole.admin, UserRole.analyst}:
