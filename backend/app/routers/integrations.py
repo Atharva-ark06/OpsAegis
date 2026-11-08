@@ -3,6 +3,7 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -60,7 +61,11 @@ async def collect_wazuh_alerts(
                     Finding.source_native_id == item.source_native_id,
                 )
             )
-            severity = FindingSeverity(item.severity) if item.severity in FindingSeverity._value2member_map_ else FindingSeverity.unknown
+            severity = (
+                FindingSeverity(item.severity)
+                if item.severity in FindingSeverity._value2member_map_
+                else FindingSeverity.unknown
+            )
             if existing is None:
                 db.add(Finding(
                     source_engine="wazuh",
@@ -77,7 +82,10 @@ async def collect_wazuh_alerts(
                 existing.title = item.title
                 existing.description = item.description
                 existing.severity = severity
-                previous_seen = existing.last_seen_at\n                if previous_seen.tzinfo is None:\n                    previous_seen = previous_seen.replace(tzinfo=timezone.utc)\n                existing.last_seen_at = max(previous_seen, item.observed_at)
+                previous_seen = existing.last_seen_at
+                if previous_seen.tzinfo is None:
+                    previous_seen = previous_seen.replace(tzinfo=timezone.utc)
+                existing.last_seen_at = max(previous_seen, item.observed_at)
                 existing.evidence = item.evidence
                 updated += 1
 
@@ -85,9 +93,20 @@ async def collect_wazuh_alerts(
             actor_user_id=actor.id,
             action="integration.wazuh.collect",
             target="wazuh-indexer",
-            detail=json.dumps({"since": start.isoformat(), "received": len(incoming), "inserted": inserted, "updated": updated}),
+            detail=json.dumps({
+                "since": start.isoformat(),
+                "received": len(incoming),
+                "inserted": inserted,
+                "updated": updated,
+            }),
         ))
         db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Concurrent Wazuh collection conflict; retry the collection",
+        ) from None
     except Exception:
         db.rollback()
         raise
