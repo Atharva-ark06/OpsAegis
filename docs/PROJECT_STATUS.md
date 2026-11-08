@@ -6,7 +6,7 @@
 - Wazuh Indexer read-only alert ingestion.
 - CrowdSec Local API read-only active-decision ingestion.
 - Nuclei authorized-target registry, fixed safe-profile CLI execution, scan history and JSONL finding normalization.
-- Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.
+- Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.\n- Separate Shannon bridge reference implementation with exact allowlists, pinned CLI, authenticated API, fail-closed SARIF proof gate and disabled-by-default execution.
 
 ## Nuclei boundaries
 - Admin-only target registration with a required authorization reference.
@@ -19,10 +19,11 @@
 
 ## Remaining
 - Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
-- Deploy and independently validate the Shannon runner bridge; the OpsAegis control-plane adapter is implemented but no runner is bundled or live scan claimed.
+- Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
 - CrowdSec historical alerts, full pagination, asset auto-mapping, cross-engine correlation, incident lifecycle, Wazuh Manager and response actions.
 - Production secrets management, monitoring and operational runbooks.
 
 No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
 
 See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon remains disabled until the external HTTPS runner is configured and health-checked.
+\n\nThe Shannon bridge is not production-ready. Do not enable it until independent egress enforcement, DNS-rebinding defenses, VM isolation, provider budget limits and written staging authorization have been verified.\n
