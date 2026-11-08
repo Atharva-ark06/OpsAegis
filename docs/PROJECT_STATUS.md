@@ -9,7 +9,7 @@
 - Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.
 - Separate Shannon bridge reference implementation with exact allowlists, pinned CLI, authenticated API, fail-closed SARIF proof gate and disabled-by-default execution.
 
-## Authentication security hardening (PR #27 — proposed)
+## Authentication security hardening (PR #27 — merged)
 - Login attempts use shared Redis fixed-window counters by source IP and normalized account; raw identifiers are HMAC-digested for Redis keys.
 - Redis failure blocks login rather than silently disabling abuse controls; rate-limit responses include Retry-After.
 - Access tokens require issuer, audience, type, token ID, subject, issued-at and expiry claims; roles are resolved from the active database user.
@@ -148,3 +148,11 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 - Health states distinguish healthy, unhealthy, not configured, execution disabled, request unavailable and role-restricted states.
 - Only administrator and analyst roles request these health endpoints; viewer cards do not attempt requests that the API would reject.
 - Global dashboard refresh rechecks engine health. Health state is not equivalent to a successful scan or proof of live findings ingestion.
+
+
+## API perimeter hardening (PR #28 — proposed)
+- Added exact Host-header allowlisting through TrustedHostMiddleware, independent of CORS.
+- Production requires explicit lowercase hostnames/IPs; wildcard, scheme and port entries are rejected. The production template includes the public host and loopback for local container health checks.
+- Added restrictive API security response headers and no-store caching for authentication routes.
+- TLS termination and HSTS remain at the external trusted reverse proxy; forwarded headers are not trusted by this middleware.
+- Automated tests cover host allowlisting, response headers and production configuration. No live production deployment is claimed.
