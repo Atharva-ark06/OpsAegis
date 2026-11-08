@@ -96,3 +96,38 @@ def test_normalizer_skips_malformed_or_unidentified_documents():
     assert WazuhIndexerAdapter._normalize_hit({"_id": "x", "_source": {"@timestamp": "not-a-date"}}) is None
     mapped = WazuhIndexerAdapter._normalize_hit(hit(level=15))
     assert mapped.severity == "critical"
+
+@pytest.mark.asyncio
+async def test_endpoint_url_cannot_embed_credentials():
+    adapter = WazuhIndexerAdapter(config(
+        wazuh_indexer_url="https://embedded-user:embedded-pass@wazuh-indexer.example:9200"
+    ))
+    with pytest.raises(WazuhAdapterError, match="credential-free HTTPS"):
+        await adapter.healthcheck()
+
+
+@pytest.mark.asyncio
+async def test_unexpected_indexer_response_shape_is_rejected():
+    def handler(request):
+        return httpx.Response(200, json={"unexpected": []})
+
+    adapter = WazuhIndexerAdapter(config(), transport=httpx.MockTransport(handler))
+    with pytest.raises(WazuhAdapterError, match="response shape"):
+        await adapter.collect_findings(datetime(2026, 11, 8, 9, tzinfo=timezone.utc))
+
+
+@pytest.mark.asyncio
+async def test_query_is_bounded_and_uses_timestamp_lower_bound():
+    captured = {}
+
+    def handler(request):
+        captured.update(request.read() and __import__("json").loads(request.content))
+        return httpx.Response(200, json={"hits": {"hits": []}})
+
+    adapter = WazuhIndexerAdapter(
+        config(wazuh_indexer_max_results=25),
+        transport=httpx.MockTransport(handler),
+    )
+    await adapter.collect_findings(datetime(2026, 11, 8, 9, tzinfo=timezone.utc))
+    assert captured["size"] == 25
+    assert captured["query"]["range"]["@timestamp"]["gte"] == "2026-11-08T09:00:00+00:00"
