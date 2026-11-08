@@ -127,7 +127,7 @@ def evaluate_detections(
         ))
 
     wazuh_by_ip: dict[str, list[Finding]] = {}
-    crowdsec_by_ip: dict[str, list[Finding]] = {}
+    crowdsec_by_ip: list[tuple[str, list[Finding]]] = []
     for item in findings:
         evidence = item.evidence if isinstance(item.evidence, dict) else {}
         if item.source_engine == "wazuh":
