@@ -77,7 +77,7 @@ async def collect_wazuh_alerts(
                 existing.title = item.title
                 existing.description = item.description
                 existing.severity = severity
-                existing.last_seen_at = max(existing.last_seen_at, item.observed_at)
+                previous_seen = existing.last_seen_at\n                if previous_seen.tzinfo is None:\n                    previous_seen = previous_seen.replace(tzinfo=timezone.utc)\n                existing.last_seen_at = max(previous_seen, item.observed_at)
                 existing.evidence = item.evidence
                 updated += 1
 
