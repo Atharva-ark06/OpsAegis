@@ -1,0 +1,8 @@
+const engines=[{name:"Wazuh",role:"SIEM / endpoint monitoring"},{name:"CrowdSec",role:"Threat intelligence / decisions"},{name:"Nuclei",role:"Authorized vulnerability scanning"},{name:"Shannon",role:"Authorized AI-assisted app testing"}];
+export default function App(){return <main className="shell">
+<header className="topbar"><div className="brand"><span className="mark">OA</span><div><strong>OpsAegis</strong><small>Operational Security & Incident Governance System</small></div></div><span className="environment">FOUNDATION BUILD · 0.1.0</span></header>
+<section className="hero"><p className="eyebrow">UNIFIED SECURITY OPERATIONS</p><h1>One operational view.<br/><em>Four specialized engines.</em></h1><p className="intro">OpsAegis connects security engines through a shared integration, correlation and incident workflow. Engine connections are not yet configured.</p></section>
+<section className="section-head"><div><p className="eyebrow">INTEGRATION LAYER</p><h2>Security engines</h2></div><span className="muted">No live telemetry connected</span></section>
+<section className="grid">{engines.map(engine=><article className="card" key={engine.name}><div className="card-top"><span className="dot"/><span className="state">Adapter planned</span></div><h3>{engine.name}</h3><p>{engine.role}</p></article>)}</section>
+<section className="notice"><strong>Honest-by-design status</strong><p>No sample alerts or fabricated metrics are displayed. Live findings will appear only after a real adapter is implemented, configured and verified.</p></section>
+<footer>OPSAEGIS <span>BUILD · INTEGRATE · CORRELATE · RESPOND</span></footer></main>}
