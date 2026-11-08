@@ -55,6 +55,9 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires a unique OPS_AEGIS_SECRET_KEY of at least 32 characters")
             if not self.database_url.startswith(("postgresql://", "postgresql+psycopg://")):
                 raise ValueError("Production requires PostgreSQL; SQLite is supported only for development and tests")
+            database_password = urlsplit(self.database_url).password or ""
+            if len(database_password) < 16 or database_password.lower() in {"password", "postgres", "change-me", "changeme"}:
+                raise ValueError("Production DATABASE_URL must contain a unique database password of at least 16 characters")
             if not self.redis_url.startswith(("redis://", "rediss://")) or urlsplit(self.redis_url).hostname in {"localhost", "127.0.0.1", "::1"}:
                 raise ValueError("Production requires a reachable Redis service URL; loopback Redis is not allowed")
             origins = self.allowed_origins
