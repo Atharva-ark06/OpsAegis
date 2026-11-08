@@ -57,7 +57,7 @@ export function describeEngineHealth(
     };
   }
 
-  if (health.status === "healthy" && health.execution_enabled) {
+  if (health.status === "healthy" && health.configured && health.execution_enabled) {
     return {
       status: "healthy",
       label: "Healthy",
