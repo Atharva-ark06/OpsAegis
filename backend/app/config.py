@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     crowdsec_ca_cert: str | None = Field(default=None, validation_alias="CROWDSEC_CA_CERT")
     crowdsec_timeout_seconds: int = Field(default=10, validation_alias="CROWDSEC_TIMEOUT_SECONDS")
     crowdsec_max_results: int = Field(default=500, validation_alias="CROWDSEC_MAX_RESULTS")
+    virustotal_api_key: str | None = Field(default=None, validation_alias="VIRUSTOTAL_API_KEY")
+    abuseipdb_api_key: str | None = Field(default=None, validation_alias="ABUSEIPDB_API_KEY")
+    threat_intel_timeout_seconds: int = Field(default=10, validation_alias="THREAT_INTEL_TIMEOUT_SECONDS")
+    threat_intel_cache_ttl_seconds: int = Field(default=900, validation_alias="THREAT_INTEL_CACHE_TTL_SECONDS")
     nuclei_enabled: bool = Field(default=False, validation_alias="NUCLEI_ENABLED")
     nuclei_binary: str = Field(default="nuclei", validation_alias="NUCLEI_BINARY")
     nuclei_timeout_seconds: int = Field(default=600, validation_alias="NUCLEI_TIMEOUT_SECONDS")
@@ -44,6 +48,8 @@ class Settings(BaseSettings):
         for name, value in (("WAZUH_INDEXER_MAX_RESULTS", self.wazuh_indexer_max_results),
                             ("CROWDSEC_MAX_RESULTS", self.crowdsec_max_results)):
             if not 1 <= value <= 1000: raise ValueError(f"{name} must be between 1 and 1000")
+        if not 1 <= self.threat_intel_timeout_seconds <= 30: raise ValueError("THREAT_INTEL_TIMEOUT_SECONDS must be between 1 and 30")
+        if not 60 <= self.threat_intel_cache_ttl_seconds <= 86400: raise ValueError("THREAT_INTEL_CACHE_TTL_SECONDS must be between 60 and 86400")
         if not 30 <= self.nuclei_timeout_seconds <= 1800: raise ValueError("NUCLEI_TIMEOUT_SECONDS must be between 30 and 1800")
         if not 1048576 <= self.nuclei_max_output_bytes <= 52428800: raise ValueError("NUCLEI_MAX_OUTPUT_BYTES must be between 1 MiB and 50 MiB")
         if not 1 <= self.nuclei_rate_limit <= 20: raise ValueError("NUCLEI_RATE_LIMIT must be between 1 and 20")

@@ -121,3 +121,20 @@ After applying migrations and starting the Compose stack, an administrator can e
 Only administrators can change scheduling. Admins and analysts can transition detections through `new → acknowledged → investigating → resolved`; each transition is audited. High/critical detections create per-user in-app notifications for active admins and analysts. Read them through `GET /api/v1/detections/notifications` and mark one read with `PATCH /api/v1/detections/notifications/{id}/read`. Notifications are in-app only; email, SMS and external paging integrations are not included.
 
 The worker does not collect source telemetry or launch scans. It evaluates only persisted findings already ingested by OpsAegis. Keep the scheduler disabled if Redis or the worker is unavailable; the API exposes heartbeat state and queued/failed runs remain visible for diagnosis.
+
+
+## Threat intelligence and IOC enrichment (PR #13)
+
+OpsAegis supports on-demand, read-only enrichment for public IPv4/IPv6 addresses, domains, HTTP(S) URLs and MD5/SHA-1/SHA-256/SHA-512 hashes.
+
+Optional providers are VirusTotal and AbuseIPDB. Configure credentials only in the backend .env:
+- VIRUSTOTAL_API_KEY — VirusTotal API key; supports IP, domain, URL and file-hash lookups.
+- ABUSEIPDB_API_KEY — AbuseIPDB API key; supports public IP lookups only.
+- THREAT_INTEL_TIMEOUT_SECONDS — provider request timeout (1–30 seconds).
+- THREAT_INTEL_CACHE_TTL_SECONDS — repeat lookup cache lifetime (60–86400 seconds; default 15 minutes).
+
+Run the Alembic migration before using the workspace. Authenticated users can view provider configuration and IOC history. Admins/analysts can submit an indicator for enrichment. Provider results are normalized, persisted and audit logged; repeated lookups are cached, with an explicit force-refresh option. Provider API keys never leave the backend.
+
+The integration performs lookup requests only: it does not submit files or URLs for scanning, visit the indicator URL, block traffic or change firewall controls. Private, loopback, link-local, reserved IPs and local/reserved domains are rejected. AbuseIPDB is marked not applicable for non-IP indicators. Provider errors/rate limits are not converted into clean verdicts. The overall risk score is the maximum score reported by successful providers; it is a source-derived indicator, not an OpsAegis probability or guarantee.
+
+No provider key or live provider lookup is included. Without credentials the workspace reports providers as not configured and enrichment returns HTTP 503.
