@@ -180,3 +180,20 @@ export function updateFindingStatus(id: number, status: FindingStatus): Promise<
 export function updateIncident(id: number, payload: { status?: IncidentStatus; assigned_to_user_id?: number | null; resolution?: string }): Promise<Incident> {
   return request("/incidents/" + id, { method: "PATCH", body: JSON.stringify(payload) });
 }
+
+export interface DetectionRule {
+  key: string; name: string; description: string; sources: string[];
+  default_threshold: number; default_window_minutes: number; severity: string; enabled: boolean;
+}
+export interface Detection {
+  id: number; rule_key: string; fingerprint: string; title: string; description: string;
+  severity: Severity; finding_ids: number[]; evidence: Record<string, unknown>;
+  incident_id: number | null; created_at: string; last_seen_at: string;
+}
+export interface DetectionEvaluation {
+  window_minutes: number; auth_threshold: number; findings_considered: number;
+  candidates: number; created: number; refreshed: number; incidents_created: number; detection_ids: number[];
+}
+export const getDetections = (): Promise<Detection[]> => request("/detections?skip=0&limit=100");
+export const getDetectionRules = (): Promise<DetectionRule[]> => request("/detections/rules");
+export const evaluateDetections = (): Promise<DetectionEvaluation> => request("/detections/evaluate?window_minutes=15&auth_threshold=3", { method: "POST" });
