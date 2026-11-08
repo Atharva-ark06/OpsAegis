@@ -12,6 +12,26 @@ The Stage 3 foundation, database persistence and authentication/RBAC milestones 
 
 **A working adapter does not mean a live connection is configured.** Wazuh data is only real when an operator configures an authorized Indexer endpoint and credentials. No fabricated alerts or telemetry are presented as live data.
 
+## Authenticated frontend workspace (PR #5)
+
+The frontend now includes a real sign-in flow and authenticated operational views backed by the API:
+- Session-scoped JWT storage in browser `sessionStorage`; the token is sent only in the Authorization header and is cleared on sign-out or a 401 response.
+- Authenticated `/auth/me` session verification.
+- Database-backed asset, finding and incident lists and overview counts (up to the API's current 200-record list limit per resource).
+- Role-aware Wazuh health and collection controls for administrators and analysts; viewers do not call the restricted integration endpoints.
+- Loading, empty, partial-error, refresh and responsive states. No fabricated operational metrics are used.
+- Frontend API base URL defaults to `http://localhost:8000/api/v1`. Set `VITE_API_BASE_URL` at frontend build time when the API is hosted elsewhere. This variable is a public URL, never a secret.
+
+The browser session token is accessible to JavaScript in the page and is not a substitute for XSS prevention or a server-side revocation mechanism. The current backend has no token refresh or logout/revocation endpoint; signing out clears the browser's copy and tokens expire according to the configured access-token lifetime.
+
+Frontend checks:
+```bash
+cd frontend
+npm install
+npm test
+npm run build
+```
+
 ## Security engines
 
 | Engine | Responsibility |
