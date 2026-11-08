@@ -63,7 +63,7 @@ def test_finding_dedup_preserves_analyst_status(db_session):
     record = {"fingerprint": "stable-shannon-finding-001", "title": "Confirmed authorization bypass",
               "severity": "high", "affected_url": "https://staging.example.test/admin",
               "validation_status": "exploited", "proof": "Reproduction evidence: unauthorized response"}
-    assert sh.persist_validated_findings(db_session, [record]) == (1, 0)
+    assert sh.persist_validated_findings(db_session, [record], "https://staging.example.test") == (1, 0)
     finding = db_session.query(Finding).filter_by(source_engine="shannon").one()
     finding.status = "triaged"
     db_session.commit()
