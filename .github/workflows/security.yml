@@ -20,9 +20,11 @@ jobs:
         with:
           fetch-depth: 0
       - name: Detect committed credentials and tokens
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: \${{ github.token }}
+        run: >-
+          docker run --rm
+          -v "$GITHUB_WORKSPACE:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.24.2
+          detect --source=/repo --redact --no-banner
 
   dependency-audit:
     name: Python dependency vulnerability audit
