@@ -23,6 +23,13 @@
 - Incidents support active admin/analyst assignment, required resolution notes for resolved/closed states, timestamps and audit records.
 - Viewers remain read-only; dashboard controls are role-gated.
 
+## Security correlation engine (PR #11)
+- Deterministic rules correlate persisted findings only: repeated Wazuh authentication alerts per identified agent, matching Wazuh agent IP plus CrowdSec active IP/range decision, and target-origin overlap between Nuclei and proof-validated Shannon findings.
+- Bounded evaluation window and authentication threshold; false-positive findings are excluded.
+- Correlated detections retain source finding IDs, evidence, stable fingerprints and incident linkage. Re-evaluation refreshes the existing detection instead of creating duplicate incidents.
+- Detection evaluation and automatic incident creation are audited; viewers can read detections/rules but cannot run evaluation.
+- No AI/ML inference, raw event stream, scheduled evaluation, editable rule administration or live engine verification is included. Nuclei/Shannon origin overlap is target-level corroboration, not proof of an identical vulnerability.
+
 ## Remaining
 - Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
