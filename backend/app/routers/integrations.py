@@ -9,7 +9,7 @@ from app.database import get_db
 from app.integrations.crowdsec import CrowdSecAdapterError, CrowdSecLapiAdapter
 from app.integrations.wazuh import WazuhAdapterError, WazuhIndexerAdapter
 from app.integrations.wazuh_manager import WazuhManagerAdapter, WazuhManagerError
-from app.models.entities import Asset, AuditLog, Finding, FindingSeverity, User, UserRole
+from app.models.entities import Asset, AuditLog, Finding, FindingSeverity, User, UserRole, Vulnerability
 from app.security import require_roles
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 OPERATORS = (UserRole.admin, UserRole.analyst)
@@ -67,7 +67,7 @@ async def sync_wazuh_vulnerabilities(db: Session=Depends(get_db),actor: User=Dep
                     description=item["description"],severity=severity,asset_id=asset.id if asset else None,
                     first_seen_at=observed,last_seen_at=observed,evidence=evidence)
                 db.add(finding);db.flush()
-                vuln=Vulnerability(cve_id=item["cve_id"],finding_id=finding.id,asset_id=asset.id if asset else None,
+                vuln=Vulnerability(cve_id=item["cve_id"],finding_id=finding.id,asset_id=finding.asset_id or (asset.id if asset else None),
                     cvss_score=item["cvss_score"],cvss_version=item["cvss_version"],cvss_severity=item["severity"],
                     description=item["description"],published_at=item["published_at"],
                     nvd_url=f'https://nvd.nist.gov/vuln/detail/{item["cve_id"]}',
@@ -89,7 +89,7 @@ async def sync_wazuh_vulnerabilities(db: Session=Depends(get_db),actor: User=Dep
                     nvd_url=f'https://nvd.nist.gov/vuln/detail/{item["cve_id"]}',
                     first_seen_at=observed,last_seen_at=observed,created_at=now,updated_at=now));created+=1
             else:
-                if vuln.asset_id is None and (asset is not None or finding.asset_id is not None):vuln.asset_id=asset.id if asset else finding.asset_id
+                if vuln.asset_id is None and (asset is not None or finding.asset_id is not None):vuln.asset_id=finding.asset_id or (asset.id if asset else None)
                 vuln.cvss_score=item["cvss_score"];vuln.cvss_version=item["cvss_version"];vuln.cvss_severity=item["severity"]
                 if item["description"]:vuln.description=item["description"]
                 if item["published_at"]:vuln.published_at=item["published_at"]
