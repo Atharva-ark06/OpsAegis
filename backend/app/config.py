@@ -154,3 +154,7 @@ class Settings(BaseSettings):
     @property
     def allowed_hosts(self) -> list[str]:
         return [item.strip() for item in self.allowed_hosts_raw.split(",") if item.strip()]
+
+
+# Shared application settings instance used by the API and Alembic.
+settings = Settings()
