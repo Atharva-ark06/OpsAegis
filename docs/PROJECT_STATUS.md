@@ -6,7 +6,8 @@
 - Wazuh Indexer read-only alert ingestion.
 - CrowdSec Local API read-only active-decision ingestion.
 - Nuclei authorized-target registry, fixed safe-profile CLI execution, scan history and JSONL finding normalization.
-- Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.\n- Separate Shannon bridge reference implementation with exact allowlists, pinned CLI, authenticated API, fail-closed SARIF proof gate and disabled-by-default execution.
+- Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.
+- Separate Shannon bridge reference implementation with exact allowlists, pinned CLI, authenticated API, fail-closed SARIF proof gate and disabled-by-default execution.
 
 ## Nuclei boundaries
 - Admin-only target registration with a required authorization reference.
@@ -47,7 +48,10 @@
 No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
 
 See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon remains disabled until the external HTTPS runner is configured and health-checked.
-\n\nThe Shannon bridge is not production-ready. Do not enable it until independent egress enforcement, DNS-rebinding defenses, VM isolation, provider budget limits and written staging authorization have been verified.\n
+
+
+The Shannon bridge is not production-ready. Do not enable it until independent egress enforcement, DNS-rebinding defenses, VM isolation, provider budget limits and written staging authorization have been verified.
+
 
 ## Threat intelligence / IOC enrichment (PR #13)
 - Read-only, on-demand VirusTotal and AbuseIPDB adapters with server-side credentials, TLS verification, fixed provider origins, no redirects, disabled environment proxy inheritance and bounded timeouts.
@@ -102,7 +106,7 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - These checks are configuration guardrails only. They do not prove TLS termination, network isolation, secret-manager integration, backup/restore, live Wazuh/CrowdSec/NVD connectivity, or production deployment.
 
 
-## Production container deployment foundation (PR #20 — in review)
+## Production container deployment foundation (PR #20 — merged)
 - Added a separate production Compose stack; the existing development Compose workflow is retained.
 - Added non-root production API and detection-worker image, and a multi-stage frontend build served by unprivileged Nginx.
 - Added private data network for PostgreSQL and password-protected Redis; database/cache ports are not published to the host.
@@ -110,3 +114,30 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Added API readiness-based health checks, frontend health check, persistent data volumes and container resource limits.
 - Added a production environment template with placeholders only and a deployment runbook.
 - CI validates Compose configuration and builds the production images. This does not prove a live deployment, TLS termination, backup/restore, monitoring, host hardening or real engine connectivity.
+
+
+## Responsive SOC frontend foundation (PR #21 — merged)
+- Added Tailwind CSS 3 and PostCSS as a utility styling foundation without enabling Preflight, preserving the existing design system.
+- Improved responsive navigation, header, overview cards and integration panels; retained light and dark theme support.
+- This was an incremental responsive/accessibility foundation, not a complete frontend redesign.
+
+## Live finding severity distribution (PR #22 — merged)
+- Overview severity bars are calculated from findings returned by the authenticated API.
+- Empty data is represented as an empty state; no synthetic counts are inserted.
+- Counts reflect the returned API page (up to 200 findings), not a database-wide aggregate.
+
+## Endpoint inventory filtering (PR #23 — merged)
+- Added endpoint inventory summary and client-side filters for reported agent status, environment and source.
+- Unknown status values are not counted as online or offline.
+- Summary and filters operate on the currently returned API records (up to 200 assets).
+
+## Incident investigation workspace (PR #24 — merged)
+- Added expandable incident investigation details, response metadata, linked detections and source finding evidence.
+- Linked records are resolved against currently returned API pages; unavailable records are explicitly identified rather than fabricated.
+- Full audit event timelines are not exposed by the current incident API and are not represented as if available.
+
+## Engine health visibility (PR #25 — proposed)
+- SOC engine cards retrieve Nuclei and Shannon health from their authenticated backend health endpoints rather than hard-coding both engines as not configured.
+- Health states distinguish healthy, unhealthy, not configured, execution disabled, request unavailable and role-restricted states.
+- Only administrator and analyst roles request these health endpoints; viewer cards do not attempt requests that the API would reject.
+- Global dashboard refresh rechecks engine health. Health state is not equivalent to a successful scan or proof of live findings ingestion.
