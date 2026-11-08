@@ -74,3 +74,12 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Vulnerability cases retain finding provenance, optional asset, CVE ID, first/last seen, analyst remediation status and notes.
 - On-demand NVD CVE API 2.0 lookup stores description, CVSS version/score/severity and NVD publication/modification timestamps; results are cached for 24 hours. Optional NVD API key remains backend-only.
 - No NVD bulk sync, Wazuh Vulnerability Detector ingestion, CPE/package matching, automatic remediation or production deployment validation is included.
+
+
+## Wazuh Manager inventory synchronization (PR #17)
+- Separate read-only Wazuh Manager REST API adapter authenticates with backend-only Basic credentials, obtains a short-lived JWT and reads paginated `GET /agents` inventory.
+- Agent ID/name/IP/OS/Manager-reported status/lastKeepAlive update Wazuh endpoint assets; registered agents can appear without alert activity.
+- Existing asset type/environment are preserved; assets missing from a response are not deleted or marked offline.
+- Manager special ID `000` is excluded. API health and manual sync are separate from Indexer alert collection.
+- HTTPS/TLS verification mandatory; optional private CA. No enrollment, restart, active response or firewall operation.
+- No scheduled sync or live Manager instance validation claimed.

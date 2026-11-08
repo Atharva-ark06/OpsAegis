@@ -162,3 +162,12 @@ The Vulnerabilities workspace provides CVE, CVSS severity, asset and remediation
 NVD lookup enriches CVE metadata; it does not establish that an asset is affected. Asset association is based solely on explicit target-to-asset mapping and the original scanner finding. A Nuclei template without a CVE identifier does not create a CVE record. This feature does not yet import Wazuh Vulnerability Detector inventory, perform package/CPE matching, auto-remediate, or claim complete endpoint coverage. Apply Alembic migration `0011_vulnerability_management` before using the workspace.
 
 Reference: [NVD Vulnerabilities API 2.0](https://nvd.nist.gov/developers/vulnerabilities).
+
+
+## Wazuh Manager agent inventory (PR #17)
+
+OpsAegis can connect to the Wazuh Manager REST API for read-only synchronization of registered agents, including agents that have not generated alerts. Configure `WAZUH_MANAGER_URL` (HTTPS), `WAZUH_MANAGER_USERNAME`, `WAZUH_MANAGER_PASSWORD`, and optionally `WAZUH_MANAGER_CA_CERT`. The adapter obtains a short-lived API JWT server-side, reads paginated `GET /agents` records, and stores agent name, ID, IP, OS and Manager-reported connection status in endpoint assets. Use an API account limited to inventory read permissions. TLS verification is mandatory.
+
+Endpoints: `GET /api/v1/integrations/wazuh-manager/health` and `POST /api/v1/integrations/wazuh-manager/sync`. Sync is manual and bounded by `WAZUH_MANAGER_MAX_AGENTS` (1–2000; default 500). Wazuh's special agent ID `000` is excluded. Sync does not delete assets missing from a response, infer offline state from missing data, enroll/restart/disconnect agents, or call active-response APIs. Existing analyst-managed asset type and environment are preserved.
+
+Reference: [Wazuh API authentication](https://documentation.wazuh.com/current/user-manual/api/getting-started.html) and [Wazuh API reference](https://documentation.wazuh.com/current/user-manual/api/reference.html).

@@ -55,6 +55,8 @@ export interface WazuhHealth {
 }
 export interface CrowdSecHealth { integration: string; configured: boolean; status: "not_configured" | "healthy" | "unhealthy"; capability: "read_active_decisions"; }
 export interface CrowdSecCollection { integration: string; received: number; inserted: number; updated: number; truncated_possible: boolean; max_results: number; data_scope: "active_decisions_only"; }
+export interface WazuhManagerHealth {integration:string;configured:boolean;status:"not_configured"|"healthy"|"unhealthy";capability:"read_agent_inventory";}
+export interface WazuhManagerSync {integration:string;received:number;created:number;updated:number;unchanged:number;skipped:number;truncated_possible:boolean;max_agents:number;data_scope:"registered_agents_only";}
 export interface WazuhCollection {
   integration: string;
   since: string;
@@ -136,6 +138,8 @@ export function getIncidents(): Promise<Incident[]> {
 export function getWazuhHealth(): Promise<WazuhHealth> {
   return request("/integrations/wazuh/health");
 }
+export function getWazuhManagerHealth():Promise<WazuhManagerHealth>{return request("/integrations/wazuh-manager/health");}
+export function syncWazuhManager():Promise<WazuhManagerSync>{return request("/integrations/wazuh-manager/sync",{method:"POST"});}
 export function collectWazuh(): Promise<WazuhCollection> {
   return request("/integrations/wazuh/collect", { method: "POST" });
 }

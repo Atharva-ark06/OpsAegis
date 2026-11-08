@@ -8,6 +8,7 @@ from app.config import settings
 from app.database import get_db
 from app.integrations.crowdsec import CrowdSecAdapterError, CrowdSecLapiAdapter
 from app.integrations.wazuh import WazuhAdapterError, WazuhIndexerAdapter
+from app.integrations.wazuh_manager import WazuhManagerAdapter, WazuhManagerError
 from app.models.entities import Asset, AuditLog, Finding, FindingSeverity, User, UserRole
 from app.security import require_roles
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -20,6 +21,52 @@ async def wazuh_health(actor: User = Depends(require_roles(*OPERATORS))) -> dict
     try: healthy=await adapter.healthcheck()
     except WazuhAdapterError: return {"integration":"wazuh-indexer","configured":True,"status":"unhealthy"}
     return {"integration":"wazuh-indexer","configured":True,"status":"healthy" if healthy else "unhealthy"}
+
+
+@router.get("/wazuh-manager/health")
+async def wazuh_manager_health(actor: User = Depends(require_roles(*OPERATORS))) -> dict[str, object]:
+    adapter=WazuhManagerAdapter()
+    if not adapter.is_configured: return {"integration":"wazuh-manager-api","configured":False,"status":"not_configured","capability":"read_agent_inventory"}
+    try: healthy=await adapter.healthcheck()
+    except WazuhManagerError: return {"integration":"wazuh-manager-api","configured":True,"status":"unhealthy","capability":"read_agent_inventory"}
+    return {"integration":"wazuh-manager-api","configured":True,"status":"healthy" if healthy else "unhealthy","capability":"read_agent_inventory"}
+
+@router.post("/wazuh-manager/sync")
+async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+    adapter=WazuhManagerAdapter()
+    if not adapter.is_configured: raise HTTPException(status_code=503,detail="Wazuh Manager API is not configured")
+    try: incoming=await adapter.collect_agents()
+    except WazuhManagerError: raise HTTPException(status_code=502,detail="Wazuh Manager API request failed; check backend integration logs") from None
+    created=updated=unchanged=skipped=0
+    try:
+        for raw in incoming:
+            item=adapter.normalize_agent(raw)
+            if item is None: skipped+=1;continue
+            asset=db.scalar(select(Asset).where(Asset.source_engine=="wazuh",Asset.external_id==item["external_id"]))
+            if asset is None:
+                db.add(Asset(name=item["name"],asset_type="endpoint",environment="unknown",source_engine="wazuh",external_id=item["external_id"],
+                    ip_address=item["ip_address"],os_name=item["os_name"],agent_status=item["agent_status"],last_seen_at=item["last_seen_at"]))
+                created+=1;continue
+            changed=False
+            if asset.name!=item["name"]:asset.name=item["name"];changed=True
+            if item["ip_address"] and asset.ip_address!=item["ip_address"]:asset.ip_address=item["ip_address"];changed=True
+            if item["os_name"] and asset.os_name!=item["os_name"]:asset.os_name=item["os_name"];changed=True
+            if asset.agent_status!=item["agent_status"]:asset.agent_status=item["agent_status"];changed=True
+            previous=asset.last_seen_at
+            if previous is not None and previous.tzinfo is None:previous=previous.replace(tzinfo=timezone.utc)
+            if item["last_seen_at"] and (previous is None or item["last_seen_at"]>previous):asset.last_seen_at=item["last_seen_at"];changed=True
+            if changed:updated+=1
+            else:unchanged+=1
+        db.add(AuditLog(actor_user_id=actor.id,action="integration.wazuh_manager.sync",target="wazuh-manager-api",
+            detail=json.dumps({"received":len(incoming),"created":created,"updated":updated,"unchanged":unchanged,"skipped":skipped,
+                "truncated_possible":len(incoming)>=settings.wazuh_manager_max_agents})))
+        db.commit()
+    except IntegrityError:
+        db.rollback();raise HTTPException(status_code=409,detail="Concurrent Wazuh agent sync conflict; retry the sync") from None
+    except Exception:
+        db.rollback();raise
+    return {"integration":"wazuh-manager-api","received":len(incoming),"created":created,"updated":updated,"unchanged":unchanged,"skipped":skipped,
+        "truncated_possible":len(incoming)>=settings.wazuh_manager_max_agents,"max_agents":settings.wazuh_manager_max_agents,"data_scope":"registered_agents_only"}
 
 @router.post("/wazuh/collect")
 async def collect_wazuh_alerts(since: datetime | None=Query(default=None,description="Timezone-aware lower bound for @timestamp"),
