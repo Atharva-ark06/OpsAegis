@@ -83,3 +83,12 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Manager special ID `000` is excluded. API health and manual sync are separate from Indexer alert collection.
 - HTTPS/TLS verification mandatory; optional private CA. No enrollment, restart, active response or firewall operation.
 - No scheduled sync or live Manager instance validation claimed.
+
+
+## Wazuh Vulnerability Detector ingestion (PR #18)
+- Read-only Indexer query of the documented `wazuh-states-vulnerabilities*` state index, separate from Wazuh alert indices and Manager agent inventory.
+- Ingests only CVE-enumerated documents with valid CVE, agent ID, package name and version; retains package metadata, host OS, Wazuh severity/score, timestamps and source document provenance.
+- Maps findings to existing endpoint assets by exact Wazuh agent ID; unknown agents remain unmapped, never guessed by IP/name.
+- Creates source-specific findings and vulnerability cases; stable Indexer document IDs are hashed for idempotent deduplication.
+- Refresh preserves analyst finding triage, vulnerability remediation status/notes, NVD cache metadata and analyst-selected asset assignments.
+- Manual admin/analyst sync only, bounded to at most 500 documents per call; partial/truncated results are reported. No scheduled sync, scan trigger, package remediation or live Indexer validation is claimed.

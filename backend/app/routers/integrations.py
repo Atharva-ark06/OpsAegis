@@ -9,7 +9,7 @@ from app.database import get_db
 from app.integrations.crowdsec import CrowdSecAdapterError, CrowdSecLapiAdapter
 from app.integrations.wazuh import WazuhAdapterError, WazuhIndexerAdapter
 from app.integrations.wazuh_manager import WazuhManagerAdapter, WazuhManagerError
-from app.models.entities import Asset, AuditLog, Finding, FindingSeverity, User, UserRole
+from app.models.entities import Asset, AuditLog, Finding, FindingSeverity, User, UserRole, Vulnerability
 from app.security import require_roles
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 OPERATORS = (UserRole.admin, UserRole.analyst)
@@ -22,6 +22,94 @@ async def wazuh_health(actor: User = Depends(require_roles(*OPERATORS))) -> dict
     except WazuhAdapterError: return {"integration":"wazuh-indexer","configured":True,"status":"unhealthy"}
     return {"integration":"wazuh-indexer","configured":True,"status":"healthy" if healthy else "unhealthy"}
 
+
+
+@router.get("/wazuh-vulnerabilities/health")
+async def wazuh_vulnerability_health(actor: User = Depends(require_roles(*OPERATORS))) -> dict[str, object]:
+    adapter=WazuhIndexerAdapter()
+    if not adapter.is_configured:
+        return {"integration":"wazuh-vulnerability-detector","configured":False,"status":"not_configured"}
+    try:
+        healthy=await adapter.healthcheck()
+    except WazuhAdapterError:
+        return {"integration":"wazuh-vulnerability-detector","configured":True,"status":"unhealthy"}
+    return {"integration":"wazuh-vulnerability-detector","configured":True,"status":"healthy" if healthy else "unhealthy"}
+
+@router.post("/wazuh-vulnerabilities/sync")
+async def sync_wazuh_vulnerabilities(db: Session=Depends(get_db),actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+    adapter=WazuhIndexerAdapter()
+    if not adapter.is_configured:
+        raise HTTPException(status_code=503,detail="Wazuh Indexer integration is not configured")
+    try:
+        incoming,total,truncated=await adapter.collect_vulnerabilities()
+    except WazuhAdapterError:
+        raise HTTPException(status_code=502,detail="Wazuh vulnerability inventory query failed; check backend integration logs") from None
+    created=updated=unchanged=unmapped=skipped=0
+    now=datetime.now(timezone.utc)
+    try:
+        for item in incoming:
+            asset=db.scalar(select(Asset).where(Asset.source_engine=="wazuh",Asset.external_id==item["agent_id"]))
+            severity=FindingSeverity(item["severity"]) if item["severity"] in FindingSeverity._value2member_map_ else FindingSeverity.unknown
+            observed=item["observed_at"] or now
+            native_id=item["source_native_id"]
+            evidence={"provider":"Wazuh Vulnerability Detection","index":"wazuh-states-vulnerabilities*",
+                "agent_id":item["agent_id"],"agent_name":item["agent_name"],
+                "package":{"name":item["package_name"],"version":item["package_version"],"type":item["package_type"],
+                    "architecture":item["package_architecture"],"description":item["package_description"]},
+                "host_os":item["os_name"],"vulnerability":{"id":item["cve_id"],"category":item["category"],
+                    "severity":item["severity"],"score":item["cvss_score"],"score_version":item["cvss_version"],
+                    "published_at":item["published_at"].isoformat() if item["published_at"] else None,
+                    "references":item["references"]}}
+            finding=db.scalar(select(Finding).where(Finding.source_engine=="wazuh-vulnerability",Finding.source_native_id==native_id))
+            if finding is None:
+                finding=Finding(source_engine="wazuh-vulnerability",source_native_id=native_id,
+                    title=f'{item["cve_id"]} affects {item["package_name"]} {item["package_version"]}',
+                    description=item["description"],severity=severity,asset_id=asset.id if asset else None,
+                    first_seen_at=observed,last_seen_at=observed,evidence=evidence)
+                db.add(finding);db.flush()
+                vuln=Vulnerability(cve_id=item["cve_id"],finding_id=finding.id,asset_id=finding.asset_id or (asset.id if asset else None),
+                    cvss_score=item["cvss_score"],cvss_version=item["cvss_version"],cvss_severity=item["severity"],
+                    description=item["description"],published_at=item["published_at"],
+                    nvd_url=f'https://nvd.nist.gov/vuln/detail/{item["cve_id"]}',
+                    first_seen_at=observed,last_seen_at=observed,created_at=now,updated_at=now)
+                db.add(vuln);created+=1
+                if asset is None:unmapped+=1
+                continue
+            finding.title=f'{item["cve_id"]} affects {item["package_name"]} {item["package_version"]}'
+            finding.description=item["description"];finding.severity=severity
+            if finding.asset_id is None and asset is not None:finding.asset_id=asset.id
+            previous=finding.last_seen_at
+            if previous.tzinfo is None:previous=previous.replace(tzinfo=timezone.utc)
+            finding.last_seen_at=max(previous,observed);finding.evidence=evidence
+            vuln=db.scalar(select(Vulnerability).where(Vulnerability.finding_id==finding.id,Vulnerability.cve_id==item["cve_id"]))
+            if vuln is None:
+                db.add(Vulnerability(cve_id=item["cve_id"],finding_id=finding.id,asset_id=asset.id if asset else finding.asset_id,
+                    cvss_score=item["cvss_score"],cvss_version=item["cvss_version"],cvss_severity=item["severity"],
+                    description=item["description"],published_at=item["published_at"],
+                    nvd_url=f'https://nvd.nist.gov/vuln/detail/{item["cve_id"]}',
+                    first_seen_at=observed,last_seen_at=observed,created_at=now,updated_at=now));created+=1
+            else:
+                if vuln.asset_id is None and (asset is not None or finding.asset_id is not None):vuln.asset_id=finding.asset_id or (asset.id if asset else None)
+                vuln.cvss_score=item["cvss_score"];vuln.cvss_version=item["cvss_version"];vuln.cvss_severity=item["severity"]
+                if item["description"]:vuln.description=item["description"]
+                if item["published_at"]:vuln.published_at=item["published_at"]
+                old=vuln.last_seen_at
+                if old.tzinfo is None:old=old.replace(tzinfo=timezone.utc)
+                vuln.last_seen_at=max(old,observed);vuln.updated_at=now
+                # Keep analyst status, remediation notes, and any NVD cache metadata.
+                updated+=1
+            if asset is None:unmapped+=1
+        db.add(AuditLog(actor_user_id=actor.id,action="integration.wazuh_vulnerabilities.sync",target="wazuh-states-vulnerabilities",
+            detail=json.dumps({"received":len(incoming),"total_hits":total,"created":created,"updated":updated,
+                "unmapped":unmapped,"skipped":skipped,"truncated":truncated})))
+        db.commit()
+    except IntegrityError:
+        db.rollback();raise HTTPException(status_code=409,detail="Concurrent Wazuh vulnerability sync conflict; retry") from None
+    except Exception:
+        db.rollback();raise
+    return {"integration":"wazuh-vulnerability-detector","received":len(incoming),"total_hits":total,
+        "created":created,"updated":updated,"unmapped":unmapped,"skipped":skipped,"truncated_possible":truncated,
+        "max_results":min(max(int(settings.wazuh_indexer_max_results),1),500),"data_scope":"current_vulnerability_state"}
 
 @router.get("/wazuh-manager/health")
 async def wazuh_manager_health(actor: User = Depends(require_roles(*OPERATORS))) -> dict[str, object]:
