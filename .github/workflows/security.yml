@@ -32,9 +32,10 @@ jobs:
           scan_status=$?
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
-          report = Path("$RUNNER_TEMP/gitleaks-report.json")
+          report = Path(os.environ["RUNNER_TEMP"]) / "gitleaks-report.json"
           if report.exists():
               findings = json.loads(report.read_text(encoding="utf-8"))
               print(f"Gitleaks findings: {len(findings)}")
