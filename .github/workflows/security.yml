@@ -1,0 +1,68 @@
+name: OpsAegis Security Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  secret-scan:
+    name: Full-history secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete Git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect committed credentials and tokens
+        shell: bash
+        run: |
+          set +e
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo" \
+            -v "$RUNNER_TEMP:/out" \
+            ghcr.io/gitleaks/gitleaks:v8.24.2 \
+            detect --source=/repo --redact --no-banner \
+            --report-format=json --report-path=/out/gitleaks-report.json
+          scan_status=$?
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report = Path(os.environ["RUNNER_TEMP"]) / "gitleaks-report.json"
+          if report.exists():
+              findings = json.loads(report.read_text(encoding="utf-8"))
+              print(f"Gitleaks findings: {len(findings)}")
+              for finding in findings:
+                  print(
+                      "Finding metadata only: "
+                      f"rule={finding.get('RuleID', 'unknown')}; "
+                      f"file={finding.get('File', 'unknown')}; "
+                      f"line={finding.get('StartLine', 'unknown')}; "
+                      f"commit={finding.get('Commit', 'unknown')}"
+                  )
+          else:
+              print("Gitleaks did not produce a report file.")
+          PY
+          exit "$scan_status"
+
+  dependency-audit:
+    name: Python dependency vulnerability audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip-audit
+      - name: Audit backend dependencies
+        run: pip-audit --strict -r backend/requirements.txt
+      - name: Audit Shannon bridge dependencies
+        run: pip-audit --strict -r runner/shannon-bridge/requirements.txt
