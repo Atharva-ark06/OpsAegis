@@ -489,7 +489,7 @@ function EngineCards({ wazuh, wazuhManager, crowdsec, canOperate, refreshKey }: 
     { name: "Nuclei", role: "Authorized vulnerability scanning", ...nucleiPresentation },
     { name: "Shannon", role: "Authorized application security testing", ...shannonPresentation },
   ];
-  return <div className="engine-grid" aria-label="Security engine health">{engines.map((engine) => <article className="engine-card" key={engine.name}><div className="engine-card-top"><span className={"engine-indicator " + engine.status} aria-hidden="true" /><span className={"engine-status " + engine.status} role="status" aria-live="polite">{engine.label ?? titleCase(engine.status)}</span></div><h4>{engine.name}</h4><p>{engine.role}</p><small>{engine.detail}</small></article>)}</div>;
+  return <div className="engine-grid" aria-label="Security engine health">{engines.map((engine) => <article className="engine-card" key={engine.name}><div className="engine-card-top"><span className={"engine-indicator " + engine.status} aria-hidden="true" /><span className={"engine-status " + engine.status} role="status" aria-live="polite">{"label" in engine ? engine.label : titleCase(engine.status)}</span></div><h4>{engine.name}</h4><p>{engine.role}</p><small>{engine.detail}</small></article>)}</div>;
 }
 
 export default App;
