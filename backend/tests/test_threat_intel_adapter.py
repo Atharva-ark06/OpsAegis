@@ -12,7 +12,7 @@ def test_normalizes_supported_ioc_types(kind,value,expected): assert normalize_i
 
 @pytest.mark.parametrize("kind,value",[("ip","127.0.0.1"),("ip","192.168.1.10"),("domain","host.local"),
     ("domain","not a domain"),("url","file:///etc/passwd"),("url","https://user:pass@example.com/"),
-    ("url","http://127.0.0.1/"),("hash","not-a-hash"),("unknown","anything")])
+    ("url","http://127.0.0.1/"),("url","https://service.internal/"),("hash","not-a-hash"),("unknown","anything")])
 def test_rejects_invalid_or_nonpublic_indicators(kind,value):
     with pytest.raises(ValueError): normalize_indicator(kind,value)
 
