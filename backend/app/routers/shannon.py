@@ -91,7 +91,7 @@ def register_target(data: TargetCreate, db: Session = Depends(get_db),
     target = ShannonTarget(**data.model_dump(), created_by=actor.id)
     db.add(target)
     db.add(AuditLog(actor_user_id=actor.id, action="integration.shannon.target.register",
-                    target=target.target_url, detail=json.dumps({
+                    target=target.target_url[:255], detail=json.dumps({
                         "source_repository": target.source_repository,
                         "authorization_reference": target.authorization_reference})))
     try:
@@ -126,7 +126,7 @@ async def start_scan(target_id: int, db: Session = Depends(get_db),
     scan = ShannonScanRun(target_id=target.id, requested_by=actor.id, status="dispatching")
     db.add(scan)
     db.add(AuditLog(actor_user_id=actor.id, action="integration.shannon.scan.request",
-                    target=target.target_url, detail=json.dumps({
+                    target=target.target_url[:255], detail=json.dumps({
                         "source_repository": target.source_repository,
                         "authorization_reference": target.authorization_reference})))
     db.commit()
@@ -227,7 +227,7 @@ def persist_validated_findings(db: Session, records: list[dict], expected_target
         native_id = hashlib.sha256(fingerprint.encode()).hexdigest()
         evidence = {"validation_status": "exploited", "affected_url": affected_url,
                     "proof": record["proof"][:4000], "runner_fingerprint": fingerprint[:255],
-                    "references": record.get("references", [])[:10] if isinstance(record.get("references"), list) else []}
+                    "references": [item[:300] for item in record.get("references", [])[:10] if isinstance(item, str)] if isinstance(record.get("references"), list) else []}
         description = record.get("description")
         description = description[:4000] if isinstance(description, str) else None
         severity = levels.get(str(record.get("severity", "")).lower(), FindingSeverity.unknown)
