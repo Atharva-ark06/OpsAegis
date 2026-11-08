@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
-from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, ForeignKey, Integer, JSON, String, Text, Index
+from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, ForeignKey, Integer, JSON, String, Text, Index, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -60,9 +60,7 @@ class Asset(Base):
 
 class Finding(Base):
     __tablename__ = "findings"
-    __table_args__ = (
-        Index("uq_findings_source_native_id", "source_engine", "source_native_id", unique=True),
-    )
+    __table_args__ = (Index("uq_findings_source_native_id", "source_engine", "source_native_id", unique=True),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     source_engine: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     source_native_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -106,5 +104,30 @@ class NucleiScanRun(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     findings_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+class ShannonTarget(Base):
+    __tablename__ = "shannon_targets"
+    __table_args__ = (UniqueConstraint("target_url", "source_repository", name="uq_shannon_target_repo"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    target_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    source_repository: Mapped[str] = mapped_column(String(500), nullable=False)
+    authorization_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+class ShannonScanRun(Base):
+    __tablename__ = "shannon_scan_runs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    target_id: Mapped[int] = mapped_column(ForeignKey("shannon_targets.id"), nullable=False, index=True)
+    requested_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    runner_job_id: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    findings_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)

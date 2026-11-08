@@ -6,6 +6,7 @@
 - Wazuh Indexer read-only alert ingestion.
 - CrowdSec Local API read-only active-decision ingestion.
 - Nuclei authorized-target registry, fixed safe-profile CLI execution, scan history and JSONL finding normalization.
+- Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.
 
 ## Nuclei boundaries
 - Admin-only target registration with a required authorization reference.
@@ -18,7 +19,10 @@
 
 ## Remaining
 - Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
-- Shannon integration, CrowdSec historical alerts, full pagination, asset auto-mapping, cross-engine correlation, incident lifecycle, Wazuh Manager and response actions.
+- Deploy and independently validate the Shannon runner bridge; the OpsAegis control-plane adapter is implemented but no runner is bundled or live scan claimed.
+- CrowdSec historical alerts, full pagination, asset auto-mapping, cross-engine correlation, incident lifecycle, Wazuh Manager and response actions.
 - Production secrets management, monitoring and operational runbooks.
 
 No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
+
+See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon remains disabled until the external HTTPS runner is configured and health-checked.
