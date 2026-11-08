@@ -17,6 +17,12 @@
 - Disabled by default; install Nuclei and explicitly set NUCLEI_ENABLED=true.
 - This executes in the backend runtime, not an isolated worker. Production must use a dedicated unprivileged scanner container with resource and egress limits before enabling.
 
+## Incident response workflow (PR #10)
+- Finding status updates are available to admins and analysts and create audit records.
+- Incident lifecycle is constrained to open, investigating, contained, resolved and closed states.
+- Incidents support active admin/analyst assignment, required resolution notes for resolved/closed states, timestamps and audit records.
+- Viewers remain read-only; dashboard controls are role-gated.
+
 ## Remaining
 - Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
