@@ -151,3 +151,14 @@ This is alert-observed inventory, not a substitute for the Wazuh Manager agents 
 - Dark, light, and system-following themes are available from the authenticated header and sign-in screen.
 - Theme preference is stored locally in the browser; no theme preference or browser storage value is sent to the API.
 - System mode follows the operating system color-scheme preference. Theme changes apply without a page reload.
+
+
+## Vulnerability management and CVE intelligence (PR #16)
+
+OpsAegis creates vulnerability cases only when an authorized Nuclei scan returns a CVE identifier in the template ID, tags or structured classification. An administrator may optionally map a registered Nuclei target to an existing OpsAegis asset; findings from that target inherit the explicit mapping only when the finding has no prior asset assignment. Unmapped findings remain unmapped.
+
+The Vulnerabilities workspace provides CVE, CVSS severity, asset and remediation-status filters, finding provenance, analyst notes and remediation states. Admins and analysts can request a read-only lookup of a known CVE from the official NVD CVE API 2.0. CVSS score/version/severity, description and NVD publication/modification timestamps are stored with a 24-hour cache. Configure optional backend-only `NVD_API_KEY` to increase NVD request allowance, and `NVD_TIMEOUT_SECONDS` (1–30, default 10). Never expose the key through frontend variables.
+
+NVD lookup enriches CVE metadata; it does not establish that an asset is affected. Asset association is based solely on explicit target-to-asset mapping and the original scanner finding. A Nuclei template without a CVE identifier does not create a CVE record. This feature does not yet import Wazuh Vulnerability Detector inventory, perform package/CPE matching, auto-remediate, or claim complete endpoint coverage. Apply Alembic migration `0011_vulnerability_management` before using the workspace.
+
+Reference: [NVD Vulnerabilities API 2.0](https://nvd.nist.gov/developers/vulnerabilities).
