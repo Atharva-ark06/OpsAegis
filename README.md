@@ -84,7 +84,7 @@ Configure these variables in the backend `.env`:
 | `WAZUH_INDEXER_TIMEOUT_SECONDS` | Request timeout, 1–60 seconds |
 | `WAZUH_INDEXER_MAX_RESULTS` | Maximum alerts per collection, 1–1000 |
 
-Do not put these credentials in frontend variables, source control, screenshots or API responses. Use a dedicated account with only the read permissions required to query alert indices. For an internal/self-signed CA, configure the CA certificate rather than disabling TLS verification.
+Do not put these credentials in frontend variables, source control, screenshots or API responses. Use a dedicated account with only the read permissions required to query alert indices. For an internal/self-signed CA, configure the CA certificate. This adapter does not provide a TLS-verification bypass.
 
 Apply the new database migration before using collection:
 
