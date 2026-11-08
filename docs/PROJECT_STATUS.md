@@ -41,7 +41,7 @@
 ## Remaining
 - Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
-- CrowdSec historical alerts, full pagination, asset auto-mapping, cross-engine correlation, incident lifecycle, Wazuh Manager and response actions.
+- CrowdSec historical-alert ingestion, full pagination and safe asset association remain outstanding; broad response actions are not implemented.
 - Production secrets management, monitoring and operational runbooks.
 
 No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
@@ -92,3 +92,11 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Creates source-specific findings and vulnerability cases; stable Indexer document IDs are hashed for idempotent deduplication.
 - Refresh preserves analyst finding triage, vulnerability remediation status/notes, NVD cache metadata and analyst-selected asset assignments.
 - Manual admin/analyst sync only, bounded to at most 500 documents per call; partial/truncated results are reported. No scheduled sync, scan trigger, package remediation or live Indexer validation is claimed.
+
+
+## Production readiness hardening (PR #19 — in review)
+- Production startup rejects the development JWT signing key, short/known placeholder secrets and weak database passwords.
+- Production requires PostgreSQL, a non-loopback Redis service URL and explicit HTTPS CORS origins (no wildcard, loopback or path-bearing origins).
+- Nuclei is blocked in production while it still executes inside the API runtime; keep it disabled until a dedicated isolated scanner worker is deployed.
+- Added automated configuration tests for accepted production settings and unsafe configuration rejection.
+- These checks are configuration guardrails only. They do not prove TLS termination, network isolation, secret-manager integration, backup/restore, live Wazuh/CrowdSec/NVD connectivity, or production deployment.
