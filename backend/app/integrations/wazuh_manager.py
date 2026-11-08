@@ -49,7 +49,7 @@ class WazuhManagerAdapter:
         async with self._client() as client:
             token=await self._authenticate(client);headers={"Authorization":"Bearer "+token};offset=0
             while offset<maximum:
-                params=[("limit",str(min(page_size,maximum-offset))),("offset",str(offset))]+[("select",field) for field in _FIELDS]
+                params=[("limit",str(min(page_size,maximum-offset))),("offset",str(offset))]+[("select",",".join(_FIELDS))]
                 try:
                     response=await client.get("/agents",params=params,headers=headers);response.raise_for_status();payload=response.json()
                 except (httpx.HTTPError,ValueError) as exc:raise WazuhManagerError(f"Wazuh Manager agent inventory request failed ({type(exc).__name__})") from None
