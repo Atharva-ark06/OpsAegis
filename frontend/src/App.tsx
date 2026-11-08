@@ -119,6 +119,28 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
 }
 
 function App() {
+  const [theme, setTheme] = useState<ThemePreference>(() => {
+    try {
+      const saved = window.localStorage.getItem("opsaegis-theme");
+      return saved === "light" || saved === "system" ? saved : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+  useEffect(() => {
+    const applyTheme = () => {
+      const resolved = theme === "system"
+        ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+        : theme;
+      document.documentElement.dataset.theme = resolved;
+    };
+    applyTheme();
+    try { window.localStorage.setItem("opsaegis-theme", theme); } catch { /* storage may be unavailable */ }
+    if (theme !== "system") return;
+    const preference = window.matchMedia("(prefers-color-scheme: light)");
+    preference.addEventListener("change", applyTheme);
+    return () => preference.removeEventListener("change", applyTheme);
+  }, [theme]);
   const [token, setToken] = useState<string | null>(() => getAccessToken());
   const [user, setUser] = useState<User | null>(null);
   const [authState, setAuthState] = useState<LoadState>("idle");
