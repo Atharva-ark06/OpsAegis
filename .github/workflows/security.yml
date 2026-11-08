@@ -20,11 +20,36 @@ jobs:
         with:
           fetch-depth: 0
       - name: Detect committed credentials and tokens
-        run: >-
-          docker run --rm
-          -v "$GITHUB_WORKSPACE:/repo"
-          ghcr.io/gitleaks/gitleaks:v8.24.2
-          detect --source=/repo --redact --no-banner
+        shell: bash
+        run: |
+          set +e
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo" \
+            -v "$RUNNER_TEMP:/out" \
+            ghcr.io/gitleaks/gitleaks:v8.24.2 \
+            detect --source=/repo --redact --no-banner \
+            --report-format=json --report-path=/out/gitleaks-report.json
+          scan_status=$?
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = Path("$RUNNER_TEMP/gitleaks-report.json")
+          if report.exists():
+              findings = json.loads(report.read_text(encoding="utf-8"))
+              print(f"Gitleaks findings: {len(findings)}")
+              for finding in findings:
+                  print(
+                      "Finding metadata only: "
+                      f"rule={finding.get('RuleID', 'unknown')}; "
+                      f"file={finding.get('File', 'unknown')}; "
+                      f"line={finding.get('StartLine', 'unknown')}; "
+                      f"commit={finding.get('Commit', 'unknown')}"
+                  )
+          else:
+              print("Gitleaks did not produce a report file.")
+          PY
+          exit "$scan_status"
 
   dependency-audit:
     name: Python dependency vulnerability audit
