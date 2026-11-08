@@ -32,6 +32,18 @@ describe("engine health presentation", () => {
     expect(result.label).toBe("Execution disabled");
   });
 
+  it("fails closed when the backend response is internally inconsistent", () => {
+    const inconsistent = { status: "healthy", configured: false, execution_enabled: true } as const;
+    const result = describeEngineHealth("Nuclei", inconsistent, true);
+    expect(result.status).toBe("not_configured");
+    expect(result.label).toBe("Not configured");
+  });
+
+  it("does not let an execution flag override an unhealthy status", () => {
+    const unhealthy = { status: "unhealthy", configured: true, execution_enabled: true } as const;
+    expect(describeEngineHealth("Shannon", unhealthy, true).status).toBe("unhealthy");
+  });
+
   it("reports a configured Shannon runner health failure", () => {
     const unhealthy = { status: "unhealthy", configured: true, execution_enabled: false } as const;
     expect(describeEngineHealth("Shannon", unhealthy, true).status).toBe("unhealthy");
