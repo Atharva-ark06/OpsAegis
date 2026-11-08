@@ -121,7 +121,7 @@ async def test_query_is_bounded_and_uses_timestamp_lower_bound():
     captured = {}
 
     def handler(request):
-        captured.update(request.read() and __import__("json").loads(request.content))
+        captured.update(__import__("json").loads(request.content))
         return httpx.Response(200, json={"hits": {"hits": []}})
 
     adapter = WazuhIndexerAdapter(
