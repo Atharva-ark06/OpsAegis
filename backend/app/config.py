@@ -2,6 +2,14 @@ from urllib.parse import unquote, urlsplit
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+_PLACEHOLDER_SECRET_MARKERS = ("change-me", "changeme", "change_me", "placeholder", "your-secret", "your-password", "replace-me", "replace_me")
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    normalized = value.strip().lower()
+    return any(marker in normalized for marker in _PLACEHOLDER_SECRET_MARKERS)
 class Settings(BaseSettings):
     environment: str = Field(default="development", validation_alias="OPS_AEGIS_ENV")
     secret_key: str = Field(default="development-only-change-this", validation_alias="OPS_AEGIS_SECRET_KEY")
@@ -51,7 +59,7 @@ class Settings(BaseSettings):
         if not 5 <= self.access_token_minutes <= 60:
             raise ValueError("OPS_AEGIS_ACCESS_TOKEN_MINUTES must be between 5 and 60")
         if self.environment.lower() == "production":
-            if len(self.secret_key) < 32 or self.secret_key == "development-only-change-this" or self.secret_key.lower() in {"change-me", "changeme", "secret", "your-secret-key"} or "change_me" in self.secret_key.lower() or len(set(self.secret_key)) < 12:
+            if len(self.secret_key) < 32 or self.secret_key == "development-only-change-this" or _is_placeholder_secret(self.secret_key) or len(set(self.secret_key)) < 12:
                 raise ValueError("Production requires a unique OPS_AEGIS_SECRET_KEY of at least 32 characters")
             if not self.database_url.startswith(("postgresql://", "postgresql+psycopg://")):
                 raise ValueError("Production requires PostgreSQL; SQLite is supported only for development and tests")
@@ -59,13 +67,13 @@ class Settings(BaseSettings):
             database_password = unquote(database_parts.password or "")
             if database_parts.hostname in {None, "localhost", "127.0.0.1", "::1"}:
                 raise ValueError("Production DATABASE_URL must use a reachable non-loopback PostgreSQL host")
-            if len(database_password) < 16 or database_password.lower() in {"password", "postgres", "change-me", "changeme"} or "change_me" in database_password.lower():
+            if len(database_password) < 16 or database_password.lower() in {"password", "postgres"} or _is_placeholder_secret(database_password):
                 raise ValueError("Production DATABASE_URL must contain a unique database password of at least 16 characters")
             redis_parts = urlsplit(self.redis_url)
             if redis_parts.scheme not in {"redis", "rediss"} or redis_parts.hostname in {None, "localhost", "127.0.0.1", "::1"}:
                 raise ValueError("Production requires a reachable Redis service URL; loopback Redis is not allowed")
             redis_password = unquote(redis_parts.password or "")
-            if len(redis_password) < 16 or redis_password.lower() in {"password", "redis", "change-me", "changeme"} or "change_me" in redis_password.lower():
+            if len(redis_password) < 16 or redis_password.lower() in {"password", "redis"} or _is_placeholder_secret(redis_password):
                 raise ValueError("Production REDIS_URL must contain a unique Redis password of at least 16 characters")
             origins = self.allowed_origins
             if not origins or "*" in origins:
