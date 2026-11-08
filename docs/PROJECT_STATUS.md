@@ -94,9 +94,19 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Manual admin/analyst sync only, bounded to at most 500 documents per call; partial/truncated results are reported. No scheduled sync, scan trigger, package remediation or live Indexer validation is claimed.
 
 
-## Production readiness hardening (PR #19 — in review)
+## Production readiness hardening (PR #19 — merged)
 - Production startup rejects the development JWT signing key, short/known placeholder secrets and weak database passwords.
 - Production requires PostgreSQL, a non-loopback Redis service URL and explicit HTTPS CORS origins (no wildcard, loopback or path-bearing origins).
 - Nuclei is blocked in production while it still executes inside the API runtime; keep it disabled until a dedicated isolated scanner worker is deployed.
 - Added automated configuration tests for accepted production settings and unsafe configuration rejection.
 - These checks are configuration guardrails only. They do not prove TLS termination, network isolation, secret-manager integration, backup/restore, live Wazuh/CrowdSec/NVD connectivity, or production deployment.
+
+
+## Production container deployment foundation (PR #20 — in review)
+- Added a separate production Compose stack; the existing development Compose workflow is retained.
+- Added non-root production API and detection-worker image, and a multi-stage frontend build served by unprivileged Nginx.
+- Added private data network for PostgreSQL and password-protected Redis; database/cache ports are not published to the host.
+- Added a one-shot Alembic migration service and startup dependency ordering so API/worker start only after migrations succeed.
+- Added API readiness-based health checks, frontend health check, persistent data volumes and container resource limits.
+- Added a production environment template with placeholders only and a deployment runbook.
+- CI validates Compose configuration and builds the production images. This does not prove a live deployment, TLS termination, backup/restore, monitoring, host hardening or real engine connectivity.

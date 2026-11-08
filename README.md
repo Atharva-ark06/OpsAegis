@@ -197,3 +197,22 @@ The Wazuh Indexer adapter can read the documented `wazuh-states-vulnerabilities*
 Authenticated admin/analyst endpoint: `POST /api/v1/integrations/wazuh-vulnerabilities/sync`. The Vulnerability Management workspace includes a manual sync control. The query is read-only and bounded to at most 500 results per call (also capped by `WAZUH_INDEXER_MAX_RESULTS`). A truncated response is explicitly reported; repeat syncs are idempotent for stable Indexer document IDs.
 
 Only CVE-enumerated records with a valid CVE ID, agent ID and package name/version are ingested. Package, version, architecture, host OS, Wazuh severity/score, detected/published timestamps and source provenance are retained as finding evidence. Endpoint association uses exact Wazuh agent ID; unmatched endpoints remain unmapped. Repeated sync preserves analyst remediation status/notes and finding triage. No Manager vulnerability endpoint or scan-trigger action is called.
+
+
+## Production Docker deployment (PR #20)
+
+A separate production Compose stack is available in `compose.production.yaml`; the original `docker-compose.yml` remains the local development stack. The production stack uses non-root API/worker containers, a compiled React frontend served by unprivileged Nginx, password-protected Redis, private PostgreSQL/Redis networking, a one-shot Alembic migration service, persistent volumes, health checks and container resource limits. The browser uses same-origin `/api/v1` requests through the Nginx reverse proxy.
+
+Start with `.env.production.example`, copy it to the untracked `.env.production`, replace every placeholder, and set the same URL-safe database/Redis passwords in their respective service and connection-string variables. Set the exact public HTTPS `CORS_ORIGINS` value and a newly generated `OPS_AEGIS_SECRET_KEY`.
+
+```powershell
+Copy-Item .env.production.example .env.production
+# Edit .env.production and replace every placeholder before continuing.
+docker compose --env-file .env.production -f compose.production.yaml config --quiet
+docker compose --env-file .env.production -f compose.production.yaml up -d --build
+docker compose --env-file .env.production -f compose.production.yaml ps
+```
+
+The frontend is bound to `127.0.0.1:8080`; place a maintained TLS reverse proxy/load balancer in front of it. PostgreSQL, Redis and the API are not published on host ports. Do not expose internal service ports to the public internet. See [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) for secrets, TLS, operations and limitations.
+
+This is a production-oriented container baseline, not proof of a live production deployment. Host hardening, TLS termination, DNS/firewall policy, secret-manager integration, off-host backups, monitoring, restore drills and runbooks remain operator responsibilities. Nuclei stays blocked in production until isolated scanner execution is deployed.
