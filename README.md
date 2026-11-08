@@ -106,3 +106,18 @@ The bridge is a controlled single-job validation implementation, not an HA produ
 Analysts and administrators can update finding triage through `PATCH /api/v1/findings/{id}/status` with one of `new`, `triaged`, `accepted`, `false_positive` or `resolved`. Each actual status change is audit logged. Viewers remain read-only.
 
 Incidents support `PATCH /api/v1/incidents/{id}` for assignment, status and resolution notes. Valid transitions are open → investigating → contained → resolved → closed, with controlled returns from investigating/contained/resolved to earlier active states. Closed incidents are terminal. A non-empty resolution note is required before resolving or closing. Assignees must be active admins or analysts. Changes are audit logged. The dashboard exposes these actions only to admin/analyst users.
+
+
+## Scheduled detection, lifecycle and notifications
+
+PR #12 adds a dedicated `detection-worker` service to Docker Compose. It uses a Redis queue, a renewable single-worker lease, persisted scheduled-run records, startup recovery for interrupted work and bounded retries (up to three attempts with exponential backoff). Scheduled evaluation is **disabled by default**.
+
+After applying migrations and starting the Compose stack, an administrator can enable the schedule through the authenticated API:
+
+- `GET /api/v1/detections/scheduler` — configuration, Redis connectivity and worker heartbeat.
+- `PUT /api/v1/detections/scheduler` — set `enabled`, `interval_seconds` (60–3600), `window_minutes` (1–1440) and `auth_threshold` (3–20). Enabling schedules the first run after the configured interval.
+- `GET /api/v1/detections/runs` — recent execution history and retry state.
+
+Only administrators can change scheduling. Admins and analysts can transition detections through `new → acknowledged → investigating → resolved`; each transition is audited. High/critical detections create per-user in-app notifications for active admins and analysts. Read them through `GET /api/v1/detections/notifications` and mark one read with `PATCH /api/v1/detections/notifications/{id}/read`. Notifications are in-app only; email, SMS and external paging integrations are not included.
+
+The worker does not collect source telemetry or launch scans. It evaluates only persisted findings already ingested by OpsAegis. Keep the scheduler disabled if Redis or the worker is unavailable; the API exposes heartbeat state and queued/failed runs remain visible for diagnosis.
