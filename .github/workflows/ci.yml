@@ -91,4 +91,4 @@ jobs:
       - name: Validate production Compose configuration
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
       - name: Build production API, migration, worker and frontend images
-        run: docker compose --env-file .env.production.example -f compose.production.yaml build migrate backend detection-worker frontend
+        run: docker compose --env-file .env.production.example -f compose.production.yaml build migrate backend detection-worker nuclei-worker frontend
