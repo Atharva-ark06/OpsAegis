@@ -99,3 +99,10 @@ Shannon actively exploits applications and may mutate state. Use disposable lab/
 PR #9 adds a separate reference bridge under [runner/shannon-bridge](runner/shannon-bridge/README.md). It is not part of the OpsAegis backend container or the local Docker Compose stack. Deploy only on a dedicated disposable Linux VM with an independently enforced egress firewall/proxy, exact target and repository allowlists, a pinned Shannon CLI and written staging authorization. The bridge remains disabled by default. See [the runner deployment contract](docs/SHANNON_RUNNER.md).
 
 The bridge is a controlled single-job validation implementation, not an HA production queue. Job state is in memory; cancellation, durable retries, artifact download and a full report parser are not implemented. SARIF ingestion fails closed unless explicit proof metadata and an in-scope affected URL exist. CI does not run Shannon. No live pentest or live engine connection is claimed.
+
+
+## Incident response and finding triage
+
+Analysts and administrators can update finding triage through `PATCH /api/v1/findings/{id}/status` with one of `new`, `triaged`, `accepted`, `false_positive` or `resolved`. Each actual status change is audit logged. Viewers remain read-only.
+
+Incidents support `PATCH /api/v1/incidents/{id}` for assignment, status and resolution notes. Valid transitions are open → investigating → contained → resolved → closed, with controlled returns from investigating/contained/resolved to earlier active states. Closed incidents are terminal. A non-empty resolution note is required before resolving or closing. Assignees must be active admins or analysts. Changes are audit logged. The dashboard exposes these actions only to admin/analyst users.
