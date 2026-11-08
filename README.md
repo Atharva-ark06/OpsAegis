@@ -171,3 +171,12 @@ OpsAegis can connect to the Wazuh Manager REST API for read-only synchronization
 Endpoints: `GET /api/v1/integrations/wazuh-manager/health` and `POST /api/v1/integrations/wazuh-manager/sync`. Sync is manual and bounded by `WAZUH_MANAGER_MAX_AGENTS` (1–2000; default 500). Wazuh's special agent ID `000` is excluded. Sync does not delete assets missing from a response, infer offline state from missing data, enroll/restart/disconnect agents, or call active-response APIs. Existing analyst-managed asset type and environment are preserved.
 
 Reference: [Wazuh API authentication](https://documentation.wazuh.com/current/user-manual/api/getting-started.html) and [Wazuh API reference](https://documentation.wazuh.com/current/user-manual/api/reference.html).
+
+
+## Wazuh Vulnerability Detector inventory (PR #18)
+
+The Wazuh Indexer adapter can read the documented `wazuh-states-vulnerabilities*` index using the existing backend-only Indexer credentials. This is separate from alert collection and Wazuh Manager agent inventory. Configure Wazuh Vulnerability Detection and confirm the state index exists before using the manual sync.
+
+Authenticated admin/analyst endpoint: `POST /api/v1/integrations/wazuh-vulnerabilities/sync`. The Vulnerability Management workspace includes a manual sync control. The query is read-only and bounded to at most 500 results per call (also capped by `WAZUH_INDEXER_MAX_RESULTS`). A truncated response is explicitly reported; repeat syncs are idempotent for stable Indexer document IDs.
+
+Only CVE-enumerated records with a valid CVE ID, agent ID and package name/version are ingested. Package, version, architecture, host OS, Wazuh severity/score, detected/published timestamps and source provenance are retained as finding evidence. Endpoint association uses exact Wazuh agent ID; unmatched endpoints remain unmapped. Repeated sync preserves analyst remediation status/notes and finding triage. No Manager vulnerability endpoint or scan-trigger action is called.

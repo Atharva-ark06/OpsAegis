@@ -247,9 +247,12 @@ export const getThreatIntelProviders=():Promise<ThreatIntelProviders>=>request("
 export const getThreatIntelIOCs=():Promise<ThreatIntelIOC[]>=>request("/threat-intel/iocs?skip=0&limit=100");
 export const enrichThreatIndicator=(payload:{indicator_type:IOCType;indicator_value:string;force_refresh?:boolean}):Promise<ThreatIntelIOC>=>request("/threat-intel/enrich",{method:"POST",body:JSON.stringify(payload)});
 
+
+export interface WazuhVulnerabilitySync {integration:string;received:number;total_hits:number;created:number;updated:number;unmapped:number;skipped:number;truncated_possible:boolean;max_results:number;data_scope:string;}
+export const syncWazuhVulnerabilities=():Promise<WazuhVulnerabilitySync>=>request("/integrations/wazuh-vulnerabilities/sync",{method:"POST"});
 export type VulnerabilityStatus = "open" | "in_progress" | "accepted" | "remediated" | "false_positive";
 export interface Vulnerability {
- id:number;cve_id:string;finding_id:number;asset_id:number|null;cvss_score:number|null;cvss_version:string|null;
+ id:number;cve_id:string;finding_id:number;asset_id:number|null;source_engine?:string|null;agent_id?:string|null;agent_name?:string|null;host_os?:string|null;package_name?:string|null;package_version?:string|null;package_type?:string|null;package_architecture?:string|null;cvss_score:number|null;cvss_version:string|null;
  cvss_severity:string|null;description:string|null;published_at:string|null;nvd_modified_at:string|null;
  nvd_data_updated_at:string|null;nvd_url:string;status:VulnerabilityStatus;remediation_notes:string|null;
  first_seen_at:string;last_seen_at:string;updated_at:string;cached?:boolean;
