@@ -288,12 +288,12 @@ function App() {
   }
   if (!token || !user) return <LoginScreen onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
 
-  return <div className="app-shell">
+  return <div className="app-shell min-h-screen bg-ops-canvas text-slate-100">
     <aside className="sidebar">
       <div className="brand sidebar-brand"><span className="brand-mark">OA</span><span><strong>OpsAegis</strong><small>SECURITY OPERATIONS</small></span></div>
       <div className="workspace-label">WORKSPACE</div>
       <nav className="side-nav" aria-label="Main navigation">
-        {navigation.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} onClick={() => { setView(item.id); setQuery(""); }}><span className="nav-short">{item.short}</span><span>{item.label}</span>{item.id === "findings" && filteredFindingCount > 0 && <span className="nav-count">{filteredFindingCount}</span>}</button>)}
+        {navigation.map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setQuery(""); }}><span className="nav-short">{item.short}</span><span>{item.label}</span>{item.id === "findings" && filteredFindingCount > 0 && <span className="nav-count">{filteredFindingCount}</span>}</button>)}
       </nav>
       <div className="sidebar-bottom">
         <div className="connection-indicator"><span className="live-dot" /><span>API session active</span></div>
@@ -301,7 +301,7 @@ function App() {
       </div>
     </aside>
 
-    <main className="main-area">
+    <main className="main-area min-w-0">
       <header className="main-header">
         <div><p className="breadcrumb">OPSAEGIS <span>/</span> {pageTitle.toUpperCase()}</p><h1>{pageTitle}</h1></div>
         <div className="header-actions"><ThemeToggle theme={theme} onChange={setTheme} /><span className="role-chip">{titleCase(user.role)}</span><button className="secondary-button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button></div>
