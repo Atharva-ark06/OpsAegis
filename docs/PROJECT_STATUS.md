@@ -171,7 +171,7 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 
 Phase 5 is in progress. The focus is validating existing integrations and operational boundaries, not adding dashboard features for their own sake.
 
-### Live integration diagnostics (PR #30 — proposed)
+### Live integration diagnostics (PR #30 — merged)
 - Adds an operator-run, read-only diagnostic CLI using the existing Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon adapters.
 - Loads local environment values without printing credentials; reports only sanitized check outcomes.
 - NVD reachability is opt-in and uses one fixed public CVE lookup. VirusTotal and AbuseIPDB are not queried to avoid unexpected API quota use.
@@ -185,3 +185,13 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Validate Redis scheduler and worker recovery under restart/failure conditions.
 - Deploy and independently validate the Shannon bridge on a disposable staging VM.
 - Complete production secret management, monitoring, backup/restore and operational runbooks.
+
+
+### Automated secret and dependency scanning (PR #31 — proposed)
+- Adds a separate GitHub Actions security workflow for pull requests and pushes to \`main\`.
+- Scans the complete Git history with Gitleaks to detect committed credentials and tokens.
+- Audits backend and Shannon bridge Python dependency requirements with \`pip-audit --strict\`.
+- Reviews newly introduced pull-request dependencies and blocks high/critical known vulnerabilities.
+- Documents secret rotation, false-positive handling and scan limitations.
+- The repository currently has no committed frontend npm lockfile, so the workflow deliberately does not claim to audit a locked frontend dependency graph.
+- A passing scan does not prove prior credential rotation, deployed-host security or absence of unknown vulnerabilities.

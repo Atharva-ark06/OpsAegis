@@ -275,3 +275,13 @@ python backend/scripts/validate_integrations.py --env-file .env --output artifac
 \`\`\`
 
 Add \`--include-nvd\` only when you want one read-only lookup of a fixed public CVE. VirusTotal and AbuseIPDB are not queried, so this check does not consume their API quota. See [Live Integration Validation](docs/INTEGRATION_VALIDATION.md) for status meanings, safety boundaries and troubleshooting. A successful health check is not proof of telemetry ingestion or production readiness.
+
+
+## Automated security checks
+
+Pull requests and pushes to \`main\` run a separate security workflow:
+- Full Git-history secret scanning with Gitleaks.
+- Vulnerability audits of backend and Shannon bridge Python dependencies.
+- GitHub dependency review for introduced dependencies (high and critical severity).
+
+See [Security Scanning in CI](docs/SECURITY_SCANNING.md) for remediation steps and limitations. A green scan does not prove that previously exposed credentials were rotated or that a deployed environment is secure.
