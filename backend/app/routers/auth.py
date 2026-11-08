@@ -6,6 +6,8 @@ from app.database import get_db
 from app.models.entities import AuditLog, User, UserRole
 from app.schemas_auth import LoginRequest, TokenResponse, UserCreate, UserRead
 from app.security import create_access_token, hash_password, verify_password, get_current_user, require_roles
+from app.config import settings
+from app.schemas_auth import AuditRead
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -22,7 +24,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user.last_login_at = datetime.now(timezone.utc)
     audit(db, user.id, "auth.login", f"user:{user.id}")
     db.commit()
-    return TokenResponse(access_token=create_access_token(user), expires_in=900)
+    return TokenResponse(access_token=create_access_token(user), expires_in=settings.access_token_minutes * 60)
 
 @router.get("/me", response_model=UserRead)
 def me(user: User = Depends(get_current_user)):
@@ -42,3 +44,11 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db),
     db.commit()
     db.refresh(user)
     return user
+
+@router.get("/audit", response_model=list[AuditRead])
+def list_audit_events(skip: int = 0, limit: int = 100, db: Session = Depends(get_db),
+                      actor: User = Depends(require_roles(UserRole.admin))):
+    from sqlalchemy import select
+    if skip < 0 or not 1 <= limit <= 200:
+        raise HTTPException(status_code=422, detail="skip must be >= 0 and limit 1..200")
+    return db.scalars(select(AuditLog).order_by(AuditLog.id.desc()).offset(skip).limit(limit)).all()
