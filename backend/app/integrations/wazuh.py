@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -51,8 +52,18 @@ class WazuhIndexerAdapter:
         if not self.is_configured:
             raise WazuhAdapterError("Wazuh Indexer is not configured")
         url = self.config.wazuh_indexer_url.rstrip("/")
-        if not url.startswith("https://"):
-            raise WazuhAdapterError("Wazuh Indexer URL must use HTTPS")
+        parsed_url = urlsplit(url)
+        if (
+            parsed_url.scheme != "https"
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            raise WazuhAdapterError(
+                "Wazuh Indexer URL must be a credential-free HTTPS URL without query or fragment"
+            )
         pattern = self.config.wazuh_indexer_index_pattern
         if not _INDEX_PATTERN.fullmatch(pattern):
             raise WazuhAdapterError("Wazuh index pattern contains unsupported characters")
@@ -60,6 +71,8 @@ class WazuhIndexerAdapter:
 
     def _client(self) -> httpx.AsyncClient:
         url, username, password = self._validate_configuration()
+        # TLS verification is always enabled. Supply the internal CA bundle
+        # when the Indexer certificate is issued by a private CA.
         verify: bool | str = self.config.wazuh_indexer_ca_cert or True
         return httpx.AsyncClient(
             base_url=url,
@@ -77,7 +90,9 @@ class WazuhIndexerAdapter:
                 response.raise_for_status()
                 return True
         except httpx.HTTPError as exc:
-            raise WazuhAdapterError(f"Wazuh Indexer health request failed ({type(exc).__name__})") from None
+            raise WazuhAdapterError(
+                f"Wazuh Indexer health request failed ({type(exc).__name__})"
+            ) from None
 
     async def collect_findings(self, since: datetime) -> list[NormalizedFinding]:
         if since.tzinfo is None:
@@ -87,7 +102,13 @@ class WazuhIndexerAdapter:
             "size": size,
             "track_total_hits": False,
             "sort": [{"@timestamp": {"order": "desc"}}],
-            "query": {"range": {"@timestamp": {"gte": since.astimezone(timezone.utc).isoformat()}}},
+            "query": {
+                "range": {
+                    "@timestamp": {
+                        "gte": since.astimezone(timezone.utc).isoformat()
+                    }
+                }
+            },
             "_source": [
                 "@timestamp", "rule.id", "rule.level", "rule.description", "rule.groups",
                 "agent.id", "agent.name", "agent.ip", "manager.name", "location", "decoder.name",
@@ -102,11 +123,20 @@ class WazuhIndexerAdapter:
                 response.raise_for_status()
                 payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
-            raise WazuhAdapterError(f"Wazuh Indexer alert query failed ({type(exc).__name__})") from None
+            raise WazuhAdapterError(
+                f"Wazuh Indexer alert query failed ({type(exc).__name__})"
+            ) from None
 
-        hits = payload.get("hits", {}).get("hits", [])
+        if not isinstance(payload, dict) or not isinstance(payload.get("hits"), dict):
+            raise WazuhAdapterError("Wazuh Indexer returned an unexpected response shape")
+        hits = payload["hits"].get("hits", [])
+        if not isinstance(hits, list):
+            raise WazuhAdapterError("Wazuh Indexer returned an invalid alert collection")
+
         findings: list[NormalizedFinding] = []
         for hit in hits[:size]:
+            if not isinstance(hit, dict):
+                continue
             finding = self._normalize_hit(hit)
             if finding is not None:
                 findings.append(finding)
