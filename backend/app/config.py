@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     nvd_api_key: str | None = Field(default=None, validation_alias="NVD_API_KEY")
     nvd_timeout_seconds: int = Field(default=10, validation_alias="NVD_TIMEOUT_SECONDS")
     nuclei_enabled: bool = Field(default=False, validation_alias="NUCLEI_ENABLED")
+    nuclei_worker_enabled: bool = Field(default=False, validation_alias="NUCLEI_WORKER_ENABLED")
     nuclei_binary: str = Field(default="nuclei", validation_alias="NUCLEI_BINARY")
     nuclei_timeout_seconds: int = Field(default=600, validation_alias="NUCLEI_TIMEOUT_SECONDS")
     nuclei_max_output_bytes: int = Field(default=10485760, validation_alias="NUCLEI_MAX_OUTPUT_BYTES")
@@ -108,8 +109,8 @@ class Settings(BaseSettings):
                     raise ValueError("Every production CORS_ORIGINS entry must be an HTTPS origin without a path")
                 if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
                     raise ValueError("Production CORS_ORIGINS cannot use loopback hosts")
-            if self.nuclei_enabled:
-                raise ValueError("NUCLEI_ENABLED is blocked in production until scanning runs in an isolated worker")
+            if self.nuclei_enabled and not self.nuclei_worker_enabled:
+                raise ValueError("Production Nuclei execution requires NUCLEI_WORKER_ENABLED=true and the isolated worker service")
         for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
                             ("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
                             ("CROWDSEC_TIMEOUT_SECONDS", self.crowdsec_timeout_seconds)):

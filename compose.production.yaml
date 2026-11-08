@@ -126,6 +126,40 @@ services:
     mem_limit: 512m
     cpus: 0.5
 
+  nuclei-worker:
+    profiles: ["scanner"]
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.nuclei-worker
+    environment:
+      OPS_AEGIS_ENV: production
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:?Set OPS_AEGIS_SECRET_KEY in .env.production}
+      OPS_AEGIS_ACCESS_TOKEN_MINUTES: ${OPS_AEGIS_ACCESS_TOKEN_MINUTES:-15}
+      OPS_AEGIS_ALLOWED_HOSTS: ${OPS_AEGIS_ALLOWED_HOSTS:?Set OPS_AEGIS_ALLOWED_HOSTS in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      REDIS_URL: ${REDIS_URL:?Set REDIS_URL in .env.production}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
+      NUCLEI_ENABLED: ${NUCLEI_ENABLED:-false}
+      NUCLEI_WORKER_ENABLED: ${NUCLEI_WORKER_ENABLED:-false}
+      NUCLEI_BINARY: /usr/local/bin/nuclei
+      NUCLEI_TIMEOUT_SECONDS: ${NUCLEI_TIMEOUT_SECONDS:-600}
+      NUCLEI_MAX_OUTPUT_BYTES: ${NUCLEI_MAX_OUTPUT_BYTES:-10485760}
+      NUCLEI_RATE_LIMIT: ${NUCLEI_RATE_LIMIT:-5}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [data, scanner-egress]
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+
   frontend:
     init: true
     read_only: true
@@ -152,6 +186,7 @@ networks:
   edge:
   data:
     internal: true
+  scanner-egress:
 
 volumes:
   postgres_data:
