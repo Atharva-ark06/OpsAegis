@@ -57,7 +57,7 @@ def update_incident(incident_id: int, payload: IncidentUpdate, db: Session = Dep
         if assignee is None or not assignee.is_active or assignee.role not in {UserRole.admin, UserRole.analyst}:
             raise HTTPException(422, "Assignee must be an active admin or analyst")
     next_status = changes.get("status", item.status)
-    if next_status != item.status and next_status not in ALLOWED_TRANSITIONS[item.status]:
+    if next_status != item.status and next_status not in ALLOWED_TRANSITIONS.get(item.status, set()):
         raise HTTPException(409, f"Invalid incident transition: {item.status} -> {next_status}")
     next_resolution = changes.get("resolution", item.resolution)
     if next_status in {"resolved", "closed"} and not (next_resolution and next_resolution.strip()):
