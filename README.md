@@ -236,3 +236,31 @@ See [Engine Health Indicators](docs/ENGINE_HEALTH.md) for the status meanings an
 ## API perimeter hardening
 
 The API validates incoming Host headers against `OPS_AEGIS_ALLOWED_HOSTS`, separately from browser CORS policy. Production requires an explicit comma-separated allowlist of lowercase hostnames/IP addresses without schemes, ports or wildcards. Configure the public reverse-proxy hostname and `127.0.0.1` for the container-local API health check. API responses include restrictive browser security headers, and authentication routes are marked `no-store`. See [API perimeter security](docs/API_PERIMETER_SECURITY.md) and [production deployment](docs/PRODUCTION_DEPLOYMENT.md).
+
+
+## Preflight checks before opening a pull request
+
+Run the same high-value startup and deployment checks locally before pushing changes that touch configuration, migrations or Compose:
+
+```powershell
+# From the repository root
+if (-not (Test-Path .env.production)) { Copy-Item .env.production.example .env.production }
+docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+
+# Backend import and migration checks
+Push-Location backend
+python -c "from app.config import Settings, settings; from app.main import app; assert isinstance(settings, Settings); print(app.title)"
+$env:DATABASE_URL = "sqlite:///./preflight-migrations.db"
+alembic upgrade head
+pytest -q
+Remove-Item Env:DATABASE_URL
+Pop-Location
+
+# Frontend checks
+Push-Location frontend
+npm test
+npm run build
+Pop-Location
+```
+
+The CI workflow now runs a dedicated preflight job first. It verifies the shared settings export, imports the FastAPI application, applies the full Alembic migration chain to a disposable SQLite database, and validates the production Compose file before the backend, frontend, runner and container jobs can start. A failed preflight blocks all downstream jobs. These checks reduce configuration regressions; they do not replace review or live deployment validation.
