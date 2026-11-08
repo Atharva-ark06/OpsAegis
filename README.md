@@ -61,7 +61,7 @@ Set `OPS_AEGIS_ENV=production` before starting the API or detection worker in a 
 - SQLite instead of PostgreSQL, or a database URL with a weak/short password.
 - A loopback Redis URL.
 - Wildcard, HTTP, loopback or path-bearing CORS origins; configure exact HTTPS origins only.
-- `NUCLEI_ENABLED=true`. Nuclei currently executes inside the API container and is intentionally blocked in production until it is moved to an isolated scanner worker.
+- `NUCLEI_ENABLED=true` and `NUCLEI_WORKER_ENABLED=true` only after the isolated scanner worker and external egress policy have been verified. The worker is opt-in via the Compose `scanner` profile.
 
 Generate a unique application signing key (never commit it):
 
@@ -99,7 +99,7 @@ Nuclei is disabled by default. Install the Nuclei binary in the backend runtime 
 
 The API accepts no arbitrary CLI flags, template paths or free-form scan URLs. The fixed profile disables Interactsh and update checks, bounds rate/concurrency/runtime/output and excludes DoS, fuzzing, intrusive and headless template tags. Findings are deduplicated; analyst triage state is preserved. Only scan systems for which you have written authorization.
 
-Deployment limitation: Nuclei currently runs as a subprocess inside the backend runtime, not a hardened isolated worker. Keep it disabled until deployed in a dedicated unprivileged container with resource limits and network egress restrictions. No live scan is claimed.
+Deployment limitation: Nuclei scan requests are queued in PostgreSQL/Redis and executed by the separate non-root `nuclei-worker` image. Start it only with the Compose `scanner` profile. The Compose egress network is not an allowlist: apply DNS/IP destination restrictions at the host/cloud firewall before enabling scans. See [the Nuclei worker deployment guide](docs/NUCLEI_WORKER.md). No live scan or deployed egress policy is claimed.
 
 
 ## Shannon authorized application testing
