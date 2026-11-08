@@ -6,6 +6,7 @@ import os
 import secrets
 import signal
 import time
+import threading
 from datetime import datetime, timedelta, timezone
 
 import redis
@@ -145,6 +146,18 @@ def recover_interrupted_runs(db) -> int:
     return len(interrupted)
 
 
+def heartbeat_loop(client, token: str, stop: threading.Event, lease_lost: threading.Event) -> None:
+    while not stop.wait(10):
+        try:
+            renewed = client.eval(RENEW_LOCK, 2, LOCK_KEY, HEARTBEAT_KEY, token, 30, utc_now().isoformat())
+            if not renewed:
+                lease_lost.set()
+                return
+        except Exception:
+            lease_lost.set()
+            return
+
+
 def run_worker() -> None:
     client = redis.Redis.from_url(settings.redis_url, decode_responses=True,
                                   socket_connect_timeout=3, socket_timeout=5)
@@ -152,13 +165,17 @@ def run_worker() -> None:
     if not client.set(LOCK_KEY, token, nx=True, ex=30):
         logger.error("Another detection worker owns the Redis lease; exiting")
         return
+    stop_heartbeat = threading.Event()
+    lease_lost = threading.Event()
+    heartbeat = threading.Thread(target=heartbeat_loop, args=(client, token, stop_heartbeat, lease_lost), daemon=True)
+    heartbeat.start()
     with SessionLocal() as db:
         recovered = recover_interrupted_runs(db)
     if recovered:
         logger.warning("Recovered %s interrupted detection run(s)", recovered)
     logger.info("Detection worker started")
     try:
-        while RUNNING:
+        while RUNNING and not lease_lost.is_set():
             renewed = client.eval(RENEW_LOCK, 2, LOCK_KEY, HEARTBEAT_KEY, token, 30, utc_now().isoformat())
             if not renewed:
                 logger.error("Worker lease lost; stopping to avoid duplicate consumers")
@@ -172,6 +189,8 @@ def run_worker() -> None:
                 client.delete(f"opsaegis:detection:enqueue:{run_id}")
                 process_run(run_id)
     finally:
+        stop_heartbeat.set()
+        heartbeat.join(timeout=2)
         client.eval(RELEASE_LOCK, 1, LOCK_KEY, token)
         client.delete(HEARTBEAT_KEY)
         client.close()

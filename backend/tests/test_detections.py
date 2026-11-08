@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from app.models.entities import AuditLog, CorrelatedDetection, Finding, FindingSeverity, Incident, User, UserRole
+from app.models.entities import AuditLog, CorrelatedDetection, DetectionNotification, Finding, FindingSeverity, Incident, User, UserRole
 from app.security import create_access_token, hash_password
 
 
@@ -34,6 +34,7 @@ def test_authentication_burst_creates_audited_incident_once(client, db_session):
     assert first.json()["created"] == 1
     assert first.json()["incidents_created"] == 1
     assert db_session.query(Incident).count() == 1
+    assert db_session.query(DetectionNotification).count() == 1
     detection = db_session.query(CorrelatedDetection).one()
     assert len(detection.finding_ids) == 3
     second = client.post("/api/v1/detections/evaluate?window_minutes=15&auth_threshold=3", headers=headers)
