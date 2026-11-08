@@ -23,3 +23,9 @@ def test_unknown_host_is_rejected(client):
 def test_development_test_host_is_allowed(client):
     response = client.get("/api/v1/health", headers={"Host": "testserver"})
     assert response.status_code == 200
+
+ 
+def test_development_api_docs_are_not_blocked_by_api_csp(client):
+    response = client.get("/docs")
+    assert response.status_code == 200
+    assert "content-security-policy" not in response.headers
