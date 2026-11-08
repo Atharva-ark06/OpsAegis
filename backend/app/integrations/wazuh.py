@@ -142,6 +142,130 @@ class WazuhIndexerAdapter:
                 findings.append(finding)
         return findings
 
+
+    async def collect_vulnerabilities(self) -> tuple[list[dict[str, Any]], int, bool]:
+        """Read Wazuh's current vulnerability state index; never call manager scan/action APIs."""
+        size = min(max(int(self.config.wazuh_indexer_max_results), 1), 500)
+        query = {
+            "size": size,
+            "track_total_hits": True,
+            "sort": [{"vulnerability.detected_at": {"order": "desc", "unmapped_type": "date"}}],
+            "_source": [
+                "agent.id", "agent.name", "host.os", "package.name", "package.version",
+                "package.architecture", "package.type", "package.description",
+                "vulnerability.id", "vulnerability.category", "vulnerability.classification",
+                "vulnerability.description", "vulnerability.detected_at", "vulnerability.published_at",
+                "vulnerability.enumeration", "vulnerability.score", "vulnerability.severity",
+                "vulnerability.scanner.vendor",
+            ],
+            "query": {"term": {"vulnerability.enumeration": "CVE"}},
+        }
+        try:
+            async with self._client() as client:
+                response = await client.post("/wazuh-states-vulnerabilities*/_search", json=query)
+                response.raise_for_status()
+                payload = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            raise WazuhAdapterError(
+                f"Wazuh vulnerability state query failed ({type(exc).__name__})"
+            ) from None
+        if not isinstance(payload, dict) or not isinstance(payload.get("hits"), dict):
+            raise WazuhAdapterError("Wazuh vulnerability index returned an unexpected response shape")
+        if payload.get("timed_out") is True:
+            raise WazuhAdapterError("Wazuh vulnerability index query timed out")
+        shards = payload.get("_shards")
+        if isinstance(shards, dict) and int(shards.get("failed") or 0) > 0:
+            raise WazuhAdapterError("Wazuh vulnerability index reported failed shards")
+        hits_obj = payload["hits"]
+        hits = hits_obj.get("hits")
+        total_obj = hits_obj.get("total", 0)
+        total = total_obj.get("value", 0) if isinstance(total_obj, dict) else total_obj
+        relation = total_obj.get("relation", "eq") if isinstance(total_obj, dict) else "eq"
+        if not isinstance(hits, list) or not isinstance(total, int) or total < 0:
+            raise WazuhAdapterError("Wazuh vulnerability index returned an invalid collection")
+        normalized = []
+        for hit in hits[:size]:
+            if isinstance(hit, dict):
+                item = self.normalize_vulnerability_hit(hit)
+                if item is not None:
+                    normalized.append(item)
+        return normalized, total, relation == "gte" or total > len(hits) or len(hits) >= size and total > size
+
+    @staticmethod
+    def normalize_vulnerability_hit(hit: dict[str, Any]) -> dict[str, Any] | None:
+        import hashlib
+        import re
+        source = hit.get("_source")
+        if not isinstance(source, dict):
+            return None
+        vulnerability = source.get("vulnerability") if isinstance(source.get("vulnerability"), dict) else {}
+        agent = source.get("agent") if isinstance(source.get("agent"), dict) else {}
+        package = source.get("package") if isinstance(source.get("package"), dict) else {}
+        host = source.get("host") if isinstance(source.get("host"), dict) else {}
+        host_os = host.get("os") if isinstance(host.get("os"), dict) else {}
+        cve = str(vulnerability.get("id") or "").upper()
+        if not re.fullmatch(r"CVE-[0-9]{4}-[0-9]{4,}", cve):
+            return None
+        agent_id = str(agent.get("id") or "").strip()
+        if not agent_id or agent_id == "000":
+            return None
+        package_name = str(package.get("name") or "").strip()
+        package_version = str(package.get("version") or "").strip()
+        if not package_name or not package_version:
+            return None
+        native = str(hit.get("_id") or "")
+        index = str(hit.get("_index") or "")
+        if not native:
+            return None
+        source_id = hashlib.sha256((index + ":" + native).encode()).hexdigest()
+        score = vulnerability.get("score") if isinstance(vulnerability.get("score"), dict) else {}
+        try:
+            cvss_score = float(score.get("base")) if score.get("base") is not None else None
+            if cvss_score is not None and not 0 <= cvss_score <= 10:
+                cvss_score = None
+        except (TypeError, ValueError):
+            cvss_score = None
+        try:
+            cvss_version = str(score.get("version"))[:8] if score.get("version") else None
+        except Exception:
+            cvss_version = None
+        severity = str(vulnerability.get("severity") or "").strip().lower()
+        if severity not in {"critical", "high", "medium", "low"}:
+            severity = "unknown"
+        detected = vulnerability.get("detected_at")
+        observed = None
+        if isinstance(detected, str):
+            try:
+                parsed = datetime.fromisoformat(detected.replace("Z", "+00:00"))
+                if parsed.tzinfo is not None:
+                    observed = parsed.astimezone(timezone.utc)
+            except ValueError:
+                pass
+        published = vulnerability.get("published_at")
+        published_at = None
+        if isinstance(published, str):
+            try:
+                parsed = datetime.fromisoformat(published.replace("Z", "+00:00"))
+                if parsed.tzinfo is not None:
+                    published_at = parsed.astimezone(timezone.utc)
+            except ValueError:
+                pass
+        references = str(vulnerability.get("reference") or "")[:2000]
+        return {
+            "source_native_id": source_id, "cve_id": cve, "agent_id": agent_id,
+            "agent_name": str(agent.get("name") or "")[:255] or None,
+            "package_name": package_name[:255], "package_version": package_version[:255],
+            "package_type": str(package.get("type") or "")[:80] or None,
+            "package_architecture": str(package.get("architecture") or "")[:80] or None,
+            "package_description": str(package.get("description") or "")[:1000] or None,
+            "os_name": str(host_os.get("full") or host_os.get("name") or "")[:255] or None,
+            "description": str(vulnerability.get("description") or "")[:4000] or None,
+            "severity": severity, "cvss_score": cvss_score, "cvss_version": cvss_version,
+            "observed_at": observed, "published_at": published_at, "references": references,
+            "category": str(vulnerability.get("category") or "")[:80] or None,
+            "scanner_vendor": str((vulnerability.get("scanner") or {}).get("vendor") or "Wazuh")[:80],
+        }
+
     @classmethod
     def _normalize_hit(cls, hit: dict[str, Any]) -> NormalizedFinding | None:
         source = hit.get("_source")
