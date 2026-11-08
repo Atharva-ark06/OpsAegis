@@ -35,7 +35,7 @@ async def test_healthcheck_uses_bounded_read_only_endpoint():
 
 @pytest.mark.asyncio
 async def test_null_decisions_are_empty():
-    def handler(request): return httpx.Response(200,json=None)
+    def handler(request): return httpx.Response(200,content=b"null",headers={"Content-Type":"application/json"})
     assert await CrowdSecLapiAdapter(config(),transport=httpx.MockTransport(handler)).collect_findings()==[]
 
 @pytest.mark.asyncio

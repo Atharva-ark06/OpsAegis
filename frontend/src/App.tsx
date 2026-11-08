@@ -105,12 +105,14 @@ function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [wazuh, setWazuh] = useState<WazuhHealth | null>(null);\n  const [crowdsec, setCrowdsec] = useState<CrowdSecHealth | null>(null);
+  const [wazuh, setWazuh] = useState<WazuhHealth | null>(null);
+  const [crowdsec, setCrowdsec] = useState<CrowdSecHealth | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [collecting, setCollecting] = useState(false);\n  const [collectingCrowdSec, setCollectingCrowdSec] = useState(false);
+  const [collecting, setCollecting] = useState(false);
+  const [collectingCrowdSec, setCollectingCrowdSec] = useState(false);
   const [collectionMessage, setCollectionMessage] = useState("");
   const [collectionError, setCollectionError] = useState("");
 
@@ -147,7 +149,8 @@ function App() {
     setLoadErrors([]);
     const requests: Promise<unknown>[] = [
       getAssets(), getFindings(), getIncidents(),
-      canOperate ? getWazuhHealth() : Promise.resolve(null),\n      canOperate ? getCrowdSecHealth() : Promise.resolve(null),
+      canOperate ? getWazuhHealth() : Promise.resolve(null),
+      canOperate ? getCrowdSecHealth() : Promise.resolve(null),
     ];
     Promise.allSettled(requests).then((results) => {
       if (!active) return;
