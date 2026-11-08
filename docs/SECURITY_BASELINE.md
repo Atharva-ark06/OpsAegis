@@ -36,3 +36,10 @@
 - Replace every `CHANGE_ME` placeholder. The application rejects these placeholder values at production startup.
 - The migration and detection-worker services do not need Wazuh, CrowdSec, VirusTotal, AbuseIPDB, NVD, Nuclei or Shannon credentials; Compose intentionally does not pass the full production environment file to those services.
 - Treat the environment template as a shape/example only. It contains placeholders and must not be used as a live deployment configuration.
+
+
+## API perimeter controls
+- API requests are restricted to the exact hostnames/IP addresses in `OPS_AEGIS_ALLOWED_HOSTS`; production rejects empty, wildcard, scheme-bearing and port-bearing entries.
+- API responses include restrictive browser security headers; authentication routes are marked `no-store`.
+- HSTS and public TLS remain configured at the external trusted TLS reverse proxy; the API does not trust arbitrary forwarded headers.
+- See `docs/API_PERIMETER_SECURITY.md` for deployment requirements.
