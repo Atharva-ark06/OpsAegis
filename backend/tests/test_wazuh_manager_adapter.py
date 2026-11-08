@@ -22,7 +22,7 @@ async def test_authenticates_then_reads_agents_with_bearer_and_pagination():
         return httpx.Response(200,json={"data":{"affected_items":[agent()],"total_affected_items":1}})
     results=await WazuhManagerAdapter(config(),transport=httpx.MockTransport(handler)).collect_agents()
     assert len(results)==1 and results[0]["id"]=="001" and requests[0].method=="POST" and requests[1].method=="GET"
-    assert "os.name" in requests[1].url.params.get_list("select")
+    assert "os.name" in requests[1].url.params["select"].split(",")
 
 @pytest.mark.asyncio
 async def test_healthcheck_authenticates_and_reads_manager_root():
