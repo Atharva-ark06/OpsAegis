@@ -100,3 +100,18 @@ def test_crowdsec_cidr_decision_matches_wazuh_agent_ip(client, db_session):
     assert response.status_code == 200
     assert response.json()["created"] == 1
     assert db_session.query(CorrelatedDetection).one().rule_key == "CROSS-ENGINE-001"
+
+
+def test_nuclei_and_proof_validated_shannon_correlate_by_https_origin(client, db_session):
+    headers = auth_headers(db_session)
+    add_finding(db_session, "nuclei", "n-1", "Exposed application endpoint",
+                {"matched_at": "https://staging.example.test/admin", "template_id": "exposed-panel"})
+    add_finding(db_session, "shannon", "s-1", "Confirmed authorization bypass",
+                {"affected_url": "https://staging.example.test/account", "validation_status": "exploited",
+                 "proof": "Verified unauthorized access response"})
+    response = client.post("/api/v1/detections/evaluate", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+    detection = db_session.query(CorrelatedDetection).one()
+    assert detection.rule_key == "APP-VULN-CORROBORATION-001"
+    assert set(detection.finding_ids) == {1, 2}

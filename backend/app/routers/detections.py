@@ -4,9 +4,11 @@ import hashlib
 import json
 import ipaddress
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -53,6 +55,19 @@ def _agent_identity(item: Finding) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip().lower()[:255]
     return None
+
+
+def _origin(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+            return None
+        port = parsed.port or 443
+        return f"{parsed.hostname.lower().rstrip('.')}:{port}"
+    except ValueError:
+        return None
 
 
 def _finding_out(item: CorrelatedDetection) -> dict:
@@ -158,6 +173,36 @@ def evaluate_detections(
             "CROSS-ENGINE-001", ip, "Cross-engine IP corroboration",
             f"Wazuh telemetry and an active CrowdSec decision both reference {ip}.",
             group, {"ip": ip, "sources": sorted({item.source_engine for item in group}),
+                    "finding_count": len(ids), "window_minutes": window_minutes},
+        ))
+
+    app_findings: dict[str, dict[str, list[Finding]]] = {}
+    for item in findings:
+        evidence = item.evidence if isinstance(item.evidence, dict) else {}
+        if item.source_engine == "nuclei":
+            origin = _origin(evidence.get("matched_at"))
+            if origin:
+                app_findings.setdefault(origin, {}).setdefault("nuclei", []).append(item)
+        elif item.source_engine == "shannon":
+            if evidence.get("validation_status") != "exploited":
+                continue
+            proof = evidence.get("proof")
+            origin = _origin(evidence.get("affected_url"))
+            if origin and isinstance(proof, str) and proof.strip():
+                app_findings.setdefault(origin, {}).setdefault("shannon", []).append(item)
+
+    for origin, source_groups in sorted(app_findings.items()):
+        nuclei_items = source_groups.get("nuclei", [])
+        shannon_items = source_groups.get("shannon", [])
+        if not nuclei_items or not shannon_items:
+            continue
+        group = nuclei_items + shannon_items
+        ids = sorted({item.id for item in group})
+        candidates.append((
+            "APP-VULN-CORROBORATION-001", origin,
+            "Independent application assessment corroboration",
+            f"Nuclei and proof-validated Shannon findings both reference HTTPS origin {origin}. This confirms target-level overlap, not an identical vulnerability.",
+            group, {"origin": origin, "sources": ["nuclei", "shannon"],
                     "finding_count": len(ids), "window_minutes": window_minutes},
         ))
 
