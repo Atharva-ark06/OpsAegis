@@ -156,3 +156,12 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 - Added restrictive API security response headers and no-store caching for authentication routes.
 - TLS termination and HSTS remain at the external trusted reverse proxy; forwarded headers are not trusted by this middleware.
 - Automated tests cover host allowlisting, response headers and production configuration. No live production deployment is claimed.
+
+
+## CI preflight guardrails (PR #29 — proposed)
+- Adds a required first CI job that verifies the shared settings instance can be imported and the FastAPI application starts at import time.
+- Applies the complete Alembic migration chain against a disposable SQLite database before downstream CI jobs begin.
+- Validates the production Compose file before backend/frontend/runner/container jobs are allowed to run.
+- Makes all existing CI jobs depend on preflight, so a configuration or deployment-manifest regression fails early with a focused job/step.
+- Adds regression tests for the application settings export and import contract.
+- This catches the classes of failures seen in PR #28 before later build/test jobs run; it cannot guarantee error-free changes or validate a live production deployment.
