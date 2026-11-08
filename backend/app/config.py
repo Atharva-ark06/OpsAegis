@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     environment: str = Field(default="development", validation_alias="OPS_AEGIS_ENV")
     secret_key: str = Field(default="development-only-change-this", validation_alias="OPS_AEGIS_SECRET_KEY")
     access_token_minutes: int = Field(default=15, validation_alias="OPS_AEGIS_ACCESS_TOKEN_MINUTES")
+    auth_login_ip_limit: int = Field(default=30, validation_alias="AUTH_LOGIN_IP_LIMIT")
+    auth_login_email_limit: int = Field(default=5, validation_alias="AUTH_LOGIN_EMAIL_LIMIT")
+    auth_login_ip_window_seconds: int = Field(default=60, validation_alias="AUTH_LOGIN_IP_WINDOW_SECONDS")
+    auth_login_email_window_seconds: int = Field(default=900, validation_alias="AUTH_LOGIN_EMAIL_WINDOW_SECONDS")
     database_url: str = Field(default="sqlite:///./opsaegis.db", validation_alias="DATABASE_URL")
     redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="REDIS_URL")
     cors_origins: str = Field(default="http://localhost:5173", validation_alias="CORS_ORIGINS")
@@ -56,6 +60,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     @model_validator(mode="after")
     def validate_security_settings(self):
+        if not 1 <= self.auth_login_ip_limit <= 1000:
+            raise ValueError("AUTH_LOGIN_IP_LIMIT must be between 1 and 1000")
+        if not 1 <= self.auth_login_email_limit <= 100:
+            raise ValueError("AUTH_LOGIN_EMAIL_LIMIT must be between 1 and 100")
+        if not 10 <= self.auth_login_ip_window_seconds <= 3600:
+            raise ValueError("AUTH_LOGIN_IP_WINDOW_SECONDS must be between 10 and 3600")
+        if not 60 <= self.auth_login_email_window_seconds <= 86400:
+            raise ValueError("AUTH_LOGIN_EMAIL_WINDOW_SECONDS must be between 60 and 86400")
         if not 5 <= self.access_token_minutes <= 60:
             raise ValueError("OPS_AEGIS_ACCESS_TOKEN_MINUTES must be between 5 and 60")
         if self.environment.lower() == "production":

@@ -65,3 +65,17 @@ def test_url_encoded_database_and_redis_passwords_are_validated_after_decoding()
         REDIS_URL="redis://:unique%2Dredis%2Dpassword%2D2026@redis:6379/0",
     )
     assert settings.environment == "production"
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"AUTH_LOGIN_IP_LIMIT": "0"}, "AUTH_LOGIN_IP_LIMIT"),
+        ({"AUTH_LOGIN_EMAIL_LIMIT": "101"}, "AUTH_LOGIN_EMAIL_LIMIT"),
+        ({"AUTH_LOGIN_IP_WINDOW_SECONDS": "5"}, "AUTH_LOGIN_IP_WINDOW_SECONDS"),
+        ({"AUTH_LOGIN_EMAIL_WINDOW_SECONDS": "86401"}, "AUTH_LOGIN_EMAIL_WINDOW_SECONDS"),
+    ],
+)
+def test_invalid_login_throttle_configuration_is_rejected(override, message):
+    with pytest.raises(ValidationError, match=message):
+        production_settings(**override)
