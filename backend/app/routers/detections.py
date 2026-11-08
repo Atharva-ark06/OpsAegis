@@ -65,6 +65,8 @@ def _origin(value: object) -> str | None:
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             return None
         port = parsed.port or 443
+        if port != 443:
+            return None
         return f"{parsed.hostname.lower().rstrip('.')}:{port}"
     except ValueError:
         return None
