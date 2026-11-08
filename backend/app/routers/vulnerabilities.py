@@ -96,4 +96,4 @@ def update_vulnerability(vulnerability_id: int, payload: VulnerabilityUpdate, db
     db.add(AuditLog(actor_user_id=actor.id, action="vulnerability.update", target=f"vulnerability:{item.id}",
         detail=json.dumps({k: (v.value if isinstance(v, VulnerabilityStatus) else v) for k,v in changes.items()})))
     db.commit(); db.refresh(item)
-    return serialize(item)
+    return serialize(item,db)
