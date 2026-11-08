@@ -23,3 +23,12 @@ class UserRead(BaseModel):
     is_active: bool
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class AuditRead(BaseModel):
+    id: int
+    actor_user_id: int | None
+    action: str
+    target: str
+    detail: str | None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
