@@ -12,7 +12,6 @@ def config(**overrides):
         "wazuh_indexer_url": "https://wazuh-indexer.example:9200",
         "wazuh_indexer_username": "reader",
         "wazuh_indexer_password": "test-password",
-        "wazuh_indexer_verify_tls": True,
         "wazuh_indexer_ca_cert": None,
         "wazuh_indexer_timeout_seconds": 5,
         "wazuh_indexer_index_pattern": "wazuh-alerts-*",
