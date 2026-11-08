@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     crowdsec_ca_cert: str | None = Field(default=None, validation_alias="CROWDSEC_CA_CERT")
     crowdsec_timeout_seconds: int = Field(default=10, validation_alias="CROWDSEC_TIMEOUT_SECONDS")
     crowdsec_max_results: int = Field(default=500, validation_alias="CROWDSEC_MAX_RESULTS")
+    nuclei_enabled: bool = Field(default=False, validation_alias="NUCLEI_ENABLED")
+    nuclei_binary: str = Field(default="nuclei", validation_alias="NUCLEI_BINARY")
+    nuclei_timeout_seconds: int = Field(default=600, validation_alias="NUCLEI_TIMEOUT_SECONDS")
+    nuclei_max_output_bytes: int = Field(default=10485760, validation_alias="NUCLEI_MAX_OUTPUT_BYTES")
+    nuclei_rate_limit: int = Field(default=5, validation_alias="NUCLEI_RATE_LIMIT")
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     @model_validator(mode="after")
     def validate_security_settings(self):
@@ -34,6 +39,9 @@ class Settings(BaseSettings):
         for name, value in (("WAZUH_INDEXER_MAX_RESULTS", self.wazuh_indexer_max_results),
                             ("CROWDSEC_MAX_RESULTS", self.crowdsec_max_results)):
             if not 1 <= value <= 1000: raise ValueError(f"{name} must be between 1 and 1000")
+        if not 30 <= self.nuclei_timeout_seconds <= 1800: raise ValueError("NUCLEI_TIMEOUT_SECONDS must be between 30 and 1800")
+        if not 1048576 <= self.nuclei_max_output_bytes <= 52428800: raise ValueError("NUCLEI_MAX_OUTPUT_BYTES must be between 1 MiB and 50 MiB")
+        if not 1 <= self.nuclei_rate_limit <= 20: raise ValueError("NUCLEI_RATE_LIMIT must be between 1 and 20")
         return self
     @property
     def allowed_origins(self) -> list[str]:
