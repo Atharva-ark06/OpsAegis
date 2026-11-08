@@ -83,8 +83,6 @@ def _finding_out(item: CorrelatedDetection) -> dict:
         "incident_id": item.incident_id, "created_at": item.created_at.isoformat(),
         "last_seen_at": item.last_seen_at.isoformat(), "status": item.status,
         "acknowledged_at": item.acknowledged_at.isoformat() if item.acknowledged_at else None,
-        "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None, "status": item.status,
-        "acknowledged_at": item.acknowledged_at.isoformat() if item.acknowledged_at else None,
         "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None,
     }
 

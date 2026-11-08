@@ -35,6 +35,7 @@ return 0
 """
 RELEASE_LOCK = """
 if redis.call('get', KEYS[1]) == ARGV[1] then
+  redis.call('del', KEYS[2])
   return redis.call('del', KEYS[1])
 end
 return 0
@@ -138,10 +139,16 @@ def recover_interrupted_runs(db) -> int:
     interrupted = db.scalars(select(ScheduledDetectionRun).where(
         ScheduledDetectionRun.status == "running"
     )).all()
+    now = utc_now()
     for run in interrupted:
-        run.status = "queued"
-        run.next_attempt_at = utc_now()
-        run.error_code = "WorkerRestartRecovery"
+        if run.attempts >= MAX_ATTEMPTS:
+            run.status = "failed"
+            run.finished_at = now
+            run.error_code = "WorkerRestartMaxAttempts"
+        else:
+            run.status = "queued"
+            run.next_attempt_at = now
+            run.error_code = "WorkerRestartRecovery"
     db.commit()
     return len(interrupted)
 
@@ -164,17 +171,21 @@ def run_worker() -> None:
     token = secrets.token_urlsafe(32)
     if not client.set(LOCK_KEY, token, nx=True, ex=30):
         logger.error("Another detection worker owns the Redis lease; exiting")
+        client.close()
         return
+
     stop_heartbeat = threading.Event()
     lease_lost = threading.Event()
-    heartbeat = threading.Thread(target=heartbeat_loop, args=(client, token, stop_heartbeat, lease_lost), daemon=True)
+    heartbeat = threading.Thread(
+        target=heartbeat_loop, args=(client, token, stop_heartbeat, lease_lost), daemon=True
+    )
     heartbeat.start()
-    with SessionLocal() as db:
-        recovered = recover_interrupted_runs(db)
-    if recovered:
-        logger.warning("Recovered %s interrupted detection run(s)", recovered)
-    logger.info("Detection worker started")
     try:
+        with SessionLocal() as db:
+            recovered = recover_interrupted_runs(db)
+        if recovered:
+            logger.warning("Recovered %s interrupted detection run(s)", recovered)
+        logger.info("Detection worker started")
         while RUNNING and not lease_lost.is_set():
             renewed = client.eval(RENEW_LOCK, 2, LOCK_KEY, HEARTBEAT_KEY, token, 30, utc_now().isoformat())
             if not renewed:
@@ -191,9 +202,10 @@ def run_worker() -> None:
     finally:
         stop_heartbeat.set()
         heartbeat.join(timeout=2)
-        client.eval(RELEASE_LOCK, 1, LOCK_KEY, token)
-        client.delete(HEARTBEAT_KEY)
-        client.close()
+        try:
+            client.eval(RELEASE_LOCK, 2, LOCK_KEY, HEARTBEAT_KEY, token)
+        finally:
+            client.close()
         logger.info("Detection worker stopped")
 
 
