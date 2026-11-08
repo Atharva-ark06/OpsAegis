@@ -57,3 +57,11 @@ def test_development_keeps_local_sqlite_and_loopback_defaults():
     assert settings.environment == "development"
     assert settings.database_url.startswith("sqlite:")
     assert settings.allowed_origins == ["http://localhost:5173"]
+
+
+def test_url_encoded_database_and_redis_passwords_are_validated_after_decoding():
+    settings = production_settings(
+        DATABASE_URL="postgresql+psycopg://opsaegis:strong%2Dpassword%2D123@postgres:5432/opsaegis",
+        REDIS_URL="redis://:unique%2Dredis%2Dpassword%2D2026@redis:6379/0",
+    )
+    assert settings.environment == "production"
