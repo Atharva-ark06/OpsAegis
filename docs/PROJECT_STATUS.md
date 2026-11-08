@@ -194,3 +194,10 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Documents secret rotation, false-positive handling and scan limitations.
 - The repository currently has no committed frontend npm lockfile, so the workflow deliberately does not claim to audit a locked frontend dependency graph.
 - A passing scan does not prove prior credential rotation, deployed-host security or absence of unknown vulnerabilities.
+
+
+### Secret scan finding — remediation required
+- Initial full-history Gitleaks scan identified two high-entropy values in an older `.env.example` commit under the VirusTotal and AbuseIPDB API-key variables.
+- The current `.env.example` entries are blank, but history retains the prior values. Treat both provider keys as potentially compromised and rotate/revoke them before considering a narrow scan exception or history rewrite.
+- The full-history secret scan is intentionally failing until this exposure is remediated; do not suppress it to obtain a green badge.
+- Initial Python dependency audit identified the pinned/resolved pytest 8.4.2 range as affected by PYSEC-2026-1845. The requirements range is being raised to the reported fixed pytest release and compatible pytest-asyncio major.

@@ -34,3 +34,10 @@ A green security workflow means these automated checks did not identify a blocki
 - the application has passed penetration testing or a full security review.
 
 Review findings promptly and record remediation. Never paste raw secret values into CI logs, issues, pull requests or diagnostic reports.
+
+
+## Findings from the initial full-history scan
+
+The first full-history scan found two high-entropy values in the historical `.env.example` at the VirusTotal and AbuseIPDB API-key entries (historical lines 26–27). The current tracked `.env.example` has blank values, but the older commit remains in Git history.
+
+Treat those provider credentials as exposed unless the owner verifies they were inert examples. Revoke and regenerate both keys at their providers, review provider usage logs, and only then plan a coordinated history cleanup. Do not add a Gitleaks allowlist entry before rotation. The CI check is intentionally expected to remain failing while those historical values remain unremediated.
