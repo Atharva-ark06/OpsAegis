@@ -164,6 +164,9 @@ def evaluate_detections(
             ))
             if record is not None:
                 record.last_seen_at = now
+                record.finding_ids = sorted(set(record.finding_ids).union(ids))
+                record.evidence = evidence
+                record.description = description
                 detection_ids.append(record.id)
                 refreshed += 1
                 continue
