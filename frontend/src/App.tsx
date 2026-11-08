@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth,
+  ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth,
   clearAccessToken, collectWazuh, getAccessToken, getAssets, getCurrentUser,
   getFindings, getIncidents, getWazuhHealth, login as loginRequest, saveAccessToken,
 } from "./api";
@@ -106,11 +106,13 @@ function App() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [wazuh, setWazuh] = useState<WazuhHealth | null>(null);
+  const [crowdsec, setCrowdsec] = useState<CrowdSecHealth | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [collecting, setCollecting] = useState(false);
+  const [collectingCrowdSec, setCollectingCrowdSec] = useState(false);
   const [collectionMessage, setCollectionMessage] = useState("");
   const [collectionError, setCollectionError] = useState("");
 
@@ -148,11 +150,12 @@ function App() {
     const requests: Promise<unknown>[] = [
       getAssets(), getFindings(), getIncidents(),
       canOperate ? getWazuhHealth() : Promise.resolve(null),
+      canOperate ? getCrowdSecHealth() : Promise.resolve(null),
     ];
     Promise.allSettled(requests).then((results) => {
       if (!active) return;
       const errors: string[] = [];
-      const [assetResult, findingResult, incidentResult, wazuhResult] = results;
+      const [assetResult, findingResult, incidentResult, wazuhResult, crowdsecResult] = results;
       if (assetResult.status === "fulfilled") setAssets(assetResult.value as Asset[]);
       else errors.push("Assets: " + (assetResult.reason instanceof Error ? assetResult.reason.message : "Unable to load assets."));
       if (findingResult.status === "fulfilled") setFindings(findingResult.value as Finding[]);
@@ -205,6 +208,21 @@ function App() {
     }
   }
 
+  async function handleCollectCrowdSec() {
+    setCollectingCrowdSec(true);
+    setCollectionError("");
+    setCollectionMessage("");
+    try {
+      const result: CrowdSecCollection = await collectCrowdSec();
+      setCollectionMessage("CrowdSec active-decision sync completed: " + result.received + " received, " + result.inserted + " inserted, " + result.updated + " updated.");
+      setRefreshKey((value) => value + 1);
+    } catch (reason) {
+      setCollectionError(reason instanceof Error ? reason.message : "CrowdSec collection failed.");
+    } finally {
+      setCollectingCrowdSec(false);
+    }
+  }
+
   const pageTitle = navigation.find((item) => item.id === view)?.label || "Overview";
   const filteredFindingCount = useMemo(() => findings.filter((item) => item.status === "new").length, [findings]);
 
@@ -253,12 +271,12 @@ function App() {
             {incidents.length ? <div className="activity-list">{incidents.slice(0, 5).map((item) => <div className="activity-row" key={item.id}><span className="incident-icon">↗</span><div className="activity-copy"><strong>{item.title}</strong><small>{titleCase(item.status)} · {formatDate(item.created_at)}</small></div><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></div>)}</div> : <EmptyState title="No incidents yet" detail="Incidents recorded by your team will appear here." />}
           </article>
         </section>
-        <section className="panel engine-panel"><div className="panel-heading"><div><p className="eyebrow">INTEGRATION LAYER</p><h3>Security engines</h3></div><button className="text-button" onClick={() => setView("integrations")}>Integration details <span>→</span></button></div><EngineCards wazuh={wazuh} /></section>
+        <section className="panel engine-panel"><div className="panel-heading"><div><p className="eyebrow">INTEGRATION LAYER</p><h3>Security engines</h3></div><button className="text-button" onClick={() => setView("integrations")}>Integration details <span>→</span></button></div><EngineCards wazuh={wazuh} crowdsec={crowdsec} /></section>
       </div>}
 
       {view !== "overview" && <div className="page-content">
         <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>
-        {view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting…" : "Collect Wazuh alerts"}</button>}</div><EngineCards wazuh={wazuh} /><p className="integration-note">Wazuh collection is read-only. Collection is enabled only when the backend reports a configured Indexer connection. CrowdSec, Nuclei and Shannon are not represented as connected.</p></section> :
+        {view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button></div>}</div><EngineCards wazuh={wazuh} crowdsec={crowdsec} /><p className="integration-note">Wazuh collection is read-only. Collection is enabled only when the backend reports a configured Indexer connection. CrowdSec collection imports active decisions only; it does not ingest historical alerts or enforce blocks. Nuclei and Shannon remain planned.</p></section> :
           <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label={"Search " + view} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={"Search " + view + "…"} /></label></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
@@ -266,10 +284,10 @@ function App() {
   </div>;
 }
 
-function EngineCards({ wazuh }: { wazuh: WazuhHealth | null }) {
+function EngineCards({ wazuh, crowdsec }: { wazuh: WazuhHealth | null; crowdsec: CrowdSecHealth | null }) {
   const engines = [
     { name: "Wazuh Indexer", role: "Read-only SIEM alert ingestion", status: wazuh?.status || "unknown", detail: wazuh?.status === "healthy" ? "Backend health check succeeded" : wazuh?.status === "unhealthy" ? "Backend could not reach the Indexer" : wazuh?.status === "not_configured" ? "Backend credentials or URL not configured" : "Status unavailable" },
-    { name: "CrowdSec", role: "Threat intelligence and decisions", status: "planned", detail: "Adapter not implemented" },
+    { name: "CrowdSec LAPI", role: "Active threat decisions (read-only)", status: crowdsec?.status || "unknown", detail: crowdsec?.status === "healthy" ? "Authenticated Local API health check succeeded" : crowdsec?.status === "unhealthy" ? "Backend could not authenticate or reach Local API" : crowdsec?.status === "not_configured" ? "Backend URL or bouncer key not configured" : "Status unavailable" },
     { name: "Nuclei", role: "Authorized vulnerability scanning", status: "planned", detail: "Adapter not implemented" },
     { name: "Shannon", role: "Authorized application security testing", status: "planned", detail: "Adapter not implemented" },
   ];
