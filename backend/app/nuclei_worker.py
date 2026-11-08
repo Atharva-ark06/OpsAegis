@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio, logging, os, secrets, signal, time, json
+import asyncio, logging, os, secrets, signal, time, json, threading
 from datetime import datetime, timedelta, timezone
 import redis
 from sqlalchemy import select
@@ -57,21 +57,31 @@ def process(scan_id):
    db.add(AuditLog(actor_user_id=actor_id,action="integration.nuclei.scan.retry" if run.status=="queued" else "integration.nuclei.scan.failed",target=str(scan_id),detail=json.dumps({"attempts":run.attempts,"error_code":run.error_code})))
    db.commit()
   log.exception("Scan %s failed",scan_id)
+def heartbeat_loop(client,token,stop,lease_lost):
+ while not stop.wait(10):
+  try:
+   if not client.eval(RENEW,2,LOCK,HEARTBEAT,token,utcnow().isoformat()):
+    lease_lost.set(); return
+  except Exception:
+   lease_lost.set(); return
+
 def run():
  if not settings.nuclei_enabled or not settings.nuclei_worker_enabled: log.error("Nuclei worker disabled"); return
  client=redis.Redis.from_url(settings.redis_url,decode_responses=True,socket_connect_timeout=3,socket_timeout=5)
  token=secrets.token_urlsafe(32)
  if not client.set(LOCK,token,nx=True,ex=30): log.error("Another worker owns the lease"); client.close(); return
+ stop_heartbeat=threading.Event(); lease_lost=threading.Event()
+ heartbeat=threading.Thread(target=heartbeat_loop,args=(client,token,stop_heartbeat,lease_lost),daemon=True)
+ heartbeat.start()
  try:
   with SessionLocal() as db: log.warning("Recovered %s interrupted scan(s)",recover(db))
-  client.set(HEARTBEAT,utcnow().isoformat(),ex=20)
-  while RUNNING:
-   if not client.eval(RENEW,2,LOCK,HEARTBEAT,token,utcnow().isoformat()): log.error("Worker lease lost"); break
+  while RUNNING and not lease_lost.is_set():
    with SessionLocal() as db: enqueue_due(db,client)
    item=client.brpop(QUEUE,timeout=2)
    if item:
     scan_id=int(item[1]); client.delete(f"opsaegis:nuclei:enqueue:{scan_id}"); process(scan_id)
  finally:
+  stop_heartbeat.set(); heartbeat.join(timeout=2)
   client.eval(RELEASE,2,LOCK,HEARTBEAT,token); client.close()
 def stop(_sig,_frame):
  global RUNNING
