@@ -42,7 +42,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-    response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+    if request.url.path not in {"/docs", "/openapi.json"}:
+        response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
     if request.url.path.startswith("/api/v1/auth/"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
