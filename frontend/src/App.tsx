@@ -120,6 +120,36 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
   return <div className="table-wrap"><table><thead><tr><th>Incident</th><th>Severity</th><th>Status</th><th>Created</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.title}</strong><small>INCIDENT-{item.id}</small></td><td><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></td><td>{canOperate ? <div className="incident-actions"><select aria-label={"Update incident " + item.id + " status"} value={incidentStatuses[item.id] ?? item.status} onChange={(event) => setIncidentStatuses((current) => ({...current,[item.id]:event.target.value as Incident["status"]}))}>{["open","investigating","contained","resolved","closed"].map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select><input aria-label={"Resolution note for incident " + item.id} value={resolutionNotes[item.id] ?? item.resolution ?? ""} onChange={(event) => setResolutionNotes((current) => ({...current,[item.id]:event.target.value}))} placeholder="Resolution note required to resolve/close" maxLength={10000}/><button className="secondary-button" onClick={() => onIncidentUpdate(item.id, incidentStatuses[item.id] ?? item.status, resolutionNotes[item.id] ?? item.resolution ?? "")}>Save response</button><button className="text-button" title={"Assign incident to " + user.email} onClick={() => onIncidentUpdate(item.id, incidentStatuses[item.id] ?? item.status, resolutionNotes[item.id] ?? item.resolution ?? "", true)}>Assign to me</button></div> : <span className="tag">{titleCase(item.status)}</span>}</td><td>{formatDate(item.created_at)}</td></tr>)}</tbody></table></div>;
 }
 
+function SeverityBreakdown({ findings }: { findings: Finding[] }) {
+  const levels = [
+    { key: "critical", label: "Critical" },
+    { key: "high", label: "High" },
+    { key: "medium", label: "Medium" },
+    { key: "low", label: "Low" },
+    { key: "informational", label: "Informational" },
+  ] as const;
+  const counts = levels.map((level) => ({
+    ...level,
+    count: findings.filter((finding) => finding.severity.toLowerCase() === level.key).length,
+  }));
+  const total = counts.reduce((sum, level) => sum + level.count, 0);
+  return <section className="panel severity-panel" aria-label="Finding severity distribution">
+    <div className="panel-heading">
+      <div><p className="eyebrow">FINDING TRIAGE</p><h3>Severity distribution</h3></div>
+      <span className="distribution-total">{total.toLocaleString()} returned findings</span>
+    </div>
+    {total ? <div className="severity-breakdown">
+      {counts.map((level) => <div className="severity-line" key={level.key}>
+        <div className="severity-line-label"><span className={"severity-dot " + level.key} /><span>{level.label}</span><strong>{level.count.toLocaleString()}</strong></div>
+        <div className="severity-track" role="progressbar" aria-label={level.label + " findings"} aria-valuemin={0} aria-valuemax={total} aria-valuenow={level.count}>
+          <span className={"severity-fill " + level.key} style={{ width: ((level.count / total) * 100).toFixed(2) + "%" }} />
+        </div>
+      </div>)}
+    </div> : <EmptyState title="No severity data yet" detail="Verified findings will populate this distribution after ingestion." />}
+    <p className="distribution-footnote">Distribution is calculated from the findings currently returned by the API (maximum 200 records), not an unbounded database total.</p>
+  </section>;
+}
+
 function App() {
   const [theme, setTheme] = useState<ThemePreference>(() => {
     try {
@@ -320,6 +350,7 @@ function App() {
           <StatCard label="NEW FINDINGS" value={filteredFindingCount} detail="Awaiting analyst triage" accent="red" />
           <StatCard label="OPEN INCIDENTS" value={incidents.filter((item) => item.status.toLowerCase() === "open").length} detail="Current open status" accent="violet" />
         </section>
+        <SeverityBreakdown findings={findings} />
         <section className="overview-grid">
           <article className="panel"><div className="panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h3>Recent findings</h3></div><button className="text-button" onClick={() => setView("findings")}>View all <span>→</span></button></div>
             {findings.length ? <div className="activity-list">{findings.slice(0, 5).map((item) => <div className="activity-row" key={item.id}><span className={"activity-icon " + item.severity}>{item.severity === "critical" || item.severity === "high" ? "!" : "•"}</span><div className="activity-copy"><strong>{item.title}</strong><small>{titleCase(item.source_engine)} · {formatDate(item.last_seen_at)}</small></div><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></div>)}</div> : <EmptyState title="No findings yet" detail="Verified findings will be listed here." />}
