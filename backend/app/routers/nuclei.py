@@ -54,7 +54,7 @@ def list_targets(db:Session=Depends(get_db),actor:User=Depends(require_roles(*OP
 def list_scans(skip:int=0,limit:int=50,db:Session=Depends(get_db),actor:User=Depends(require_roles(*OPS))):
     if skip<0 or not 1<=limit<=100: raise HTTPException(422,"skip must be >= 0 and limit 1..100")
     return [scan_out(r) for r in db.scalars(select(NucleiScanRun).order_by(NucleiScanRun.id.desc()).offset(skip).limit(limit)).all()]
-@router.post("/targets/{target_id}/scans",status_code=202)
+@router.post("/targets/{target_id}/scans",status_code=200)
 async def start_scan(target_id:int,data:ScanRequest,db:Session=Depends(get_db),actor:User=Depends(require_roles(*OPS))):
     t=db.get(NucleiTarget,target_id)
     if t is None or not t.enabled: raise HTTPException(404,"Enabled authorized target not found")
@@ -76,7 +76,7 @@ async def start_scan(target_id:int,data:ScanRequest,db:Session=Depends(get_db),a
         raise HTTPException(502,"Nuclei scan failed; inspect backend scanner logs") from None
     return {"scan":scan_out(run),"received":len(records),"inserted":inserted,"updated":updated}
 async def execute(url:str)->list[dict]:
-    args=[settings.nuclei_binary,"-u",url,"-jsonl","-silent","-no-color","-disable-update-check","-no-interactsh","-rl",str(settings.nuclei_rate_limit),"-c","2","-timeout","5","-retries","0","-severity","info,low,medium,high,critical","-exclude-tags","dos,fuzz,intrusive,headless"]
+    args=[settings.nuclei_binary,"-u",url,"-jsonl","-silent","-no-color","-disable-update-check","-no-interactsh","-rl",str(settings.nuclei_rate_limit),"-c","2","-timeout","5","-retries","0","-severity","info,low,medium,high,critical","-pt","http","-exclude-tags","dos,fuzz,intrusive,headless"]
     try: proc=await asyncio.create_subprocess_exec(*args,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
     except OSError as exc: raise RuntimeError(type(exc).__name__) from None
     async def read_bounded():
