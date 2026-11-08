@@ -37,7 +37,7 @@ class ScanRequest(BaseModel):
 def target_out(t):
     return {"id":t.id,"name":t.name,"url":t.url,"authorization_reference":t.authorization_reference,"asset_id":t.asset_id,"enabled":t.enabled,"created_at":t.created_at.isoformat()}
 def scan_out(r):
-    return {"id":r.id,"target_id":r.target_id,"status":r.status,"profile":r.profile,"started_at":r.started_at.isoformat() if r.started_at else None,"finished_at":r.finished_at.isoformat() if r.finished_at else None,"findings_count":r.findings_count,"error_code":r.error_code,"created_at":r.created_at.isoformat()}
+    return {"id":r.id,"target_id":r.target_id,"status":r.status,"profile":r.profile,"started_at":r.started_at.isoformat() if r.started_at else None,"finished_at":r.finished_at.isoformat() if r.finished_at else None,"findings_count":r.findings_count,"error_code":r.error_code,"attempts":r.attempts,"next_attempt_at":r.next_attempt_at.isoformat() if r.next_attempt_at else None,"created_at":r.created_at.isoformat()}
 @router.get("/health")
 def health(actor:User=Depends(require_roles(*OPS))):
     if not settings.nuclei_enabled:
