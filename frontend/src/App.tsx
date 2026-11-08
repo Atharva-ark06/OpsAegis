@@ -238,7 +238,7 @@ function App() {
       {collectionError && <div className="error-banner" role="alert">{collectionError}</div>}
 
       {view === "overview" && <div className="page-content">
-        <section className="welcome-row"><div><p className="eyebrow">OPERATIONAL SNAPSHOT</p><h2>Security posture at a glance.</h2><p>Live records retrieved from your OpsAegis database. No demo metrics or synthetic telemetry are included.</p></div><div className="snapshot-stamp"><span className="live-dot" /> DATABASE CONNECTED <small>{loadState === "ready" ? "LATEST API READ COMPLETE" : "WAITING FOR API"}</small></div></section>
+        <section className="welcome-row"><div><p className="eyebrow">OPERATIONAL SNAPSHOT</p><h2>Security posture at a glance.</h2><p>Live records retrieved from your OpsAegis database. No demo metrics or synthetic telemetry are included.</p></div><div className="snapshot-stamp"><span className="live-dot" /> API DATA SESSION <small>{loadState === "ready" ? "LATEST API READ COMPLETE" : loadState === "error" ? "API READ DEGRADED" : "SYNCING API DATA"}</small></div></section>
         <section className="stats-grid">
           <StatCard label="REGISTERED ASSETS" value={assets.length} detail="Records returned · max 200" accent="blue" />
           <StatCard label="TOTAL FINDINGS" value={findings.length} detail="Records returned · max 200" accent="amber" />
