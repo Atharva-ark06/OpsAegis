@@ -128,8 +128,13 @@ def test_worker_scheduler_due_slot_and_retry_queue_helpers(test_session_factory)
         assert enqueue_pending(db, client, now) == 0
         assert client.items == [("opsaegis:detection:queue", str(run.id))]
         run.status = "running"
+        run.attempts = 1
+        exhausted = ScheduledDetectionRun(schedule_slot="exhausted-slot", status="running", attempts=3,
+                                          window_minutes=15, auth_threshold=3, next_attempt_at=now,
+                                          created_at=now)
+        db.add(exhausted)
         db.commit()
-        assert recover_interrupted_runs(db) == 1
-        db.refresh(run)
-        assert run.status == "queued"
-        assert run.error_code == "WorkerRestartRecovery"
+        assert recover_interrupted_runs(db) == 2
+        db.refresh(run); db.refresh(exhausted)
+        assert run.status == "queued" and run.error_code == "WorkerRestartRecovery"
+        assert exhausted.status == "failed" and exhausted.error_code == "WorkerRestartMaxAttempts"
