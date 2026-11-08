@@ -10,6 +10,7 @@ from app.routers.integrations import router as integrations_router
 from app.routers.nuclei import router as nuclei_router
 from app.routers.shannon import router as shannon_router
 from app.routers.detections import router as detections_router
+from app.routers.threat_intel import router as threat_intel_router
 
 app = FastAPI(title="OpsAegis API", version="0.6.0",
     description="Integration and incident-management API for OpsAegis.",
@@ -18,7 +19,7 @@ app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins,
     allow_credentials=True, allow_methods=["GET","POST","PUT","PATCH","DELETE"],
     allow_headers=["Authorization","Content-Type"])
 for router in (health_router, auth_router, assets_router, findings_router, incidents_router,
-               integrations_router, nuclei_router, shannon_router, detections_router):
+               integrations_router, nuclei_router, shannon_router, detections_router, threat_intel_router):
     app.include_router(router, prefix="/api/v1")
 
 @app.get("/", tags=["root"])
