@@ -142,3 +142,29 @@ export const registerNucleiTarget = (payload: {name:string;url:string;authorizat
   request("/integrations/nuclei/targets",{method:"POST",body:JSON.stringify(payload)});
 export const startNucleiScan = (id:number): Promise<{scan:NucleiScan;received:number;inserted:number;updated:number}> =>
   request("/integrations/nuclei/targets/"+id+"/scans",{method:"POST",body:JSON.stringify({profile:"safe"})});
+
+export interface ShannonHealth {
+  integration: string; configured: boolean;
+  status: "not_configured" | "healthy" | "unhealthy";
+  execution_enabled: boolean; mode: "external_isolated_runner";
+}
+export interface ShannonTarget {
+  id: number; name: string; target_url: string; source_repository: string;
+  authorization_reference: string; enabled: boolean; created_at: string;
+}
+export interface ShannonScan {
+  id: number; target_id: number; runner_job_id: string | null; status: string;
+  findings_count: number; started_at: string | null; finished_at: string | null;
+  error_code: string | null; created_at: string;
+}
+export interface ShannonSync { scan: ShannonScan; received: number; inserted: number; updated: number; }
+export const getShannonHealth = (): Promise<ShannonHealth> => request("/integrations/shannon/health");
+export const getShannonTargets = (): Promise<ShannonTarget[]> => request("/integrations/shannon/targets");
+export const getShannonScans = (): Promise<ShannonScan[]> => request("/integrations/shannon/scans");
+export const registerShannonTarget = (payload: {
+  name: string; target_url: string; source_repository: string; authorization_reference: string;
+}): Promise<ShannonTarget> => request("/integrations/shannon/targets", { method: "POST", body: JSON.stringify(payload) });
+export const startShannonScan = (id: number): Promise<{ scan: ShannonScan }> =>
+  request("/integrations/shannon/targets/" + id + "/scans", { method: "POST" });
+export const syncShannonScan = (id: number): Promise<ShannonSync> =>
+  request("/integrations/shannon/scans/" + id + "/sync", { method: "POST" });

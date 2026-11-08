@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     wazuh_indexer_ca_cert: str | None = Field(default=None, validation_alias="WAZUH_INDEXER_CA_CERT")
     wazuh_indexer_timeout_seconds: int = Field(default=10, validation_alias="WAZUH_INDEXER_TIMEOUT_SECONDS")
     wazuh_indexer_max_results: int = Field(default=500, validation_alias="WAZUH_INDEXER_MAX_RESULTS")
-    # CrowdSec bouncer API keys grant read-only access to decisions.
     crowdsec_lapi_url: str | None = Field(default=None, validation_alias="CROWDSEC_LAPI_URL")
     crowdsec_api_key: str | None = Field(default=None, validation_alias="CROWDSEC_API_KEY")
     crowdsec_ca_cert: str | None = Field(default=None, validation_alias="CROWDSEC_CA_CERT")
@@ -26,6 +25,12 @@ class Settings(BaseSettings):
     nuclei_timeout_seconds: int = Field(default=600, validation_alias="NUCLEI_TIMEOUT_SECONDS")
     nuclei_max_output_bytes: int = Field(default=10485760, validation_alias="NUCLEI_MAX_OUTPUT_BYTES")
     nuclei_rate_limit: int = Field(default=5, validation_alias="NUCLEI_RATE_LIMIT")
+    shannon_enabled: bool = Field(default=False, validation_alias="SHANNON_ENABLED")
+    shannon_runner_url: str | None = Field(default=None, validation_alias="SHANNON_RUNNER_URL")
+    shannon_runner_token: str | None = Field(default=None, validation_alias="SHANNON_RUNNER_TOKEN")
+    shannon_timeout_seconds: int = Field(default=15, validation_alias="SHANNON_TIMEOUT_SECONDS")
+    shannon_max_response_bytes: int = Field(default=5242880, validation_alias="SHANNON_MAX_RESPONSE_BYTES")
+    shannon_max_findings: int = Field(default=200, validation_alias="SHANNON_MAX_FINDINGS")
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     @model_validator(mode="after")
     def validate_security_settings(self):
@@ -42,6 +47,13 @@ class Settings(BaseSettings):
         if not 30 <= self.nuclei_timeout_seconds <= 1800: raise ValueError("NUCLEI_TIMEOUT_SECONDS must be between 30 and 1800")
         if not 1048576 <= self.nuclei_max_output_bytes <= 52428800: raise ValueError("NUCLEI_MAX_OUTPUT_BYTES must be between 1 MiB and 50 MiB")
         if not 1 <= self.nuclei_rate_limit <= 20: raise ValueError("NUCLEI_RATE_LIMIT must be between 1 and 20")
+        if not 5 <= self.shannon_timeout_seconds <= 60: raise ValueError("SHANNON_TIMEOUT_SECONDS must be between 5 and 60")
+        if not 1048576 <= self.shannon_max_response_bytes <= 5242880: raise ValueError("SHANNON_MAX_RESPONSE_BYTES must be between 1 MiB and 5 MiB")
+        if not 1 <= self.shannon_max_findings <= 500: raise ValueError("SHANNON_MAX_FINDINGS must be between 1 and 500")
+        if self.shannon_enabled and (not self.shannon_runner_url or not self.shannon_runner_token):
+            raise ValueError("SHANNON_ENABLED requires SHANNON_RUNNER_URL and SHANNON_RUNNER_TOKEN")
+        if self.shannon_runner_url and not self.shannon_runner_url.startswith("https://"):
+            raise ValueError("SHANNON_RUNNER_URL must use HTTPS")
         return self
     @property
     def allowed_origins(self) -> list[str]:

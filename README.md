@@ -21,7 +21,7 @@ A built adapter is not proof of a live connection. Configure and verify each aut
 | Wazuh | Endpoint telemetry and SIEM alerts | Indexer read-only adapter |
 | CrowdSec | Behavioural threat decisions | LAPI active-decision adapter |
 | Nuclei | Authorized vulnerability scanning | Authorized target registry and safe-profile scans |
-| Shannon | Authorized AI-assisted application testing | Planned |
+| Shannon | Authorized AI-assisted application testing | External isolated-runner control-plane adapter (runner deployment required) |
 
 ## CrowdSec Local API integration
 
@@ -79,3 +79,16 @@ Nuclei is disabled by default. Install the Nuclei binary in the backend runtime 
 The API accepts no arbitrary CLI flags, template paths or free-form scan URLs. The fixed profile disables Interactsh and update checks, bounds rate/concurrency/runtime/output and excludes DoS, fuzzing, intrusive and headless template tags. Findings are deduplicated; analyst triage state is preserved. Only scan systems for which you have written authorization.
 
 Deployment limitation: Nuclei currently runs as a subprocess inside the backend runtime, not a hardened isolated worker. Keep it disabled until deployed in a dedicated unprivileged container with resource limits and network egress restrictions. No live scan is claimed.
+
+
+## Shannon authorized application testing
+
+OpsAegis provides an authenticated control-plane adapter for a separately deployed Shannon runner bridge. Shannon OSS is a CLI/worker orchestrator, not a native HTTP API; OpsAegis does not execute Shannon inside FastAPI or expose the Docker socket to the backend.
+
+See [docs/SHANNON_RUNNER.md](docs/SHANNON_RUNNER.md) for the bridge API contract, deployment boundary, security requirements and licensing notes. Shannon OSS is AGPL-3.0; its source is not embedded in this repository.
+
+The integration is disabled by default. Configure backend-only SHANNON_ENABLED, SHANNON_RUNNER_URL and SHANNON_RUNNER_TOKEN only after deploying and reviewing the isolated bridge. Admins register an HTTPS staging target, its GitHub source repository and a written authorization reference. Only admins can dispatch an assessment. Analysts can view and sync scan history.
+
+Findings are accepted only when the bridge reports validation_status=exploited and supplies non-empty proof evidence. Repeated results are deduplicated and analyst triage state is preserved. A configured adapter is not proof of a live Shannon engine: no bridge, model-provider key or live scan is included in this PR.
+
+Shannon actively exploits applications and may mutate state. Use disposable lab/staging environments only; never production. The runner must enforce DNS/IP egress allowlists, isolation, resource budgets, read-only source mounts and prompt-injection safeguards.
