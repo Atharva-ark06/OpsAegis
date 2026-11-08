@@ -57,6 +57,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check Docker Compose availability
         run: docker compose version
+      - name: Prepare placeholder environment file for Compose validation
+        run: cp .env.production.example .env.production
       - name: Validate production Compose configuration
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
       - name: Build production API, migration, worker and frontend images
