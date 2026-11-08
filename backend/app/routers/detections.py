@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ipaddress
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -32,8 +33,8 @@ def _severity(items: list[Finding]) -> FindingSeverity:
     return max((item.severity for item in items), key=lambda value: SEVERITY_RANK[value], default=FindingSeverity.medium)
 
 
-def _fingerprint(rule_key: str, identity: str, finding_ids: list[int]) -> str:
-    material = rule_key + "|" + identity + "|" + ",".join(map(str, sorted(finding_ids)))
+def _fingerprint(rule_key: str, identity: str, window_bucket: int) -> str:
+    material = rule_key + "|" + identity + "|" + str(window_bucket)
     return hashlib.sha256(material.encode()).hexdigest()
 
 
@@ -141,7 +142,7 @@ def evaluate_detections(
             scope = str(evidence.get("scope") or "").lower()
             value = evidence.get("value")
             if scope in {"ip", "range"} and isinstance(value, str) and value.strip():
-                crowdsec_by_ip.setdefault(value.strip().lower(), []).append(item)
+                crowdsec_by_ip.append((value.strip().lower(), [item]))
 
     for ip in sorted(set(wazuh_by_ip).intersection(crowdsec_by_ip)):
         group = wazuh_by_ip[ip] + crowdsec_by_ip[ip]
@@ -160,7 +161,7 @@ def evaluate_detections(
     try:
         for rule_key, identity, title, description, group, evidence in candidates:
             ids = sorted({item.id for item in group})
-            fingerprint = _fingerprint(rule_key, identity, ids)
+            bucket = int(now.timestamp() // (window_minutes * 60))\n            fingerprint = _fingerprint(rule_key, identity, bucket)
             record = db.scalar(select(CorrelatedDetection).where(
                 CorrelatedDetection.fingerprint == fingerprint
             ))
