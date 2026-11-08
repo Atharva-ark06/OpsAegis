@@ -21,7 +21,7 @@ function formatDate(value: string): string {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
 }
 function titleCase(value: string): string {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 function severityClass(value: string): string {
   return "severity severity-" + value;
