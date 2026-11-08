@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, clearAccessToken, getAccessToken, getAssets, login, saveAccessToken } from "./api";
+import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, login, saveAccessToken } from "./api";
 
 function mockResponse(status: number, payload: unknown) {
   return {
@@ -68,6 +68,28 @@ describe("OpsAegis API client", () => {
       message: "Invalid query",
       status: 422,
     }));
+  });
+
+  it("retrieves Nuclei execution state from the backend health endpoint", async () => {
+    const health = { integration: "nuclei", configured: true, status: "healthy", execution_enabled: true, profile: "safe" };
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200, health));
+
+    await expect(getNucleiHealth()).resolves.toEqual(health);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/integrations/nuclei/health",
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
+  });
+
+  it("retrieves Shannon runner health instead of inferring availability from configuration", async () => {
+    const health = { integration: "shannon", configured: true, status: "unhealthy", execution_enabled: false, mode: "external_isolated_runner" };
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200, health));
+
+    await expect(getShannonHealth()).resolves.toEqual(health);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/integrations/shannon/health",
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
   });
 
   it("removes the session token on explicit sign out", () => {
