@@ -80,6 +80,7 @@ class WazuhIndexerAdapter:
             timeout=httpx.Timeout(self.config.wazuh_indexer_timeout_seconds),
             verify=verify,
             follow_redirects=False,
+            trust_env=False,
             transport=self.transport,
         )
 
