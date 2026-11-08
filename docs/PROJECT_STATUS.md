@@ -66,3 +66,11 @@ See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon rema
 - Asset API exposes source engine, external ID, observed IP, agent observation state and last-seen time.
 - Source refresh does not overwrite analyst-managed asset type or environment.
 - Alert-observed inventory only: no claim of Wazuh Manager online status, OS inventory or silent-agent discovery. CrowdSec IP-only records are not auto-mapped.
+
+
+## Vulnerability management and CVE intelligence (PR #16)
+- Nuclei target registration supports optional explicit association to an existing OpsAegis asset. Scan findings inherit that association only when they do not already have an analyst-selected asset.
+- CVE records are created only from CVE identifiers present in Nuclei template IDs, tags or structured classification evidence. No CVE is inferred from a generic title, IOC reputation or guessed score.
+- Vulnerability cases retain finding provenance, optional asset, CVE ID, first/last seen, analyst remediation status and notes.
+- On-demand NVD CVE API 2.0 lookup stores description, CVSS version/score/severity and NVD publication/modification timestamps; results are cached for 24 hours. Optional NVD API key remains backend-only.
+- No NVD bulk sync, Wazuh Vulnerability Detector ingestion, CPE/package matching, automatic remediation or production deployment validation is included.
