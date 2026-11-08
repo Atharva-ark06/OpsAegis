@@ -43,8 +43,9 @@ def test_requires_canonical_github_repository(client, db_session, repo):
 def test_execution_disabled_by_default(client, db_session, monkeypatch):
     monkeypatch.setattr(sh.settings, "shannon_enabled", False)
     payload = target_payload()
-    client.post("/api/v1/integrations/shannon/targets", json=payload, headers=auth_headers(db_session))
-    response = client.post("/api/v1/integrations/shannon/targets/1/scans", headers=auth_headers(db_session))
+    headers = auth_headers(db_session)
+    client.post("/api/v1/integrations/shannon/targets", json=payload, headers=headers)
+    response = client.post("/api/v1/integrations/shannon/targets/1/scans", headers=headers)
     assert response.status_code == 503
 
 def test_finding_ingestion_requires_exploit_proof(db_session):
