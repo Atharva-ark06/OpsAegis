@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ShannonPanel } from "./ShannonPanel";
 import { DetectionsPanel } from "./DetectionsPanel";
 import { ThreatIntelPanel } from "./ThreatIntelPanel";
+import { VulnerabilityPanel } from "./VulnerabilityPanel";
 import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan } from "./api";
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth,
@@ -9,13 +10,14 @@ import {
   getFindings, getIncidents, getWazuhHealth, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
 } from "./api";
 
-type View = "overview" | "assets" | "findings" | "detections" | "incidents" | "integrations" | "threat-intel";
+type View = "overview" | "assets" | "findings" | "vulnerabilities" | "detections" | "incidents" | "integrations" | "threat-intel";
 type LoadState = "idle" | "loading" | "ready" | "error";
 
 const navigation: { id: View; label: string; short: string }[] = [
   { id: "overview", label: "Overview", short: "OV" },
   { id: "assets", label: "Assets", short: "AS" },
   { id: "findings", label: "Findings", short: "FI" },
+  { id: "vulnerabilities", label: "Vulnerabilities", short: "VU" },
   { id: "detections", label: "Detections", short: "DE" },
   { id: "incidents", label: "Incidents", short: "IN" },
   { id: "integrations", label: "Integrations", short: "IG" },
@@ -318,8 +320,8 @@ function App() {
       </div>}
 
       {view !== "overview" && <div className="page-content">
-        {view !== "detections" && view !== "threat-intel" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
-        {view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button></div>}</div><EngineCards wazuh={wazuh} crowdsec={crowdsec} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
+        {view !== "detections" && view !== "threat-intel" && view !== "vulnerabilities" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
+        {view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button></div>}</div><EngineCards wazuh={wazuh} crowdsec={crowdsec} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
           <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label={"Search " + view} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={"Search " + view + "…"} /></label></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
@@ -339,9 +341,9 @@ function EngineCards({ wazuh, crowdsec }: { wazuh: WazuhHealth | null; crowdsec:
 
 export default App;
 
-function NucleiPanel({canOperate,isAdmin}:{canOperate:boolean;isAdmin:boolean}) {
+function NucleiPanel({canOperate,isAdmin,assets}:{canOperate:boolean;isAdmin:boolean;assets:Asset[]}) {
  const [health,setHealth]=useState<NucleiHealth|null>(null),[targets,setTargets]=useState<NucleiTarget[]>([]),[scans,setScans]=useState<NucleiScan[]>([]);
- const [name,setName]=useState(""),[url,setUrl]=useState(""),[authorization,setAuthorization]=useState("");
+ const [name,setName]=useState(""),[url,setUrl]=useState(""),[authorization,setAuthorization]=useState(""),[assetId,setAssetId]=useState("");
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  async function refresh(){
   const result=await Promise.allSettled([getNucleiHealth(),getNucleiTargets(),getNucleiScans()]);
@@ -353,7 +355,7 @@ function NucleiPanel({canOperate,isAdmin}:{canOperate:boolean;isAdmin:boolean}) 
  useEffect(()=>{if(canOperate)void refresh();},[canOperate]);
  async function add(event:FormEvent<HTMLFormElement>){
   event.preventDefault();setBusy(true);setError("");setMessage("");
-  try{await registerNucleiTarget({name:name.trim(),url:url.trim(),authorization_reference:authorization.trim()});setName("");setUrl("");setAuthorization("");setMessage("Authorized target registered.");await refresh();}
+  try{await registerNucleiTarget({name:name.trim(),url:url.trim(),authorization_reference:authorization.trim(),asset_id:assetId?Number(assetId):null});setName("");setUrl("");setAuthorization("");setMessage("Authorized target registered.");await refresh();}
   catch(e){setError(e instanceof Error?e.message:"Target registration failed.");}finally{setBusy(false);}
  }
  async function scan(id:number){
@@ -370,6 +372,7 @@ function NucleiPanel({canOperate,isAdmin}:{canOperate:boolean;isAdmin:boolean}) 
    <label>Target name<input value={name} onChange={e=>setName(e.target.value)} minLength={2} maxLength={120} required placeholder="Authorized staging application"/></label>
    <label>HTTPS target URL<input type="url" value={url} onChange={e=>setUrl(e.target.value)} required placeholder="https://staging.example.com"/></label>
    <label>Authorization reference<input value={authorization} onChange={e=>setAuthorization(e.target.value)} minLength={12} maxLength={500} required placeholder="Written approval / change ticket"/></label>
+   <label>Map scan results to asset (optional)<select value={assetId} onChange={e=>setAssetId(e.target.value)}><option value="">Unmapped — do not associate with an asset</option>{assets.map(asset=><option key={asset.id} value={asset.id}>{asset.name} · {asset.ip_address||"No IP"}</option>)}</select></label>
    <button className="primary-button compact" disabled={busy}>Register target</button>
   </form>}
   <div className="nuclei-target-list"><h4>Registered targets</h4>{targets.length?targets.map(t=><div className="nuclei-target-row" key={t.id}><div><strong>{t.name}</strong><small>{t.url} · {t.authorization_reference}</small></div><button className="primary-button compact" disabled={busy||!health?.execution_enabled||!t.enabled} onClick={()=>void scan(t.id)}>Run safe scan</button></div>):<EmptyState title="No authorized targets" detail="An administrator must register an approved HTTPS target before scanning."/>}</div>

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio,hashlib,json,shutil
+import asyncio,hashlib,json,shutil,re
 from datetime import datetime,timezone
 from ipaddress import ip_address
 from urllib.parse import urlsplit,urlunsplit
@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
-from app.models.entities import AuditLog,Finding,FindingSeverity,NucleiScanRun,NucleiTarget,User,UserRole
+from app.models.entities import Asset,AuditLog,Finding,FindingSeverity,NucleiScanRun,NucleiTarget,User,UserRole,Vulnerability
 from app.security import require_roles
 router=APIRouter(prefix="/integrations/nuclei",tags=["nuclei"])
 OPS=(UserRole.admin,UserRole.analyst)
@@ -19,6 +19,7 @@ class TargetCreate(BaseModel):
     name:str=Field(min_length=2,max_length=120)
     url:str=Field(min_length=9,max_length=2048)
     authorization_reference:str=Field(min_length=12,max_length=500)
+    asset_id:int|None=None
     @field_validator("url")
     @classmethod
     def validate_url(cls,value):
@@ -33,7 +34,7 @@ class TargetCreate(BaseModel):
 class ScanRequest(BaseModel):
     profile:str=Field(default="safe",pattern="^safe$")
 def target_out(t):
-    return {"id":t.id,"name":t.name,"url":t.url,"authorization_reference":t.authorization_reference,"enabled":t.enabled,"created_at":t.created_at.isoformat()}
+    return {"id":t.id,"name":t.name,"url":t.url,"authorization_reference":t.authorization_reference,"asset_id":t.asset_id,"enabled":t.enabled,"created_at":t.created_at.isoformat()}
 def scan_out(r):
     return {"id":r.id,"target_id":r.target_id,"status":r.status,"profile":r.profile,"started_at":r.started_at.isoformat() if r.started_at else None,"finished_at":r.finished_at.isoformat() if r.finished_at else None,"findings_count":r.findings_count,"error_code":r.error_code,"created_at":r.created_at.isoformat()}
 @router.get("/health")
@@ -42,6 +43,7 @@ def health(actor:User=Depends(require_roles(*OPS))):
     return {"integration":"nuclei","configured":ready,"status":"healthy" if ready else "not_configured","execution_enabled":ready,"profile":"safe"}
 @router.post("/targets",status_code=201)
 def add_target(data:TargetCreate,db:Session=Depends(get_db),actor:User=Depends(require_roles(UserRole.admin))):
+    if data.asset_id is not None and db.get(Asset,data.asset_id) is None: raise HTTPException(404,"Asset not found")
     t=NucleiTarget(**data.model_dump(),created_by=actor.id);db.add(t)
     db.add(AuditLog(actor_user_id=actor.id,action="integration.nuclei.target.register",target=t.url,detail=json.dumps({"name":t.name,"authorization_reference":t.authorization_reference})))
     try: db.commit()
@@ -65,7 +67,7 @@ async def start_scan(target_id:int,data:ScanRequest,db:Session=Depends(get_db),a
     db.commit();db.refresh(run)
     try:
         async with _lock: records=await execute(t.url)
-        inserted,updated=persist_findings(db,records)
+        inserted,updated=persist_findings(db,records,asset_id=t.asset_id)
         run.status="completed";run.findings_count=inserted+updated;run.finished_at=datetime.now(timezone.utc)
         db.add(AuditLog(actor_user_id=actor.id,action="integration.nuclei.scan.complete",target=str(run.id),detail=json.dumps({"received":len(records),"inserted":inserted,"updated":updated})));db.commit()
     except TimeoutError:
@@ -99,18 +101,35 @@ async def execute(url:str)->list[dict]:
         except (ValueError,UnicodeDecodeError): continue
         if isinstance(obj,dict) and isinstance(obj.get("info"),dict) and obj.get("template-id") and obj.get("matched-at"): parsed.append(obj)
     return parsed
-def persist_findings(db:Session,records:list[dict])->tuple[int,int]:
+def persist_findings(db:Session,records:list[dict],asset_id:int|None=None)->tuple[int,int]:
     levels={"info":FindingSeverity.informational,"informational":FindingSeverity.informational,"low":FindingSeverity.low,"medium":FindingSeverity.medium,"high":FindingSeverity.high,"critical":FindingSeverity.critical}
     inserted=updated=0;now=datetime.now(timezone.utc)
     for obj in records:
         info=obj["info"];template=str(obj["template-id"])[:120];matched=str(obj["matched-at"])[:1024];matcher=str(obj.get("matcher-name") or "")[:80]
         native=hashlib.sha256(f"{template}|{matched}|{matcher}".encode()).hexdigest()
-        evidence={"template_id":template,"matched_at":matched,"matcher_name":matcher,"host":str(obj.get("host",""))[:255],"tags":info.get("tags",[])[:30] if isinstance(info.get("tags"),list) else []}
+        tags=info.get("tags",[])[:30] if isinstance(info.get("tags"),list) else []
+        classification=info.get("classification") if isinstance(info.get("classification"),dict) else {}
+        raw_cves=classification.get("cve-id") or classification.get("cve_id") or []
+        if isinstance(raw_cves,str): raw_cves=[raw_cves]
+        candidates=[template,*[str(x) for x in tags],*[str(x) for x in raw_cves if isinstance(raw_cves,list)]]
+        cves=sorted({match.upper() for candidate in candidates for match in re.findall(r"CVE-\d{4}-\d{4,}",candidate,re.I)})[:20]
+        evidence={"template_id":template,"matched_at":matched,"matcher_name":matcher,"host":str(obj.get("host",""))[:255],"tags":tags,"cve_ids":cves}
         severity=levels.get(str(info.get("severity","")).lower(),FindingSeverity.unknown)
         title=str(info.get("name") or template)[:500];description=str(info.get("description") or "")[:4000] or None
         existing=db.scalar(select(Finding).where(Finding.source_engine=="nuclei",Finding.source_native_id==native))
         if existing is None:
-            db.add(Finding(source_engine="nuclei",source_native_id=native,title=title,description=description,severity=severity,first_seen_at=now,last_seen_at=now,evidence=evidence));inserted+=1
+            finding=Finding(source_engine="nuclei",source_native_id=native,title=title,description=description,severity=severity,asset_id=asset_id,first_seen_at=now,last_seen_at=now,evidence=evidence);db.add(finding);db.flush();inserted+=1
         else:
-            existing.title=title;existing.description=description;existing.severity=severity;existing.last_seen_at=now;existing.evidence=evidence;updated+=1
+            finding=existing
+            existing.title=title;existing.description=description;existing.severity=severity;existing.last_seen_at=now;existing.evidence=evidence
+            if existing.asset_id is None and asset_id is not None: existing.asset_id=asset_id
+            updated+=1
+        for cve_id in cves:
+            vuln=db.scalar(select(Vulnerability).where(Vulnerability.finding_id==finding.id,Vulnerability.cve_id==cve_id))
+            if vuln is None:
+                db.add(Vulnerability(cve_id=cve_id,finding_id=finding.id,asset_id=finding.asset_id,
+                    nvd_url="https://nvd.nist.gov/vuln/detail/"+cve_id,first_seen_at=now,last_seen_at=now))
+            else:
+                vuln.last_seen_at=now
+                if vuln.asset_id is None and finding.asset_id is not None: vuln.asset_id=finding.asset_id
     db.flush();return inserted,updated

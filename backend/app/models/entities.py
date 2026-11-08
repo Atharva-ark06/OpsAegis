@@ -96,6 +96,37 @@ class Incident(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to_user_id])
 
+class VulnerabilityStatus(str, Enum):
+    open = "open"
+    in_progress = "in_progress"
+    accepted = "accepted"
+    remediated = "remediated"
+    false_positive = "false_positive"
+
+
+class Vulnerability(Base):
+    __tablename__ = "vulnerabilities"
+    __table_args__ = (UniqueConstraint("finding_id", "cve_id", name="uq_vulnerabilities_finding_cve"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cve_id: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    finding_id: Mapped[int] = mapped_column(ForeignKey("findings.id", ondelete="CASCADE"), nullable=False, index=True)
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
+    cvss_score: Mapped[float | None] = mapped_column(nullable=True)
+    cvss_version: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    cvss_severity: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    nvd_modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    nvd_data_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    nvd_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[VulnerabilityStatus] = mapped_column(SqlEnum(VulnerabilityStatus), nullable=False, default=VulnerabilityStatus.open)
+    remediation_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
 class DetectionStatus(str, Enum):
     new = "new"
     acknowledged = "acknowledged"
@@ -129,6 +160,7 @@ class NucleiTarget(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False, unique=True)
     authorization_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
