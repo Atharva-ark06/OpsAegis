@@ -52,7 +52,7 @@ class TargetCreate(BaseModel):
         parts = [part for part in parsed.path.strip("/").split("/") if part]
         if parsed.scheme != "https" or parsed.hostname != "github.com" or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("Source repository must be an HTTPS GitHub repository URL")
-        if len(parts) != 2 or any(part in (".", "..") for part in parts):
+        if len(parts) != 2 or not re.fullmatch(r"[A-Za-z0-9_.-]+", parts[0]) or not re.fullmatch(r"[A-Za-z0-9_.-]+", parts[1]) or parts[0] in (".", "..") or parts[1] in (".", ".."):
             raise ValueError("Use https://github.com/owner/repository")
         return f"https://github.com/{parts[0]}/{parts[1].removesuffix('.git')}"
 
@@ -214,10 +214,14 @@ def persist_validated_findings(db: Session, records: list[dict], expected_target
             raise HTTPException(502, "Runner finding is missing required identity fields")
         if len(fingerprint) > 255 or len(title) > 500 or len(affected_url) > 1024:
             raise HTTPException(502, "Runner finding exceeds field limits")
-        expected = urlsplit(expected_target_url)
-        affected = urlsplit(affected_url)
-        if (affected.scheme != "https" or affected.hostname != expected.hostname or
-                affected.port not in (None, 443) or affected.username or affected.password or
+        try:
+            expected = urlsplit(expected_target_url)
+            affected = urlsplit(affected_url)
+            affected_port = affected.port
+        except ValueError:
+            raise HTTPException(502, "Runner finding URL is malformed") from None
+        if (affected.scheme != "https" or (affected.hostname or "").lower().rstrip(".") != (expected.hostname or "").lower().rstrip(".") or
+                affected_port not in (None, 443) or affected.username or affected.password or
                 affected.query or affected.fragment):
             raise HTTPException(502, "Runner finding URL is outside the registered target scope")
         native_id = hashlib.sha256(fingerprint.encode()).hexdigest()
