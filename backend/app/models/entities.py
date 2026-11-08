@@ -89,6 +89,22 @@ class Incident(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to_user_id])
 
+class CorrelatedDetection(Base):
+    __tablename__ = "correlated_detections"
+    __table_args__ = (UniqueConstraint("fingerprint", name="uq_correlated_detections_fingerprint"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rule_key: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[FindingSeverity] = mapped_column(SqlEnum(FindingSeverity), nullable=False)
+    finding_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False)
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    incident_id: Mapped[int | None] = mapped_column(ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+
+
 class NucleiTarget(Base):
     __tablename__ = "nuclei_targets"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
