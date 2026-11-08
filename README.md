@@ -264,3 +264,14 @@ Pop-Location
 ```
 
 The CI workflow now runs a dedicated preflight job first. It verifies the shared settings export, imports the FastAPI application, applies the full Alembic migration chain to a disposable SQLite database, and validates the production Compose file before the backend, frontend, runner and container jobs can start. A failed preflight blocks all downstream jobs. These checks reduce configuration regressions; they do not replace review or live deployment validation.
+
+
+## Live integration diagnostics
+
+Use the read-only operator validation script to check configured Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon endpoints without launching scans or changing data:
+
+\`\`\`powershell
+python backend/scripts/validate_integrations.py --env-file .env --output artifacts/integration-diagnostics.json
+\`\`\`
+
+Add \`--include-nvd\` only when you want one read-only lookup of a fixed public CVE. VirusTotal and AbuseIPDB are not queried, so this check does not consume their API quota. See [Live Integration Validation](docs/INTEGRATION_VALIDATION.md) for status meanings, safety boundaries and troubleshooting. A successful health check is not proof of telemetry ingestion or production readiness.
