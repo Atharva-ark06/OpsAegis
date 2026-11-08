@@ -9,6 +9,13 @@
 - Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.
 - Separate Shannon bridge reference implementation with exact allowlists, pinned CLI, authenticated API, fail-closed SARIF proof gate and disabled-by-default execution.
 
+## Authentication security hardening (PR #27 — proposed)
+- Login attempts use shared Redis fixed-window counters by source IP and normalized account; raw identifiers are HMAC-digested for Redis keys.
+- Redis failure blocks login rather than silently disabling abuse controls; rate-limit responses include Retry-After.
+- Access tokens require issuer, audience, type, token ID, subject, issued-at and expiry claims; roles are resolved from the active database user.
+- Failed logins use a dummy password-hash verification for unknown accounts and create privacy-minimized audit events.
+- This does not add refresh tokens or server-side token revocation; access tokens remain valid until expiry unless the signing key is rotated or the user is disabled.
+
 ## Nuclei boundaries
 - Admin-only target registration with a required authorization reference.
 - Exact HTTPS URLs only; reject credentials, query/fragment, localhost, metadata, loopback, link-local, multicast and reserved IP targets.
