@@ -1,0 +1,13 @@
+FROM golang:1.24-alpine AS nuclei-build
+ENV CGO_ENABLED=0 GOTOOLCHAIN=auto
+RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.4.10
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && groupadd --gid 10002 scanner && useradd --uid 10002 --gid scanner --create-home --shell /usr/sbin/nologin scanner
+COPY --from=nuclei-build /go/bin/nuclei /usr/local/bin/nuclei
+COPY --chown=scanner:scanner app ./app
+USER 10002:10002
+ENTRYPOINT ["python","-m","app.nuclei_worker"]
