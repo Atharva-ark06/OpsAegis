@@ -12,16 +12,17 @@ def upgrade():
     op.add_column("incidents", sa.Column("resolution", sa.Text(), nullable=True))
     op.add_column("incidents", sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("incidents", sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True))
-    op.create_foreign_key("fk_incidents_assigned_to_user_id_users", "incidents", "users",
-                          ["assigned_to_user_id"], ["id"])
-    op.create_index("ix_incidents_assigned_to_user_id", "incidents", ["assigned_to_user_id"])
     op.execute("UPDATE incidents SET updated_at = created_at WHERE updated_at IS NULL")
     with op.batch_alter_table("incidents") as batch:
         batch.alter_column("updated_at", existing_type=sa.DateTime(timezone=True), nullable=False)
+        batch.create_foreign_key("fk_incidents_assigned_to_user_id_users", "users",
+                                 ["assigned_to_user_id"], ["id"])
+        batch.create_index("ix_incidents_assigned_to_user_id", ["assigned_to_user_id"])
 
 def downgrade():
-    op.drop_index("ix_incidents_assigned_to_user_id", table_name="incidents")
-    op.drop_constraint("fk_incidents_assigned_to_user_id_users", "incidents", type_="foreignkey")
+    with op.batch_alter_table("incidents") as batch:
+        batch.drop_index("ix_incidents_assigned_to_user_id")
+        batch.drop_constraint("fk_incidents_assigned_to_user_id_users", type_="foreignkey")
     op.drop_column("incidents", "closed_at")
     op.drop_column("incidents", "updated_at")
     op.drop_column("incidents", "resolution")
