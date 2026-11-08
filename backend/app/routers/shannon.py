@@ -180,8 +180,11 @@ async def sync_scan(scan_id: int, db: Session = Depends(get_db),
         records = result["findings"]
         if not isinstance(records, list) or len(records) > settings.shannon_max_findings:
             raise HTTPException(502, "Shannon runner returned an invalid findings collection")
+        target = db.get(ShannonTarget, scan.target_id)
+        if target is None:
+            raise HTTPException(409, "Registered Shannon target no longer exists")
         received = len(records)
-        inserted, updated = persist_validated_findings(db, records)
+        inserted, updated = persist_validated_findings(db, records, target.target_url)
     scan.status = status
     if status in ("completed", "failed", "cancelled"):
         scan.finished_at = datetime.now(timezone.utc)
@@ -195,7 +198,7 @@ async def sync_scan(scan_id: int, db: Session = Depends(get_db),
     db.commit()
     return {"scan": scan_out(scan), "received": received, "inserted": inserted, "updated": updated}
 
-def persist_validated_findings(db: Session, records: list[dict]) -> tuple[int, int]:
+def persist_validated_findings(db: Session, records: list[dict], expected_target_url: str) -> tuple[int, int]:
     levels = {"informational": FindingSeverity.informational, "info": FindingSeverity.informational,
               "low": FindingSeverity.low, "medium": FindingSeverity.medium,
               "high": FindingSeverity.high, "critical": FindingSeverity.critical}
@@ -211,6 +214,12 @@ def persist_validated_findings(db: Session, records: list[dict]) -> tuple[int, i
             raise HTTPException(502, "Runner finding is missing required identity fields")
         if len(fingerprint) > 255 or len(title) > 500 or len(affected_url) > 1024:
             raise HTTPException(502, "Runner finding exceeds field limits")
+        expected = urlsplit(expected_target_url)
+        affected = urlsplit(affected_url)
+        if (affected.scheme != "https" or affected.hostname != expected.hostname or
+                affected.port not in (None, 443) or affected.username or affected.password or
+                affected.query or affected.fragment):
+            raise HTTPException(502, "Runner finding URL is outside the registered target scope")
         native_id = hashlib.sha256(fingerprint.encode()).hexdigest()
         evidence = {"validation_status": "exploited", "affected_url": affected_url,
                     "proof": record["proof"][:4000], "runner_fingerprint": fingerprint[:255],
