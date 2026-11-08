@@ -8,7 +8,7 @@ def production_settings(**overrides):
     values = {
         "OPS_AEGIS_ENV": "production",
         "OPS_AEGIS_SECRET_KEY": "a" * 48,
-        "DATABASE_URL": "postgresql+psycopg://opsaegis:strong-password@postgres:5432/opsaegis",
+        "DATABASE_URL": "postgresql+psycopg://opsaegis:strong-password-123@postgres:5432/opsaegis",
         "REDIS_URL": "redis://redis:6379/0",
         "CORS_ORIGINS": "https://soc.example.com",
         "NUCLEI_ENABLED": "false",
