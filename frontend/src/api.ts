@@ -144,12 +144,12 @@ export function getCrowdSecHealth(): Promise<CrowdSecHealth> { return request("/
 export function collectCrowdSec(): Promise<CrowdSecCollection> { return request("/integrations/crowdsec/collect", { method: "POST" }); }
 
 export interface NucleiHealth { integration: string; configured: boolean; status: "healthy" | "not_configured"; execution_enabled: boolean; profile: "safe"; }
-export interface NucleiTarget { id: number; name: string; url: string; authorization_reference: string; enabled: boolean; created_at: string; }
+export interface NucleiTarget { id: number; name: string; url: string; authorization_reference: string; asset_id:number|null; enabled: boolean; created_at: string; }
 export interface NucleiScan { id: number; target_id: number; status: string; profile: string; started_at: string | null; finished_at: string | null; findings_count: number; error_code: string | null; created_at: string; }
 export const getNucleiHealth = (): Promise<NucleiHealth> => request("/integrations/nuclei/health");
 export const getNucleiTargets = (): Promise<NucleiTarget[]> => request("/integrations/nuclei/targets");
 export const getNucleiScans = (): Promise<NucleiScan[]> => request("/integrations/nuclei/scans");
-export const registerNucleiTarget = (payload: {name:string;url:string;authorization_reference:string}): Promise<NucleiTarget> =>
+export const registerNucleiTarget = (payload: {name:string;url:string;authorization_reference:string;asset_id?:number|null}): Promise<NucleiTarget> =>
   request("/integrations/nuclei/targets",{method:"POST",body:JSON.stringify(payload)});
 export const startNucleiScan = (id:number): Promise<{scan:NucleiScan;received:number;inserted:number;updated:number}> =>
   request("/integrations/nuclei/targets/"+id+"/scans",{method:"POST",body:JSON.stringify({profile:"safe"})});
@@ -242,3 +242,18 @@ export interface ThreatIntelProviders { virustotal:{configured:boolean;status:st
 export const getThreatIntelProviders=():Promise<ThreatIntelProviders>=>request("/threat-intel/providers");
 export const getThreatIntelIOCs=():Promise<ThreatIntelIOC[]>=>request("/threat-intel/iocs?skip=0&limit=100");
 export const enrichThreatIndicator=(payload:{indicator_type:IOCType;indicator_value:string;force_refresh?:boolean}):Promise<ThreatIntelIOC>=>request("/threat-intel/enrich",{method:"POST",body:JSON.stringify(payload)});
+
+export type VulnerabilityStatus = "open" | "in_progress" | "accepted" | "remediated" | "false_positive";
+export interface Vulnerability {
+ id:number;cve_id:string;finding_id:number;asset_id:number|null;cvss_score:number|null;cvss_version:string|null;
+ cvss_severity:string|null;description:string|null;published_at:string|null;nvd_modified_at:string|null;
+ nvd_data_updated_at:string|null;nvd_url:string;status:VulnerabilityStatus;remediation_notes:string|null;
+ first_seen_at:string;last_seen_at:string;updated_at:string;cached?:boolean;
+}
+export const getVulnerabilities=(filters:{severity?:string;status?:VulnerabilityStatus;asset_id?:number;q?:string}={}):Promise<Vulnerability[]>=>{
+ const params=new URLSearchParams({skip:"0",limit:"200"});
+ Object.entries(filters).forEach(([k,v])=>{if(v!==undefined&&v!=="")params.set(k,String(v));});
+ return request("/vulnerabilities?"+params.toString());
+};
+export const enrichVulnerability=(id:number,force=false):Promise<Vulnerability>=>request("/vulnerabilities/"+id+"/enrich?force="+String(force),{method:"POST"});
+export const updateVulnerability=(id:number,payload:{status?:VulnerabilityStatus;remediation_notes?:string|null}):Promise<Vulnerability>=>request("/vulnerabilities/"+id,{method:"PATCH",body:JSON.stringify(payload)});
