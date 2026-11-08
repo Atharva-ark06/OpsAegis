@@ -38,7 +38,7 @@ docker compose --env-file .env.production -f compose.production.yaml ps
 
 The Compose stack:
 - Runs PostgreSQL and password-protected Redis on a private, internal-only data network; neither publishes a host port.
-- Runs the API and detection worker as an unprivileged UID.
+- Runs the API and detection worker as an unprivileged UID with read-only root filesystems, dropped Linux capabilities and no-new-privileges; only bounded temporary filesystems are writable.
 - Runs Alembic migrations in a one-shot service before the API and worker start.
 - Serves the compiled React application from an unprivileged Nginx container on port 8080, bound to host loopback only.
 - Proxies same-origin `/api/` requests to the API and applies baseline browser security headers.
