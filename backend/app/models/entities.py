@@ -89,6 +89,13 @@ class Incident(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to_user_id])
 
+class DetectionStatus(str, Enum):
+    new = "new"
+    acknowledged = "acknowledged"
+    investigating = "investigating"
+    resolved = "resolved"
+
+
 class CorrelatedDetection(Base):
     __tablename__ = "correlated_detections"
     __table_args__ = (UniqueConstraint("fingerprint", name="uq_correlated_detections_fingerprint"),)
@@ -152,3 +159,45 @@ class ShannonScanRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class DetectionSchedule(Base):
+    __tablename__ = "detection_schedules"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
+    window_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    auth_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ScheduledDetectionRun(Base):
+    __tablename__ = "scheduled_detection_runs"
+    __table_args__ = (UniqueConstraint("schedule_slot", name="uq_scheduled_detection_runs_slot"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    schedule_slot: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="queued")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    window_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    auth_threshold: Mapped[int] = mapped_column(Integer, nullable=False)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class DetectionNotification(Base):
+    __tablename__ = "detection_notifications"
+    __table_args__ = (UniqueConstraint("user_id", "detection_id", name="uq_detection_notification_user_detection"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    detection_id: Mapped[int] = mapped_column(ForeignKey("correlated_detections.id", ondelete="CASCADE"), nullable=False)
+    severity: Mapped[FindingSeverity] = mapped_column(SqlEnum(FindingSeverity), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
