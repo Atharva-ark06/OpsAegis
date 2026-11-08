@@ -14,6 +14,10 @@ A unified security operations and threat-response platform integrating Wazuh, Cr
 
 A built adapter is not proof of a live connection. Configure and verify each authorized engine endpoint before expecting its records.
 
+## Authentication security
+
+Login throttling, strict JWT claim validation and failed-login audit controls are documented in [Authentication Security](docs/AUTHENTICATION_SECURITY.md).
+
 ## Security engines
 
 | Engine | Role | Integration status |
