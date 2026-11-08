@@ -104,11 +104,40 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
 }) {
   const [resolutionNotes, setResolutionNotes] = useState<Record<number, string>>({});
   const [incidentStatuses, setIncidentStatuses] = useState<Record<number, Incident["status"]>>({});
+  const [assetStatus, setAssetStatus] = useState("all");
+  const [assetEnvironment, setAssetEnvironment] = useState("all");
+  const [assetSource, setAssetSource] = useState("all");
   const needle = query.trim().toLowerCase();
   if (view === "assets") {
-    const rows = assets.filter((item) => [item.name, item.asset_type, item.environment, item.os_name || "", item.agent_status || "", item.external_id || "", item.ip_address || ""].join(" ").toLowerCase().includes(needle));
-    if (!rows.length) return <EmptyState title={needle ? "No matching assets" : "No assets registered"} detail={needle ? "Try another search term." : "Assets will appear here when they are added through the OpsAegis API."} />;
-    return <div className="table-wrap"><table><thead><tr><th>Asset</th><th>Type</th><th>IP address</th><th>Agent source</th><th>Operating system</th><th>Agent status</th><th>Environment</th><th>Last observed</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.name}</strong><small>ASSET-{item.id}</small></td><td>{titleCase(item.asset_type)}</td><td>{item.ip_address ?? "—"}</td><td>{item.source_engine ? titleCase(item.source_engine) + (item.external_id ? " · " + item.external_id : "") : "Manual"}</td><td>{item.os_name ?? "—"}</td><td>{item.agent_status ? <span className="tag">{titleCase(item.agent_status)}</span> : "—"}</td><td><span className="tag">{titleCase(item.environment)}</span></td><td>{item.last_seen_at ? formatDate(item.last_seen_at) : "—"}</td></tr>)}</tbody></table></div>;
+    const registeredAgents = assets.filter((item) => Boolean(item.source_engine && item.external_id));
+    const reportedOnline = registeredAgents.filter((item) => ["active", "connected", "online"].includes((item.agent_status || "").toLowerCase())).length;
+    const reportedOffline = registeredAgents.filter((item) => ["disconnected", "offline", "never_connected"].includes((item.agent_status || "").toLowerCase())).length;
+    const environments = [...new Set(assets.map((item) => item.environment).filter(Boolean))].sort();
+    const sources = [...new Set(assets.map((item) => item.source_engine || "manual"))].sort();
+    const rows = assets.filter((item) => {
+      const matchesSearch = [item.name, item.asset_type, item.environment, item.os_name || "", item.agent_status || "", item.external_id || "", item.ip_address || ""].join(" ").toLowerCase().includes(needle);
+      const matchesStatus = assetStatus === "all" || (item.agent_status || "unknown").toLowerCase() === assetStatus;
+      const matchesEnvironment = assetEnvironment === "all" || item.environment === assetEnvironment;
+      const matchesSource = assetSource === "all" || (item.source_engine || "manual") === assetSource;
+      return matchesSearch && matchesStatus && matchesEnvironment && matchesSource;
+    });
+    return <div className="asset-workspace">
+      <div className="asset-summary">
+        <article><small>INVENTORY RECORDS</small><strong>{assets.length}</strong><span>Returned by API · max 200</span></article>
+        <article><small>WAZUH-MAPPED AGENTS</small><strong>{registeredAgents.length}</strong><span>Identified by source and agent ID</span></article>
+        <article><small>REPORTED ONLINE</small><strong>{reportedOnline}</strong><span>Based on reported agent status</span></article>
+        <article><small>REPORTED OFFLINE</small><strong>{reportedOffline}</strong><span>Unknown states are not counted</span></article>
+      </div>
+      <div className="asset-filters">
+        <label>Agent status<select value={assetStatus} onChange={(event) => setAssetStatus(event.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="connected">Connected</option><option value="online">Online</option><option value="disconnected">Disconnected</option><option value="offline">Offline</option><option value="unknown">Unknown / not reported</option></select></label>
+        <label>Environment<select value={assetEnvironment} onChange={(event) => setAssetEnvironment(event.target.value)}><option value="all">All environments</option>{environments.map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select></label>
+        <label>Source<select value={assetSource} onChange={(event) => setAssetSource(event.target.value)}><option value="all">All sources</option>{sources.map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select></label>
+        <span className="asset-result-count">{rows.length} of {assets.length} records</span>
+        <button className="text-button" onClick={() => { setAssetStatus("all"); setAssetEnvironment("all"); setAssetSource("all"); }}>Clear filters</button>
+      </div>
+      {!rows.length ? <EmptyState title={assets.length ? "No matching assets" : "No assets registered"} detail={assets.length ? "Adjust or clear the filters to see more endpoint records." : "Assets will appear here when they are added through the OpsAegis API."} /> :
+      <div className="table-wrap"><table><thead><tr><th>Asset</th><th>Type</th><th>IP address</th><th>Agent source</th><th>Operating system</th><th>Agent status</th><th>Environment</th><th>Last observed</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.name}</strong><small>ASSET-{item.id}</small></td><td>{titleCase(item.asset_type)}</td><td>{item.ip_address ?? "—"}</td><td>{item.source_engine ? titleCase(item.source_engine) + (item.external_id ? " · " + item.external_id : "") : "Manual"}</td><td>{item.os_name ?? "—"}</td><td>{item.agent_status ? <span className="tag">{titleCase(item.agent_status)}</span> : "Not reported"}</td><td><span className="tag">{titleCase(item.environment)}</span></td><td>{item.last_seen_at ? formatDate(item.last_seen_at) : "—"}</td></tr>)}</tbody></table></div>}
+    </div>;
   }
   if (view === "findings") {
     const rows = findings.filter((item) => [item.title, item.source_engine, item.status, item.severity].join(" ").toLowerCase().includes(needle));
