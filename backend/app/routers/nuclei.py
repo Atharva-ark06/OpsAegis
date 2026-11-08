@@ -112,7 +112,7 @@ def persist_findings(db:Session,records:list[dict],asset_id:int|None=None)->tupl
         raw_cves=classification.get("cve-id") or classification.get("cve_id") or []
         if isinstance(raw_cves,str): raw_cves=[raw_cves]
         candidates=[template,*[str(x) for x in tags],*[str(x) for x in raw_cves if isinstance(raw_cves,list)]]
-        cves=sorted({match.upper() for candidate in candidates for match in re.findall(r"CVE-\\d{4}-\\d{4,}",candidate,re.I)})[:20]
+        cves=sorted({match.upper() for candidate in candidates for match in re.findall(r"CVE-\d{4}-\d{4,}",candidate,re.I)})[:20]
         evidence={"template_id":template,"matched_at":matched,"matcher_name":matcher,"host":str(obj.get("host",""))[:255],"tags":tags,"cve_ids":cves}
         severity=levels.get(str(info.get("severity","")).lower(),FindingSeverity.unknown)
         title=str(info.get("name") or template)[:500];description=str(info.get("description") or "")[:4000] or None
