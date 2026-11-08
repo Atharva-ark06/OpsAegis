@@ -86,7 +86,7 @@ class WazuhIndexerAdapter:
         query = {
             "size": size,
             "track_total_hits": False,
-            "sort": [{"@timestamp": {"order": "asc"}}],
+            "sort": [{"@timestamp": {"order": "desc"}}],
             "query": {"range": {"@timestamp": {"gte": since.astimezone(timezone.utc).isoformat()}}},
             "_source": [
                 "@timestamp", "rule.id", "rule.level", "rule.description", "rule.groups",
