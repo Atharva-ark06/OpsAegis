@@ -131,3 +131,14 @@ export function collectWazuh(): Promise<WazuhCollection> {
 
 export function getCrowdSecHealth(): Promise<CrowdSecHealth> { return request("/integrations/crowdsec/health"); }
 export function collectCrowdSec(): Promise<CrowdSecCollection> { return request("/integrations/crowdsec/collect", { method: "POST" }); }
+
+export interface NucleiHealth { integration: string; configured: boolean; status: "healthy" | "not_configured"; execution_enabled: boolean; profile: "safe"; }
+export interface NucleiTarget { id: number; name: string; url: string; authorization_reference: string; enabled: boolean; created_at: string; }
+export interface NucleiScan { id: number; target_id: number; status: string; profile: string; started_at: string | null; finished_at: string | null; findings_count: number; error_code: string | null; created_at: string; }
+export const getNucleiHealth = (): Promise<NucleiHealth> => request("/integrations/nuclei/health");
+export const getNucleiTargets = (): Promise<NucleiTarget[]> => request("/integrations/nuclei/targets");
+export const getNucleiScans = (): Promise<NucleiScan[]> => request("/integrations/nuclei/scans");
+export const registerNucleiTarget = (payload: {name:string;url:string;authorization_reference:string}): Promise<NucleiTarget> =>
+  request("/integrations/nuclei/targets",{method:"POST",body:JSON.stringify(payload)});
+export const startNucleiScan = (id:number): Promise<{scan:NucleiScan;received:number;inserted:number;updated:number}> =>
+  request("/integrations/nuclei/targets/"+id+"/scans",{method:"POST",body:JSON.stringify({profile:"safe"})});
