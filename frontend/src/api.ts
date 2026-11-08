@@ -247,6 +247,9 @@ export const getThreatIntelProviders=():Promise<ThreatIntelProviders>=>request("
 export const getThreatIntelIOCs=():Promise<ThreatIntelIOC[]>=>request("/threat-intel/iocs?skip=0&limit=100");
 export const enrichThreatIndicator=(payload:{indicator_type:IOCType;indicator_value:string;force_refresh?:boolean}):Promise<ThreatIntelIOC>=>request("/threat-intel/enrich",{method:"POST",body:JSON.stringify(payload)});
 
+
+export interface WazuhVulnerabilitySync {integration:string;received:number;total_hits:number;created:number;updated:number;unmapped:number;skipped:number;truncated_possible:boolean;max_results:number;data_scope:string;}
+export const syncWazuhVulnerabilities=():Promise<WazuhVulnerabilitySync>=>request("/integrations/wazuh-vulnerabilities/sync",{method:"POST"});
 export type VulnerabilityStatus = "open" | "in_progress" | "accepted" | "remediated" | "false_positive";
 export interface Vulnerability {
  id:number;cve_id:string;finding_id:number;asset_id:number|null;cvss_score:number|null;cvss_version:string|null;
