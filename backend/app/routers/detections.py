@@ -83,6 +83,8 @@ def _finding_out(item: CorrelatedDetection) -> dict:
         "incident_id": item.incident_id, "created_at": item.created_at.isoformat(),
         "last_seen_at": item.last_seen_at.isoformat(), "status": item.status,
         "acknowledged_at": item.acknowledged_at.isoformat() if item.acknowledged_at else None,
+        "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None, "status": item.status,
+        "acknowledged_at": item.acknowledged_at.isoformat() if item.acknowledged_at else None,
         "resolved_at": item.resolved_at.isoformat() if item.resolved_at else None,
     }
 
@@ -290,3 +292,149 @@ def evaluate_detections(
             "findings_considered": len(findings), "candidates": len(candidates),
             "created": created, "refreshed": refreshed,
             "incidents_created": incidents_created, "detection_ids": detection_ids}
+
+
+class ScheduleUpdate(BaseModel):
+    enabled: bool
+    interval_seconds: int = Field(ge=60, le=3600)
+    window_minutes: int = Field(default=15, ge=1, le=1440)
+    auth_threshold: int = Field(default=3, ge=3, le=20)
+
+
+class DetectionStatusUpdate(BaseModel):
+    status: DetectionStatus
+
+
+def _schedule_dict(item: DetectionSchedule, worker_status: str = "unknown", redis_status: str = "unknown") -> dict:
+    return {"enabled": item.enabled, "interval_seconds": item.interval_seconds,
+            "window_minutes": item.window_minutes, "auth_threshold": item.auth_threshold,
+            "updated_at": item.updated_at.isoformat(),
+            "next_run_at": item.next_run_at.isoformat() if item.next_run_at else None,
+            "last_scheduled_at": item.last_scheduled_at.isoformat() if item.last_scheduled_at else None,
+            "worker_status": worker_status, "redis_status": redis_status}
+
+
+def _run_dict(item: ScheduledDetectionRun) -> dict:
+    return {"id": item.id, "status": item.status, "attempts": item.attempts,
+            "window_minutes": item.window_minutes, "auth_threshold": item.auth_threshold,
+            "next_attempt_at": item.next_attempt_at.isoformat(),
+            "started_at": item.started_at.isoformat() if item.started_at else None,
+            "finished_at": item.finished_at.isoformat() if item.finished_at else None,
+            "error_code": item.error_code, "created_at": item.created_at.isoformat()}
+
+
+def _notification_dict(item: DetectionNotification) -> dict:
+    return {"id": item.id, "detection_id": item.detection_id, "severity": item.severity.value,
+            "title": item.title, "message": item.message, "created_at": item.created_at.isoformat(),
+            "read_at": item.read_at.isoformat() if item.read_at else None}
+
+
+@router.get("/scheduler")
+def get_scheduler(db: Session = Depends(get_db), actor: User = Depends(get_current_user)) -> dict:
+    config = db.get(DetectionSchedule, 1)
+    if config is None:
+        config = DetectionSchedule(id=1, enabled=False, interval_seconds=300,
+                                   window_minutes=15, auth_threshold=3,
+                                   updated_at=datetime.now(timezone.utc))
+        db.add(config)
+        db.commit()
+        db.refresh(config)
+    worker_status, redis_status = "offline", "unavailable"
+    try:
+        client = redis_lib.Redis.from_url(settings.redis_url, decode_responses=True,
+                                           socket_connect_timeout=0.5, socket_timeout=0.5)
+        redis_status = "connected" if client.ping() else "unavailable"
+        worker_status = "online" if client.get("opsaegis:detection:worker:heartbeat") else "offline"
+        client.close()
+    except Exception:
+        pass
+    return _schedule_dict(config, worker_status, redis_status)
+
+
+@router.put("/scheduler")
+def update_scheduler(payload: ScheduleUpdate, db: Session = Depends(get_db),
+                     actor: User = Depends(require_roles(UserRole.admin))) -> dict:
+    now = datetime.now(timezone.utc)
+    config = db.get(DetectionSchedule, 1)
+    if config is None:
+        config = DetectionSchedule(id=1, updated_at=now)
+        db.add(config)
+    config.enabled = payload.enabled
+    config.interval_seconds = payload.interval_seconds
+    config.window_minutes = payload.window_minutes
+    config.auth_threshold = payload.auth_threshold
+    config.updated_by_user_id = actor.id
+    config.updated_at = now
+    config.next_run_at = now + timedelta(seconds=payload.interval_seconds) if payload.enabled else None
+    db.add(AuditLog(actor_user_id=actor.id, action="detection.schedule.update",
+                    target="detection-scheduler",
+                    detail=json.dumps({"enabled": payload.enabled, "interval_seconds": payload.interval_seconds,
+                                       "window_minutes": payload.window_minutes,
+                                       "auth_threshold": payload.auth_threshold})))
+    db.commit()
+    db.refresh(config)
+    return _schedule_dict(config)
+
+
+@router.get("/runs")
+def list_scheduled_runs(limit: int = Query(default=20, ge=1, le=100),
+                        db: Session = Depends(get_db),
+                        actor: User = Depends(get_current_user)) -> list[dict]:
+    rows = db.scalars(select(ScheduledDetectionRun).order_by(
+        ScheduledDetectionRun.created_at.desc(), ScheduledDetectionRun.id.desc()
+    ).limit(limit)).all()
+    return [_run_dict(item) for item in rows]
+
+
+@router.get("/notifications")
+def list_notifications(limit: int = Query(default=50, ge=1, le=100),
+                       db: Session = Depends(get_db),
+                       actor: User = Depends(get_current_user)) -> list[dict]:
+    rows = db.scalars(select(DetectionNotification).where(
+        DetectionNotification.user_id == actor.id
+    ).order_by(DetectionNotification.created_at.desc(), DetectionNotification.id.desc()).limit(limit)).all()
+    return [_notification_dict(item) for item in rows]
+
+
+@router.patch("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, db: Session = Depends(get_db),
+                            actor: User = Depends(get_current_user)) -> dict:
+    item = db.scalar(select(DetectionNotification).where(
+        DetectionNotification.id == notification_id, DetectionNotification.user_id == actor.id
+    ))
+    if item is None:
+        raise HTTPException(404, "Notification not found")
+    if item.read_at is None:
+        item.read_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(item)
+    return _notification_dict(item)
+
+
+@router.patch("/{detection_id}/status")
+def update_detection_status(detection_id: int, payload: DetectionStatusUpdate,
+                            db: Session = Depends(get_db),
+                            actor: User = Depends(require_roles(*OPERATORS))) -> dict:
+    item = db.get(CorrelatedDetection, detection_id)
+    if item is None:
+        raise HTTPException(404, "Detection not found")
+    transitions = {"new": {"acknowledged"}, "acknowledged": {"investigating"},
+                   "investigating": {"acknowledged", "resolved"}, "resolved": set()}
+    next_status = payload.status.value
+    if next_status != item.status and next_status not in transitions.get(item.status, set()):
+        raise HTTPException(409, f"Invalid detection transition: {item.status} -> {next_status}")
+    if next_status != item.status:
+        previous = item.status
+        now = datetime.now(timezone.utc)
+        item.status = next_status
+        item.updated_at = now
+        if next_status == "acknowledged" and item.acknowledged_at is None:
+            item.acknowledged_at = now
+        if next_status == "resolved":
+            item.resolved_at = now
+        db.add(AuditLog(actor_user_id=actor.id, action="detection.status.update",
+                        target=f"detection:{item.id}",
+                        detail=json.dumps({"from": previous, "to": next_status})))
+        db.commit()
+        db.refresh(item)
+    return _finding_out(item)
