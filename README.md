@@ -216,3 +216,14 @@ docker compose --env-file .env.production -f compose.production.yaml ps
 The frontend is bound to `127.0.0.1:8080`; place a maintained TLS reverse proxy/load balancer in front of it. PostgreSQL, Redis and the API are not published on host ports. Do not expose internal service ports to the public internet. See [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) for secrets, TLS, operations and limitations.
 
 This is a production-oriented container baseline, not proof of a live production deployment. Host hardening, TLS termination, DNS/firewall policy, secret-manager integration, off-host backups, monitoring, restore drills and runbooks remain operator responsibilities. Nuclei stays blocked in production until isolated scanner execution is deployed.
+
+
+## SOC engine health indicators
+
+The Overview and Integrations workspaces display backend-reported health for Wazuh Manager, Wazuh Indexer, CrowdSec, Nuclei and Shannon. Nuclei and Shannon status is retrieved from their authenticated health endpoints; it is not hard-coded as unavailable.
+
+Only administrators and analysts can request Nuclei and Shannon health details. Viewer accounts see a restricted indicator because the corresponding endpoints are role-protected. Use the dashboard **Refresh** action to recheck the health endpoints.
+
+A healthy indicator means the relevant backend health check succeeded and execution is enabled where applicable. It does **not** prove that a scan has completed, findings have been ingested, or a production deployment is healthy. An unavailable health request is shown as unknown, not as not configured.
+
+See [Engine Health Indicators](docs/ENGINE_HEALTH.md) for the status meanings and troubleshooting steps.

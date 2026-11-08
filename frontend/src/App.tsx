@@ -3,7 +3,8 @@ import { ShannonPanel } from "./ShannonPanel";
 import { DetectionsPanel } from "./DetectionsPanel";
 import { ThreatIntelPanel } from "./ThreatIntelPanel";
 import { VulnerabilityPanel } from "./VulnerabilityPanel";
-import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan } from "./api";
+import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan, ShannonHealth, getShannonHealth } from "./api";
+import { describeEngineHealth } from "./engineHealth";
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, WazuhManagerHealth, WazuhManagerSync, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth, getWazuhManagerHealth, syncWazuhManager,
   clearAccessToken, collectWazuh, getAccessToken, getAssets, getCurrentUser,
@@ -434,12 +435,12 @@ function App() {
             {incidents.length ? <div className="activity-list">{incidents.slice(0, 5).map((item) => <div className="activity-row" key={item.id}><span className="incident-icon">↗</span><div className="activity-copy"><strong>{item.title}</strong><small>{titleCase(item.status)} · {formatDate(item.created_at)}</small></div><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></div>)}</div> : <EmptyState title="No incidents yet" detail="Incidents recorded by your team will appear here." />}
           </article>
         </section>
-        <section className="panel engine-panel"><div className="panel-heading"><div><p className="eyebrow">INTEGRATION LAYER</p><h3>Security engines</h3></div><button className="text-button" onClick={() => setView("integrations")}>Integration details <span>→</span></button></div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} /></section>
+        <section className="panel engine-panel"><div className="panel-heading"><div><p className="eyebrow">INTEGRATION LAYER</p><h3>Security engines</h3></div><button className="text-button" onClick={() => setView("integrations")}>Integration details <span>→</span></button></div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /></section>
       </div>}
 
       {view !== "overview" && <div className="page-content">
         {view !== "detections" && view !== "threat-intel" && view !== "vulnerabilities" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
-        {view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
+        {view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
           <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label={"Search " + view} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={"Search " + view + "…"} /></label></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
@@ -447,15 +448,48 @@ function App() {
   </div>;
 }
 
-function EngineCards({ wazuh, wazuhManager, crowdsec }: { wazuh: WazuhHealth | null; wazuhManager:WazuhManagerHealth|null; crowdsec: CrowdSecHealth | null }) {
+function EngineCards({ wazuh, wazuhManager, crowdsec, canOperate, refreshKey }: {
+  wazuh: WazuhHealth | null; wazuhManager: WazuhManagerHealth | null; crowdsec: CrowdSecHealth | null;
+  canOperate: boolean; refreshKey: number;
+}) {
+  const [nucleiHealth, setNucleiHealth] = useState<NucleiHealth | null>(null);
+  const [shannonHealth, setShannonHealth] = useState<ShannonHealth | null>(null);
+  const [nucleiHealthFailed, setNucleiHealthFailed] = useState(false);
+  const [shannonHealthFailed, setShannonHealthFailed] = useState(false);
+
+  useEffect(() => {
+    if (!canOperate) {
+      setNucleiHealth(null);
+      setShannonHealth(null);
+      setNucleiHealthFailed(false);
+      setShannonHealthFailed(false);
+      return;
+    }
+    let active = true;
+    setNucleiHealth(null);
+    setShannonHealth(null);
+    setNucleiHealthFailed(false);
+    setShannonHealthFailed(false);
+    Promise.allSettled([getNucleiHealth(), getShannonHealth()]).then(([nuclei, shannon]) => {
+      if (!active) return;
+      if (nuclei.status === "fulfilled") setNucleiHealth(nuclei.value);
+      else setNucleiHealthFailed(true);
+      if (shannon.status === "fulfilled") setShannonHealth(shannon.value);
+      else setShannonHealthFailed(true);
+    });
+    return () => { active = false; };
+  }, [canOperate, refreshKey]);
+
+  const nucleiPresentation = describeEngineHealth("Nuclei", nucleiHealth, canOperate, nucleiHealthFailed);
+  const shannonPresentation = describeEngineHealth("Shannon", shannonHealth, canOperate, shannonHealthFailed);
   const engines = [
     { name: "Wazuh Manager API", role: "Registered endpoint inventory (read-only)", status: wazuhManager?.status || "unknown", detail: wazuhManager?.status === "healthy" ? "Authenticated Manager API reachable" : wazuhManager?.status === "unhealthy" ? "Manager API health check failed" : wazuhManager?.status === "not_configured" ? "Manager API credentials or URL not configured" : "Status unavailable" },
     { name: "Wazuh Indexer", role: "Read-only SIEM alert ingestion", status: wazuh?.status || "unknown", detail: wazuh?.status === "healthy" ? "Backend health check succeeded" : wazuh?.status === "unhealthy" ? "Backend could not reach the Indexer" : wazuh?.status === "not_configured" ? "Backend credentials or URL not configured" : "Status unavailable" },
     { name: "CrowdSec LAPI", role: "Active threat decisions (read-only)", status: crowdsec?.status || "unknown", detail: crowdsec?.status === "healthy" ? "Authenticated Local API health check succeeded" : crowdsec?.status === "unhealthy" ? "Backend could not authenticate or reach Local API" : crowdsec?.status === "not_configured" ? "Backend URL or bouncer key not configured" : "Status unavailable" },
-    { name: "Nuclei", role: "Authorized vulnerability scanning", status: "not_configured", detail: "Safe-profile scanner; configure backend runtime and approved targets" },
-    { name: "Shannon", role: "Authorized application security testing", status: "not_configured", detail: "External isolated runner bridge required; disabled by default" },
+    { name: "Nuclei", role: "Authorized vulnerability scanning", ...nucleiPresentation },
+    { name: "Shannon", role: "Authorized application security testing", ...shannonPresentation },
   ];
-  return <div className="engine-grid">{engines.map((engine) => <article className="engine-card" key={engine.name}><div className="engine-card-top"><span className={"engine-indicator " + engine.status} /><span className={"engine-status " + engine.status}>{titleCase(engine.status)}</span></div><h4>{engine.name}</h4><p>{engine.role}</p><small>{engine.detail}</small></article>)}</div>;
+  return <div className="engine-grid" aria-label="Security engine health">{engines.map((engine) => <article className="engine-card" key={engine.name}><div className="engine-card-top"><span className={"engine-indicator " + engine.status} aria-hidden="true" /><span className={"engine-status " + engine.status} role="status" aria-live="polite">{"label" in engine ? engine.label : titleCase(engine.status)}</span></div><h4>{engine.name}</h4><p>{engine.role}</p><small>{engine.detail}</small></article>)}</div>;
 }
 
 export default App;
