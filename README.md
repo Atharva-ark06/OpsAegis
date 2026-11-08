@@ -231,3 +231,8 @@ Only administrators and analysts can request Nuclei and Shannon health details. 
 A healthy indicator means the relevant backend health check succeeded and execution is enabled where applicable. It does **not** prove that a scan has completed, findings have been ingested, or a production deployment is healthy. An unavailable health request is shown as unknown, not as not configured.
 
 See [Engine Health Indicators](docs/ENGINE_HEALTH.md) for the status meanings and troubleshooting steps.
+
+
+## API perimeter hardening
+
+The API validates incoming Host headers against `OPS_AEGIS_ALLOWED_HOSTS`, separately from browser CORS policy. Production requires an explicit comma-separated allowlist of lowercase hostnames/IP addresses without schemes, ports or wildcards. Configure the public reverse-proxy hostname and `127.0.0.1` for the container-local API health check. API responses include restrictive browser security headers, and authentication routes are marked `no-store`. See [API perimeter security](docs/API_PERIMETER_SECURITY.md) and [production deployment](docs/PRODUCTION_DEPLOYMENT.md).

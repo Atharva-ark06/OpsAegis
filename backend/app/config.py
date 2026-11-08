@@ -10,6 +10,8 @@ _PLACEHOLDER_SECRET_MARKERS = ("change-me", "changeme", "change_me", "placeholde
 def _is_placeholder_secret(value: str) -> bool:
     normalized = value.strip().lower()
     return any(marker in normalized for marker in _PLACEHOLDER_SECRET_MARKERS)
+
+
 class Settings(BaseSettings):
     environment: str = Field(default="development", validation_alias="OPS_AEGIS_ENV")
     secret_key: str = Field(default="development-only-change-this", validation_alias="OPS_AEGIS_SECRET_KEY")
@@ -21,6 +23,7 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite:///./opsaegis.db", validation_alias="DATABASE_URL")
     redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="REDIS_URL")
     cors_origins: str = Field(default="http://localhost:5173", validation_alias="CORS_ORIGINS")
+    allowed_hosts_raw: str = Field(default="localhost,127.0.0.1,testserver", validation_alias="OPS_AEGIS_ALLOWED_HOSTS")
     wazuh_manager_url: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_URL")
     wazuh_manager_username: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_USERNAME")
     wazuh_manager_password: str | None = Field(default=None, validation_alias="WAZUH_MANAGER_PASSWORD")
@@ -58,6 +61,7 @@ class Settings(BaseSettings):
     shannon_max_response_bytes: int = Field(default=5242880, validation_alias="SHANNON_MAX_RESPONSE_BYTES")
     shannon_max_findings: int = Field(default=200, validation_alias="SHANNON_MAX_FINDINGS")
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     @model_validator(mode="after")
     def validate_security_settings(self):
         if not 1 <= self.auth_login_ip_limit <= 1000:
@@ -70,6 +74,14 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_LOGIN_EMAIL_WINDOW_SECONDS must be between 60 and 86400")
         if not 5 <= self.access_token_minutes <= 60:
             raise ValueError("OPS_AEGIS_ACCESS_TOKEN_MINUTES must be between 5 and 60")
+        hosts = self.allowed_hosts
+        if not hosts:
+            raise ValueError("OPS_AEGIS_ALLOWED_HOSTS must contain at least one host")
+        for host in hosts:
+            if host != host.strip() or "://" in host or "/" in host or "?" in host or "#" in host or ":" in host and not (host.startswith("[") and host.endswith("]")):
+                raise ValueError("OPS_AEGIS_ALLOWED_HOSTS entries must be hostnames or IP addresses without ports or schemes")
+            if host == "*" or host.startswith("*.") or host.lower() != host:
+                raise ValueError("OPS_AEGIS_ALLOWED_HOSTS requires explicit lowercase hosts; wildcards are forbidden")
         if self.environment.lower() == "production":
             if len(self.secret_key) < 32 or self.secret_key == "development-only-change-this" or _is_placeholder_secret(self.secret_key) or len(set(self.secret_key)) < 12:
                 raise ValueError("Production requires a unique OPS_AEGIS_SECRET_KEY of at least 32 characters")
@@ -101,27 +113,48 @@ class Settings(BaseSettings):
         for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
                             ("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
                             ("CROWDSEC_TIMEOUT_SECONDS", self.crowdsec_timeout_seconds)):
-            if not 1 <= value <= 60: raise ValueError(f"{name} must be between 1 and 60")
-        if not 1 <= self.wazuh_manager_max_agents <= 2000: raise ValueError("WAZUH_MANAGER_MAX_AGENTS must be between 1 and 2000")
-        if self.wazuh_manager_url and not self.wazuh_manager_url.startswith("https://"): raise ValueError("WAZUH_MANAGER_URL must use HTTPS")
+            if not 1 <= value <= 60:
+                raise ValueError(f"{name} must be between 1 and 60")
+        if not 1 <= self.wazuh_manager_max_agents <= 2000:
+            raise ValueError("WAZUH_MANAGER_MAX_AGENTS must be between 1 and 2000")
+        if self.wazuh_manager_url and not self.wazuh_manager_url.startswith("https://"):
+            raise ValueError("WAZUH_MANAGER_URL must use HTTPS")
         for name, value in (("WAZUH_INDEXER_MAX_RESULTS", self.wazuh_indexer_max_results),
                             ("CROWDSEC_MAX_RESULTS", self.crowdsec_max_results)):
-            if not 1 <= value <= 1000: raise ValueError(f"{name} must be between 1 and 1000")
-        if not 1 <= self.threat_intel_timeout_seconds <= 30: raise ValueError("THREAT_INTEL_TIMEOUT_SECONDS must be between 1 and 30")
-        if not 60 <= self.threat_intel_cache_ttl_seconds <= 86400: raise ValueError("THREAT_INTEL_CACHE_TTL_SECONDS must be between 60 and 86400")
-        if not 1 <= self.nvd_timeout_seconds <= 30: raise ValueError("NVD_TIMEOUT_SECONDS must be between 1 and 30")
-        if not 30 <= self.nuclei_timeout_seconds <= 1800: raise ValueError("NUCLEI_TIMEOUT_SECONDS must be between 30 and 1800")
-        if not 1048576 <= self.nuclei_max_output_bytes <= 52428800: raise ValueError("NUCLEI_MAX_OUTPUT_BYTES must be between 1 MiB and 50 MiB")
-        if not 1 <= self.nuclei_rate_limit <= 20: raise ValueError("NUCLEI_RATE_LIMIT must be between 1 and 20")
-        if not 5 <= self.shannon_timeout_seconds <= 60: raise ValueError("SHANNON_TIMEOUT_SECONDS must be between 5 and 60")
-        if not 1048576 <= self.shannon_max_response_bytes <= 5242880: raise ValueError("SHANNON_MAX_RESPONSE_BYTES must be between 1 MiB and 5 MiB")
-        if not 1 <= self.shannon_max_findings <= 500: raise ValueError("SHANNON_MAX_FINDINGS must be between 1 and 500")
+            if not 1 <= value <= 1000:
+                raise ValueError(f"{name} must be between 1 and 1000")
+        if not 1 <= self.threat_intel_timeout_seconds <= 30:
+            raise ValueError("THREAT_INTEL_TIMEOUT_SECONDS must be between 1 and 30")
+        if not 60 <= self.threat_intel_cache_ttl_seconds <= 86400:
+            raise ValueError("THREAT_INTEL_CACHE_TTL_SECONDS must be between 60 and 86400")
+        if not 1 <= self.nvd_timeout_seconds <= 30:
+            raise ValueError("NVD_TIMEOUT_SECONDS must be between 1 and 30")
+        if not 30 <= self.nuclei_timeout_seconds <= 1800:
+            raise ValueError("NUCLEI_TIMEOUT_SECONDS must be between 30 and 1800")
+        if not 1048576 <= self.nuclei_max_output_bytes <= 52428800:
+            raise ValueError("NUCLEI_MAX_OUTPUT_BYTES must be between 1 MiB and 50 MiB")
+        if not 1 <= self.nuclei_rate_limit <= 20:
+            raise ValueError("NUCLEI_RATE_LIMIT must be between 1 and 20")
+        if not 5 <= self.shannon_timeout_seconds <= 60:
+            raise ValueError("SHANNON_TIMEOUT_SECONDS must be between 5 and 60")
+        if not 1048576 <= self.shannon_max_response_bytes <= 5242880:
+            raise ValueError("SHANNON_MAX_RESPONSE_BYTES must be between 1 MiB and 5 MiB")
+        if not 1 <= self.shannon_max_findings <= 500:
+            raise ValueError("SHANNON_MAX_FINDINGS must be between 1 and 500")
         if self.shannon_enabled and (not self.shannon_runner_url or not self.shannon_runner_token):
             raise ValueError("SHANNON_ENABLED requires SHANNON_RUNNER_URL and SHANNON_RUNNER_TOKEN")
         if self.shannon_runner_url and not self.shannon_runner_url.startswith("https://"):
             raise ValueError("SHANNON_RUNNER_URL must use HTTPS")
         return self
+
     @property
     def allowed_origins(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @property
+    def allowed_hosts(self) -> list[str]:
+        return [item.strip() for item in self.allowed_hosts_raw.split(",") if item.strip()]
+
+
+# Shared application settings instance used by the API and Alembic.
 settings = Settings()

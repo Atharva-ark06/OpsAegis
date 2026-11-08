@@ -26,7 +26,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 Use unique, URL-safe passwords of at least 16 characters for PostgreSQL and Redis. Set the same PostgreSQL password in `POSTGRES_PASSWORD` and the password segment of `DATABASE_URL`. Set the same Redis password in `REDIS_PASSWORD` and `REDIS_URL`. Avoid URL-reserved characters in these passwords unless correctly percent-encoded.
 
-Set `CORS_ORIGINS` to the exact public HTTPS origin, for example `https://soc.example.com`. Never commit `.env.production`; it is covered by the repository's environment-file ignore rules. The checked-in example contains placeholders only.
+Set `CORS_ORIGINS` to the exact public HTTPS origin, for example `https://soc.example.com`. Set `OPS_AEGIS_ALLOWED_HOSTS` to the exact lowercase public hostname plus `127.0.0.1` for the API container health check (example: `soc.example.com,127.0.0.1`). Do not include schemes, ports, wildcard entries or arbitrary internal hosts. Never commit `.env.production`; it is covered by the repository's environment-file ignore rules. The checked-in example contains placeholders only.
 
 ## 2. Validate and start
 
