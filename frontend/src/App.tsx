@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan } from "./api";
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth,
   clearAccessToken, collectWazuh, getAccessToken, getAssets, getCurrentUser,
@@ -276,7 +277,7 @@ function App() {
 
       {view !== "overview" && <div className="page-content">
         <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>
-        {view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button></div>}</div><EngineCards wazuh={wazuh} crowdsec={crowdsec} /><p className="integration-note">Wazuh collection is read-only. Collection is enabled only when the backend reports a configured Indexer connection. CrowdSec collection imports active decisions only; it does not ingest historical alerts or enforce blocks. Nuclei and Shannon remain planned.</p></section> :
+        {view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button></div>}</div><EngineCards wazuh={wazuh} crowdsec={crowdsec} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei scans only registered HTTPS targets with an authorization reference and the fixed safe profile. Shannon remains planned.</p></section> :
           <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label={"Search " + view} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={"Search " + view + "…"} /></label></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
@@ -288,10 +289,49 @@ function EngineCards({ wazuh, crowdsec }: { wazuh: WazuhHealth | null; crowdsec:
   const engines = [
     { name: "Wazuh Indexer", role: "Read-only SIEM alert ingestion", status: wazuh?.status || "unknown", detail: wazuh?.status === "healthy" ? "Backend health check succeeded" : wazuh?.status === "unhealthy" ? "Backend could not reach the Indexer" : wazuh?.status === "not_configured" ? "Backend credentials or URL not configured" : "Status unavailable" },
     { name: "CrowdSec LAPI", role: "Active threat decisions (read-only)", status: crowdsec?.status || "unknown", detail: crowdsec?.status === "healthy" ? "Authenticated Local API health check succeeded" : crowdsec?.status === "unhealthy" ? "Backend could not authenticate or reach Local API" : crowdsec?.status === "not_configured" ? "Backend URL or bouncer key not configured" : "Status unavailable" },
-    { name: "Nuclei", role: "Authorized vulnerability scanning", status: "planned", detail: "Adapter not implemented" },
+    { name: "Nuclei", role: "Authorized vulnerability scanning", status: "not_configured", detail: "Safe-profile scanner; configure backend runtime and approved targets" },
     { name: "Shannon", role: "Authorized application security testing", status: "planned", detail: "Adapter not implemented" },
   ];
   return <div className="engine-grid">{engines.map((engine) => <article className="engine-card" key={engine.name}><div className="engine-card-top"><span className={"engine-indicator " + engine.status} /><span className={"engine-status " + engine.status}>{titleCase(engine.status)}</span></div><h4>{engine.name}</h4><p>{engine.role}</p><small>{engine.detail}</small></article>)}</div>;
 }
 
 export default App;
+
+function NucleiPanel({canOperate,isAdmin}:{canOperate:boolean;isAdmin:boolean}) {
+ const [health,setHealth]=useState<NucleiHealth|null>(null),[targets,setTargets]=useState<NucleiTarget[]>([]),[scans,setScans]=useState<NucleiScan[]>([]);
+ const [name,setName]=useState(""),[url,setUrl]=useState(""),[authorization,setAuthorization]=useState("");
+ const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
+ async function refresh(){
+  const result=await Promise.allSettled([getNucleiHealth(),getNucleiTargets(),getNucleiScans()]);
+  if(result[0].status==="fulfilled")setHealth(result[0].value);
+  if(result[1].status==="fulfilled")setTargets(result[1].value);
+  if(result[2].status==="fulfilled")setScans(result[2].value);
+  const failed=result.find(x=>x.status==="rejected");if(failed?.status==="rejected")setError(failed.reason instanceof Error?failed.reason.message:"Unable to load Nuclei data.");
+ }
+ useEffect(()=>{if(canOperate)void refresh();},[canOperate]);
+ async function add(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();setBusy(true);setError("");setMessage("");
+  try{await registerNucleiTarget({name:name.trim(),url:url.trim(),authorization_reference:authorization.trim()});setName("");setUrl("");setAuthorization("");setMessage("Authorized target registered.");await refresh();}
+  catch(e){setError(e instanceof Error?e.message:"Target registration failed.");}finally{setBusy(false);}
+ }
+ async function scan(id:number){
+  setBusy(true);setError("");setMessage("");
+  try{const r=await startNucleiScan(id);setMessage("Scan "+r.scan.status+": "+r.received+" results ("+r.inserted+" new, "+r.updated+" updated).");await refresh();}
+  catch(e){setError(e instanceof Error?e.message:"Nuclei scan failed.");}finally{setBusy(false);}
+ }
+ if(!canOperate)return null;
+ return <section className="nuclei-workspace">
+  <div className="panel-heading"><div><p className="eyebrow">AUTHORIZED VULNERABILITY SCANNING</p><h3>Nuclei scan workspace</h3></div><span className={"engine-status "+(health?.status||"unknown")}>{health?.execution_enabled?"Scanner ready":"Scanner not configured"}</span></div>
+  <p className="integration-note">Only admin-registered HTTPS targets with a written authorization reference can be scanned. One fixed safe profile is available; arbitrary CLI arguments and template paths are not accepted.</p>
+  {error&&<ErrorMessage>{error}</ErrorMessage>}{message&&<div className="success-banner" role="status">{message}</div>}
+  {isAdmin&&<form className="nuclei-target-form" onSubmit={add}>
+   <label>Target name<input value={name} onChange={e=>setName(e.target.value)} minLength={2} maxLength={120} required placeholder="Authorized staging application"/></label>
+   <label>HTTPS target URL<input type="url" value={url} onChange={e=>setUrl(e.target.value)} required placeholder="https://staging.example.com"/></label>
+   <label>Authorization reference<input value={authorization} onChange={e=>setAuthorization(e.target.value)} minLength={12} maxLength={500} required placeholder="Written approval / change ticket"/></label>
+   <button className="primary-button compact" disabled={busy}>Register target</button>
+  </form>}
+  <div className="nuclei-target-list"><h4>Registered targets</h4>{targets.length?targets.map(t=><div className="nuclei-target-row" key={t.id}><div><strong>{t.name}</strong><small>{t.url} · {t.authorization_reference}</small></div><button className="primary-button compact" disabled={busy||!health?.execution_enabled||!t.enabled} onClick={()=>void scan(t.id)}>Run safe scan</button></div>):<EmptyState title="No authorized targets" detail="An administrator must register an approved HTTPS target before scanning."/>}</div>
+  <div className="nuclei-target-list"><h4>Recent scan history</h4>{scans.length?scans.slice(0,10).map(s=><div className="nuclei-target-row" key={s.id}><div><strong>Scan #{s.id} · Target #{s.target_id}</strong><small>{s.status} · {s.findings_count} findings · {formatDate(s.created_at)}</small></div><span className="tag">{s.profile}</span></div>):<EmptyState title="No scans yet" detail="Scan execution history will appear here."/>}</div>
+  {!health?.execution_enabled&&<p className="integration-note">Execution remains disabled until NUCLEI_ENABLED=true and the Nuclei binary is installed in the backend runtime.</p>}
+ </section>;
+}
