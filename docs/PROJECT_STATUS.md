@@ -201,3 +201,11 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - The current `.env.example` entries are blank, but history retains the prior values. Treat both provider keys as potentially compromised and rotate/revoke them before considering a narrow scan exception or history rewrite.
 - The full-history secret scan is intentionally failing until this exposure is remediated; do not suppress it to obtain a green badge.
 - Initial Python dependency audit identified the pinned/resolved pytest 8.4.2 range as affected by PYSEC-2026-1845. The requirements range is being raised to the reported fixed pytest release and compatible pytest-asyncio major.
+
+
+## Isolated Nuclei worker (PR #32 — proposed)
+- Nuclei scan requests are persisted as queued jobs and executed by a dedicated worker container; the API no longer starts the Nuclei subprocess.
+- The worker uses durable database queue state with Redis delivery, startup recovery, bounded retries and a Redis heartbeat consumed by the authenticated health endpoint.
+- Scanner image is separate and non-root, uses a read-only root filesystem, drops Linux capabilities, disallows privilege escalation, and applies CPU, memory and PID limits.
+- The worker is disabled by default and attached to a separate outbound network. Docker Compose does not provide a domain/IP egress allowlist; enforce DNS/IP destination restrictions at the host/cloud firewall before enabling it.
+- This PR does not prove production egress filtering, live scans or deployed container isolation. Keep execution disabled until firewall policy and staging authorization are verified.
