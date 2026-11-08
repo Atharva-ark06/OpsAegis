@@ -382,7 +382,6 @@ tbody tr:hover { background: #142236; }
   .activity-row { gap: 7px; }
 }
 
-
 /* SOC overview severity distribution */
 .severity-panel { margin-top: 15px; padding: 18px; }
 .distribution-total { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .04em; }
