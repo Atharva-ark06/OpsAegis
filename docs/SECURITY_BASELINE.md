@@ -1,5 +1,15 @@
 # Security Baseline
 
+## Production startup requirements
+- Set `OPS_AEGIS_ENV=production`; startup rejects the development JWT secret and weak/placeholder signing keys.
+- Use PostgreSQL with a unique database password of at least 16 characters; SQLite is development/test only.
+- Use a reachable non-loopback Redis URL.
+- Set explicit HTTPS CORS origins only. Wildcards, HTTP origins, loopback hosts and URL paths are rejected.
+- Keep Nuclei disabled in production until execution is moved from the API runtime to a dedicated unprivileged scanner worker with egress and resource controls.
+- Generate and store secrets outside Git. The checked-in `.env.example` is development-only and contains deliberately insecure local defaults.
+- These startup checks do not replace TLS termination, firewall policy, secret management, backup/restore testing, monitoring or deployment review.
+
+
 - Never commit .env files, credentials, tokens, private keys or customer evidence.
 - Replace development credentials before use outside a local workstation.
 - Development ports are bound to loopback by default.
