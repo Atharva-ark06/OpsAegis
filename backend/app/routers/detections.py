@@ -140,10 +140,19 @@ def evaluate_detections(
             if scope in {"ip", "range"} and isinstance(value, str) and value.strip():
                 crowdsec_by_ip.append((value.strip().lower(), [item]))
 
-    for ip in sorted(set(wazuh_by_ip).intersection(crowdsec_by_ip)):
-        group = wazuh_by_ip[ip] + crowdsec_by_ip[ip]
+    for ip, wazuh_items in sorted(wazuh_by_ip.items()):
+        matching_crowdsec: list[Finding] = []
+        for decision_value, decision_items in crowdsec_by_ip:
+            try:
+                decision_network = ipaddress.ip_network(decision_value, strict=False)
+                if ipaddress.ip_address(ip) in decision_network:
+                    matching_crowdsec.extend(decision_items)
+            except ValueError:
+                if decision_value == ip:
+                    matching_crowdsec.extend(decision_items)
+        group = wazuh_items + matching_crowdsec
         ids = sorted({item.id for item in group})
-        if len({item.source_engine for item in group}) < 2:
+        if not matching_crowdsec:
             continue
         candidates.append((
             "CROSS-ENGINE-001", ip, "Cross-engine IP corroboration",
