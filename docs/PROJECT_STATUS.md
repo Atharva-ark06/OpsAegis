@@ -1,70 +1,42 @@
 # OpsAegis — Project Status
 
-Updated for merged PRs #3 and #4 and the PR #5 authenticated frontend implementation branch.
+Updated for merged PRs #3, #4 and #5 and the PR #6 CrowdSec adapter implementation.
 
 ## Implemented and merged
+- FastAPI application, PostgreSQL persistence, Alembic migrations and Redis service.
+- JWT bearer authentication, Argon2 password hashing, admin/analyst/viewer RBAC and audit logging.
+- Authenticated React/TypeScript workspace with API-backed assets, findings, incidents and Wazuh status.
+- Wazuh Indexer HTTPS read-only adapter, bounded alert retrieval, normalization, evidence metadata and source-event deduplication.
 
-### Stage 3 foundation
-- FastAPI application, root/health/readiness endpoints and environment-based configuration.
-- Initial SQLAlchemy models for assets, findings and incidents.
-- React + TypeScript analyst-console starter.
-- Docker Compose definitions for API, frontend, PostgreSQL and Redis.
+## PR #6 — CrowdSec Local API adapter
+- Uses CrowdSec Local API /v1/decisions with a dedicated bouncer API key in X-Api-Key.
+- Enforces HTTPS, certificate verification, optional CA bundle, timeout, disabled redirects and bounded result count.
+- Imports active decisions only; does not claim historical CrowdSec alert ingestion.
+- Normalizes decision ID, action, scope, value, scenario, origin and duration.
+- Adds protected admin/analyst health and manual collection endpoints.
+- Deduplicates by decision ID and preserves analyst triage status and first-seen time.
+- Audits collection counts without storing API keys or raw upstream responses.
+- Adds deterministic adapter and route tests.
 
-### Database persistence
-- SQLAlchemy session lifecycle and persistence APIs for assets, findings and incidents.
-- Alembic initial schema migration.
-- PostgreSQL and Redis service definitions with health checks.
-
-### Authentication and access control (PR #3)
-- JWT bearer authentication and Argon2 password hashing.
-- Admin, analyst and viewer roles enforced in protected API routes.
-- Administrator user provisioning and first-admin bootstrap command.
-- User and audit-log models; successful login and user creation audit events.
-- Production signing-secret validation and configurable token lifetime.
-
-## PR #4 — Wazuh integration implementation
-
-This PR introduces:
-- Wazuh Indexer/OpenSearch read-only adapter using backend-only Basic Auth over HTTPS.
-- TLS verification, optional CA bundle, request timeout and bounded result count.
-- Normalization of alert IDs, timestamps, rule levels, descriptions and agent metadata.
-- Protected integration health and collection endpoints for admin/analyst roles.
-- Persisted finding evidence metadata and source-event deduplication migration.
-- Collection audit event and adapter/route tests using mocked HTTP responses.
-
-**The adapter code does not mean a live Wazuh instance is connected.** Live validation requires an authorized Wazuh Indexer URL and read-only credentials in the backend environment.
-
-## PR #5 — Authenticated frontend workspace (in progress)
-
-The PR #5 branch replaces the static starter screen with:
-- Email/password login against the existing JWT endpoint and authenticated session verification.
-- Session-scoped browser token handling, automatic local token clearing on API 401 responses, and sign-out.
-- Authenticated asset, finding and incident list views backed by existing API endpoints.
-- Overview counts and recent records sourced from the API (each list currently requests up to 200 records).
-- Wazuh Indexer health display and a role-gated read-only collection action for admin/analyst accounts.
-- Explicit disconnected/planned states for engines without adapters, plus loading, empty, error, refresh and responsive states.
-- API client unit tests and CI execution before the frontend build.
-
-The UI does not create incidents automatically, implement record editing/deletion, or claim server-side token revocation. The backend currently has no refresh/revocation endpoint. The browser stores the short-lived bearer token in sessionStorage; this is tab-scoped but remains accessible to page JavaScript.
+A configured endpoint is not proof of a live connection. CI uses mocked HTTP responses; live verification requires an operator-supplied authorized LAPI URL and bouncer key.
 
 ## Not implemented yet
-
-- Scheduled polling/Redis worker orchestration and retry/dead-letter handling.
-- CrowdSec, Nuclei and Shannon adapters.
-- Full pagination/cursor-based collection beyond the configured Wazuh result cap.
-- Asset auto-mapping and cross-engine correlation.
-- Incident generation from correlated findings and complete incident lifecycle.
-- Evidence object storage and evidence access controls.
-- Production deployment hardening, monitoring and operational runbooks.
+- Scheduled polling, durable Redis worker orchestration, retry/backoff and persisted execution history.
+- CrowdSec historical alert ingestion; current adapter reads active decisions only.
+- Nuclei scan orchestration, target authorization registry, scan profiles and finding ingestion.
+- Shannon isolated job execution and evidence ingestion.
+- Full pagination/cursor collection and asset auto-mapping.
+- Cross-engine correlation, automatic incident creation and complete incident lifecycle.
+- Wazuh Manager agent-management integration and response actions.
+- Production deployment hardening, monitoring, secrets manager integration and operational runbooks.
 
 ## Data integrity and UI principles
-
 - Never present fixtures or mock responses as live telemetry.
 - Preserve source engine and source-native event identifiers.
 - Deduplicate repeated source events rather than multiplying findings.
 - Do not silently overwrite analyst triage status during ingestion.
 - Keep integration credentials server-side and never return them in API responses.
+- Distinguish active CrowdSec decisions from historical alerts and enforcement.
 
-## Current validation status
-
-Automated tests cover the adapter's normalization, transport configuration, bounded queries, access control and idempotent ingestion behavior. CI results must be checked against the latest PR commit; no live Wazuh connection is claimed until tested against an authorized lab Indexer.
+## Validation
+PR #6 adds mocked tests for CrowdSec LAPI authentication, HTTPS validation, malformed responses, normalization, role authorization, deduplication and triage preservation. Full backend/frontend CI and an authorized live CrowdSec lab check are required before claiming production readiness.

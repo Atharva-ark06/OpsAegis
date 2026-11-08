@@ -42,6 +42,8 @@ export interface WazuhHealth {
   configured: boolean;
   status: "not_configured" | "healthy" | "unhealthy";
 }
+export interface CrowdSecHealth { integration: string; configured: boolean; status: "not_configured" | "healthy" | "unhealthy"; capability: "read_active_decisions"; }
+export interface CrowdSecCollection { integration: string; received: number; inserted: number; updated: number; truncated_possible: boolean; max_results: number; data_scope: "active_decisions_only"; }
 export interface WazuhCollection {
   integration: string;
   since: string;
@@ -126,3 +128,6 @@ export function getWazuhHealth(): Promise<WazuhHealth> {
 export function collectWazuh(): Promise<WazuhCollection> {
   return request("/integrations/wazuh/collect", { method: "POST" });
 }
+
+export function getCrowdSecHealth(): Promise<CrowdSecHealth> { return request("/integrations/crowdsec/health"); }
+export function collectCrowdSec(): Promise<CrowdSecCollection> { return request("/integrations/crowdsec/collect", { method: "POST" }); }
