@@ -10,6 +10,7 @@ def upgrade():
   batch.add_column(sa.Column("attempts",sa.Integer(),nullable=False,server_default="0"))
   batch.add_column(sa.Column("next_attempt_at",sa.DateTime(timezone=True),nullable=True))
   batch.create_index("ix_nuclei_scan_runs_next_attempt_at",["next_attempt_at"])
+ op.execute("UPDATE nuclei_scan_runs SET next_attempt_at = created_at WHERE status = 'queued' AND next_attempt_at IS NULL")
 def downgrade():
  with op.batch_alter_table("nuclei_scan_runs") as batch:
   batch.drop_index("ix_nuclei_scan_runs_next_attempt_at")
