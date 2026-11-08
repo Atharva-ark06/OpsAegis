@@ -10,6 +10,17 @@ depends_on = None
 
 def upgrade():
     op.add_column("findings", sa.Column("evidence", sa.JSON(), nullable=True))
+    duplicates = op.get_bind().execute(sa.text(
+        "SELECT source_engine, source_native_id, COUNT(*) AS total "
+        "FROM findings WHERE source_native_id IS NOT NULL "
+        "GROUP BY source_engine, source_native_id HAVING COUNT(*) > 1"
+    )).first()
+    if duplicates:
+        raise RuntimeError(
+            "Cannot add finding deduplication index: duplicate non-null "
+            "(source_engine, source_native_id) records already exist. "
+            "Resolve duplicates before retrying this migration."
+        )
     op.create_index(
         "uq_findings_source_native_id",
         "findings",
