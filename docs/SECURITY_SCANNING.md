@@ -20,9 +20,9 @@ Gitleaks can produce false positives. Suppress only a verified non-secret with a
 
 The project currently does not commit a frontend npm lockfile. This workflow therefore does not claim reproducible frontend dependency resolution or perform an npm audit. Add and maintain a reviewed lockfile before enabling a meaningful locked frontend audit.
 
-## Dependency review
+## GitHub Dependency Review availability
 
-For pull requests, GitHub's dependency review action checks newly introduced dependency changes and fails on known high or critical vulnerabilities. It complements, but does not replace, the full Python audits.
+The GitHub Dependency Review action is not enabled in this repository because its dependency graph feature is currently unavailable. The workflow does not call that action or claim to provide its PR-level diff analysis. Enable the repository dependency graph in GitHub Settings if you want to add that additional check later.
 
 ## What a green result means
 

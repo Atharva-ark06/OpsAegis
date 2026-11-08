@@ -191,7 +191,6 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Adds a separate GitHub Actions security workflow for pull requests and pushes to \`main\`.
 - Scans the complete Git history with Gitleaks to detect committed credentials and tokens.
 - Audits backend and Shannon bridge Python dependency requirements with \`pip-audit --strict\`.
-- Reviews newly introduced pull-request dependencies and blocks high/critical known vulnerabilities.
 - Documents secret rotation, false-positive handling and scan limitations.
 - The repository currently has no committed frontend npm lockfile, so the workflow deliberately does not claim to audit a locked frontend dependency graph.
 - A passing scan does not prove prior credential rotation, deployed-host security or absence of unknown vulnerabilities.

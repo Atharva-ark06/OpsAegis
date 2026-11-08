@@ -38,14 +38,3 @@ jobs:
         run: pip-audit --strict -r backend/requirements.txt
       - name: Audit Shannon bridge dependencies
         run: pip-audit --strict -r runner/shannon-bridge/requirements.txt
-
-  dependency-review:
-    name: Review introduced dependency vulnerabilities
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: never
