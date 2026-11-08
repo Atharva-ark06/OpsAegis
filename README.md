@@ -244,7 +244,7 @@ Run the same high-value startup and deployment checks locally before pushing cha
 
 ```powershell
 # From the repository root
-Copy-Item .env.production.example .env.production -Force
+if (-not (Test-Path .env.production)) { Copy-Item .env.production.example .env.production }
 docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
 
 # Backend import and migration checks
