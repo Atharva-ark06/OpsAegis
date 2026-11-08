@@ -219,4 +219,4 @@ class ThreatIntelIOC(Base):
     provider_results:Mapped[dict[str,Any]]=mapped_column(JSON,nullable=False)
     enriched_at:Mapped[datetime|None]=mapped_column(DateTime(timezone=True),nullable=True)
     created_by_user_id:Mapped[int|None]=mapped_column(ForeignKey("users.id",ondelete="SET NULL"),nullable=True)
-    created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=utc_now,nullable=False)
+    created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=utc_now,nullable=False,index=True)

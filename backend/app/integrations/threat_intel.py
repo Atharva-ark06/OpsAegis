@@ -25,7 +25,7 @@ def normalize_indicator(kind:str,value:str)->tuple[str,str]:
         if parsed.scheme.lower() not in {"http","https"} or not parsed.hostname: raise ValueError("URL indicators must use HTTP or HTTPS and include a hostname")
         if parsed.username is not None or parsed.password is not None: raise ValueError("URL indicators cannot contain credentials")
         if parsed.fragment: raise ValueError("URL indicators must not contain fragments")
-        try: host=parsed.hostname.encode("idna").decode("ascii").lower()
+        try: host=parsed.hostname.encode("idna").decode("ascii").lower().rstrip(".")
         except UnicodeError: raise ValueError("URL hostname is invalid") from None
         try:
             address=ipaddress.ip_address(host)
