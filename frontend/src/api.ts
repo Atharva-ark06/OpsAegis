@@ -29,13 +29,18 @@ export interface Finding {
   first_seen_at: string;
   last_seen_at: string;
 }
+export type IncidentStatus = "open" | "investigating" | "contained" | "resolved" | "closed";
 export interface Incident {
   id: number;
   title: string;
   severity: Severity;
-  status: string;
+  status: IncidentStatus;
   description: string | null;
+  assigned_to_user_id: number | null;
+  resolution: string | null;
   created_at: string;
+  updated_at: string;
+  closed_at: string | null;
 }
 export interface WazuhHealth {
   integration: string;
@@ -168,3 +173,10 @@ export const startShannonScan = (id: number): Promise<{ scan: ShannonScan }> =>
   request("/integrations/shannon/targets/" + id + "/scans", { method: "POST" });
 export const syncShannonScan = (id: number): Promise<ShannonSync> =>
   request("/integrations/shannon/scans/" + id + "/sync", { method: "POST" });
+
+export function updateFindingStatus(id: number, status: FindingStatus): Promise<Finding> {
+  return request("/findings/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
+}
+export function updateIncident(id: number, payload: { status?: IncidentStatus; assigned_to_user_id?: number | null; resolution?: string }): Promise<Incident> {
+  return request("/incidents/" + id, { method: "PATCH", body: JSON.stringify(payload) });
+}

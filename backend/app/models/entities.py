@@ -82,7 +82,12 @@ class Incident(Base):
     severity: Mapped[FindingSeverity] = mapped_column(SqlEnum(FindingSeverity), default=FindingSeverity.unknown, nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="open")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    resolution: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    assignee: Mapped[User | None] = relationship(foreign_keys=[assigned_to_user_id])
 
 class NucleiTarget(Base):
     __tablename__ = "nuclei_targets"
