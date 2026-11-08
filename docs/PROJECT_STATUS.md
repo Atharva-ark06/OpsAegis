@@ -143,14 +143,14 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 - Linked records are resolved against currently returned API pages; unavailable records are explicitly identified rather than fabricated.
 - Full audit event timelines are not exposed by the current incident API and are not represented as if available.
 
-## Engine health visibility (PR #25 — proposed)
+## Engine health visibility (PR #25 — merged)
 - SOC engine cards retrieve Nuclei and Shannon health from their authenticated backend health endpoints rather than hard-coding both engines as not configured.
 - Health states distinguish healthy, unhealthy, not configured, execution disabled, request unavailable and role-restricted states.
 - Only administrator and analyst roles request these health endpoints; viewer cards do not attempt requests that the API would reject.
 - Global dashboard refresh rechecks engine health. Health state is not equivalent to a successful scan or proof of live findings ingestion.
 
 
-## API perimeter hardening (PR #28 — proposed)
+## API perimeter hardening (PR #28 — merged)
 - Added exact Host-header allowlisting through TrustedHostMiddleware, independent of CORS.
 - Production requires explicit lowercase hostnames/IPs; wildcard, scheme and port entries are rejected. The production template includes the public host and loopback for local container health checks.
 - Added restrictive API security response headers and no-store caching for authentication routes.
@@ -158,10 +158,30 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 - Automated tests cover host allowlisting, response headers and production configuration. No live production deployment is claimed.
 
 
-## CI preflight guardrails (PR #29 — proposed)
+## CI preflight guardrails (PR #29 — merged)
 - Adds a required first CI job that verifies the shared settings instance can be imported and the FastAPI application starts at import time.
 - Applies the complete Alembic migration chain against a disposable SQLite database before downstream CI jobs begin.
 - Validates the production Compose file before backend/frontend/runner/container jobs are allowed to run.
 - Makes all existing CI jobs depend on preflight, so a configuration or deployment-manifest regression fails early with a focused job/step.
 - Adds regression tests for the application settings export and import contract.
 - This catches the classes of failures seen in PR #28 before later build/test jobs run; it cannot guarantee error-free changes or validate a live production deployment.
+
+
+## Phase 5 — Production readiness and end-to-end validation
+
+Phase 5 is in progress. The focus is validating existing integrations and operational boundaries, not adding dashboard features for their own sake.
+
+### Live integration diagnostics (PR #30 — proposed)
+- Adds an operator-run, read-only diagnostic CLI using the existing Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon adapters.
+- Loads local environment values without printing credentials; reports only sanitized check outcomes.
+- NVD reachability is opt-in and uses one fixed public CVE lookup. VirusTotal and AbuseIPDB are not queried to avoid unexpected API quota use.
+- The diagnostic never launches a scan or writes application data. Nuclei remains disabled and is reported as unsafe if its legacy API-process execution flag is enabled.
+- A passing check validates only the checked endpoint at that moment; it does not prove telemetry ingestion, worker reliability or production readiness.
+
+### Remaining validation
+- Run the diagnostic from the actual deployment network with operator-provided credentials and review the sanitized report.
+- Validate Wazuh alert and vulnerability ingestion, Manager inventory sync, CrowdSec decisions and threat-intelligence lookups using authorized test data.
+- Move Nuclei execution out of the API process into a separately isolated scanner worker with enforceable egress restrictions before enabling scans.
+- Validate Redis scheduler and worker recovery under restart/failure conditions.
+- Deploy and independently validate the Shannon bridge on a disposable staging VM.
+- Complete production secret management, monitoring, backup/restore and operational runbooks.
