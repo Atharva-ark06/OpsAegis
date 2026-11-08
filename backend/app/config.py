@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
@@ -48,8 +50,27 @@ class Settings(BaseSettings):
     def validate_security_settings(self):
         if not 5 <= self.access_token_minutes <= 60:
             raise ValueError("OPS_AEGIS_ACCESS_TOKEN_MINUTES must be between 5 and 60")
-        if self.environment.lower() == "production" and (len(self.secret_key) < 32 or self.secret_key == "development-only-change-this"):
-            raise ValueError("Production requires a unique OPS_AEGIS_SECRET_KEY of at least 32 characters")
+        if self.environment.lower() == "production":
+            if len(self.secret_key) < 32 or self.secret_key == "development-only-change-this" or self.secret_key.lower() in {"change-me", "changeme", "secret", "your-secret-key"}:
+                raise ValueError("Production requires a unique OPS_AEGIS_SECRET_KEY of at least 32 characters")
+            if not self.database_url.startswith(("postgresql://", "postgresql+psycopg://")):
+                raise ValueError("Production requires PostgreSQL; SQLite is supported only for development and tests")
+            database_password = urlsplit(self.database_url).password or ""
+            if len(database_password) < 16 or database_password.lower() in {"password", "postgres", "change-me", "changeme"}:
+                raise ValueError("Production DATABASE_URL must contain a unique database password of at least 16 characters")
+            if not self.redis_url.startswith(("redis://", "rediss://")) or urlsplit(self.redis_url).hostname in {"localhost", "127.0.0.1", "::1"}:
+                raise ValueError("Production requires a reachable Redis service URL; loopback Redis is not allowed")
+            origins = self.allowed_origins
+            if not origins or "*" in origins:
+                raise ValueError("Production CORS_ORIGINS must contain explicit HTTPS origins; wildcards are forbidden")
+            for origin in origins:
+                parsed = urlsplit(origin)
+                if parsed.scheme != "https" or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
+                    raise ValueError("Every production CORS_ORIGINS entry must be an HTTPS origin without a path")
+                if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
+                    raise ValueError("Production CORS_ORIGINS cannot use loopback hosts")
+            if self.nuclei_enabled:
+                raise ValueError("NUCLEI_ENABLED is blocked in production until scanning runs in an isolated worker")
         for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
                             ("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
                             ("CROWDSEC_TIMEOUT_SECONDS", self.crowdsec_timeout_seconds)):
