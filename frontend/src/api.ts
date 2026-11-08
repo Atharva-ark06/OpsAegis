@@ -252,7 +252,7 @@ export interface WazuhVulnerabilitySync {integration:string;received:number;tota
 export const syncWazuhVulnerabilities=():Promise<WazuhVulnerabilitySync>=>request("/integrations/wazuh-vulnerabilities/sync",{method:"POST"});
 export type VulnerabilityStatus = "open" | "in_progress" | "accepted" | "remediated" | "false_positive";
 export interface Vulnerability {
- id:number;cve_id:string;finding_id:number;asset_id:number|null;cvss_score:number|null;cvss_version:string|null;
+ id:number;cve_id:string;finding_id:number;asset_id:number|null;source_engine?:string|null;agent_id?:string|null;agent_name?:string|null;host_os?:string|null;package_name?:string|null;package_version?:string|null;package_type?:string|null;package_architecture?:string|null;cvss_score:number|null;cvss_version:string|null;
  cvss_severity:string|null;description:string|null;published_at:string|null;nvd_modified_at:string|null;
  nvd_data_updated_at:string|null;nvd_url:string;status:VulnerabilityStatus;remediation_notes:string|null;
  first_seen_at:string;last_seen_at:string;updated_at:string;cached?:boolean;
