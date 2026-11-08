@@ -7,7 +7,7 @@ import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTarge
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, WazuhManagerHealth, WazuhManagerSync, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth, getWazuhManagerHealth, syncWazuhManager,
   clearAccessToken, collectWazuh, getAccessToken, getAssets, getCurrentUser,
-  getFindings, getIncidents, getWazuhHealth, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
+  getFindings, getIncidents, getWazuhHealth, getDetections, Detection, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
 } from "./api";
 
 type View = "overview" | "assets" | "findings" | "vulnerabilities" | "detections" | "incidents" | "integrations" | "threat-intel";
@@ -107,6 +107,19 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
   const [assetStatus, setAssetStatus] = useState("all");
   const [assetEnvironment, setAssetEnvironment] = useState("all");
   const [assetSource, setAssetSource] = useState("all");
+  const [incidentDetections, setIncidentDetections] = useState<Detection[]>([]);
+  const [incidentDetectionsError, setIncidentDetectionsError] = useState("");
+  const [expandedIncidentIds, setExpandedIncidentIds] = useState<number[]>([]);
+  useEffect(() => {
+    if (view !== "incidents") return;
+    let active = true;
+    getDetections().then((items) => {
+      if (active) { setIncidentDetections(items); setIncidentDetectionsError(""); }
+    }).catch((reason: unknown) => {
+      if (active) setIncidentDetectionsError(reason instanceof Error ? reason.message : "Linked detections could not be loaded.");
+    });
+    return () => { active = false; };
+  }, [view]);
   const needle = query.trim().toLowerCase();
   if (view === "assets") {
     const registeredAgents = assets.filter((item) => Boolean(item.source_engine && item.external_id));
@@ -144,9 +157,42 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
     if (!rows.length) return <EmptyState title={needle ? "No matching findings" : "No findings recorded"} detail={needle ? "Try another search term." : "Findings appear after a security engine sends verified events or an authorized analyst records one."} />;
     return <div className="table-wrap"><table><thead><tr><th>Finding</th><th>Source</th><th>Severity</th><th>Status</th><th>Last seen</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.title}</strong><small>FINDING-{item.id}{item.asset_id ? " · ASSET-" + item.asset_id : ""}</small></td><td>{titleCase(item.source_engine)}</td><td><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></td><td>{canOperate ? <select aria-label={"Update finding " + item.id + " status"} value={item.status} onChange={(event) => onFindingStatus(item.id, event.target.value as Finding["status"])}>{["new","triaged","accepted","false_positive","resolved"].map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select> : <span className="tag">{titleCase(item.status)}</span>}</td><td>{formatDate(item.last_seen_at)}</td></tr>)}</tbody></table></div>;
   }
-  const rows = incidents.filter((item) => [item.title, item.status, item.severity].join(" ").toLowerCase().includes(needle));
+  const rows = incidents.filter((item) => [item.title, item.status, item.severity, item.description || "", item.resolution || ""].join(" ").toLowerCase().includes(needle));
   if (!rows.length) return <EmptyState title={needle ? "No matching incidents" : "No incidents recorded"} detail={needle ? "Try another search term." : "Incidents created in OpsAegis will appear here. No incidents are generated automatically yet."} />;
-  return <div className="table-wrap"><table><thead><tr><th>Incident</th><th>Severity</th><th>Status</th><th>Created</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.title}</strong><small>INCIDENT-{item.id}</small></td><td><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></td><td>{canOperate ? <div className="incident-actions"><select aria-label={"Update incident " + item.id + " status"} value={incidentStatuses[item.id] ?? item.status} onChange={(event) => setIncidentStatuses((current) => ({...current,[item.id]:event.target.value as Incident["status"]}))}>{["open","investigating","contained","resolved","closed"].map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select><input aria-label={"Resolution note for incident " + item.id} value={resolutionNotes[item.id] ?? item.resolution ?? ""} onChange={(event) => setResolutionNotes((current) => ({...current,[item.id]:event.target.value}))} placeholder="Resolution note required to resolve/close" maxLength={10000}/><button className="secondary-button" onClick={() => onIncidentUpdate(item.id, incidentStatuses[item.id] ?? item.status, resolutionNotes[item.id] ?? item.resolution ?? "")}>Save response</button><button className="text-button" title={"Assign incident to " + user.email} onClick={() => onIncidentUpdate(item.id, incidentStatuses[item.id] ?? item.status, resolutionNotes[item.id] ?? item.resolution ?? "", true)}>Assign to me</button></div> : <span className="tag">{titleCase(item.status)}</span>}</td><td>{formatDate(item.created_at)}</td></tr>)}</tbody></table></div>;
+  return <div className="incident-workspace">
+    <div className="incident-summary">
+      <article><small>RETURNED INCIDENTS</small><strong>{incidents.length}</strong><span>API records · max 200</span></article>
+      <article><small>OPEN / INVESTIGATING</small><strong>{incidents.filter((item) => ["open", "investigating"].includes(item.status)).length}</strong><span>Active response states</span></article>
+      <article><small>CONTAINED</small><strong>{incidents.filter((item) => item.status === "contained").length}</strong><span>Containment recorded</span></article>
+      <article><small>RESOLVED / CLOSED</small><strong>{incidents.filter((item) => ["resolved", "closed"].includes(item.status)).length}</strong><span>Completed lifecycle states</span></article>
+    </div>
+    {incidentDetectionsError && <div className="inline-error" role="status">Linked detection context unavailable: {incidentDetectionsError}</div>}
+    <div className="incident-register">{rows.map((item) => {
+      const expanded = expandedIncidentIds.includes(item.id);
+      const linkedDetections = incidentDetections.filter((detection) => detection.incident_id === item.id);
+      const linkedFindingIds = [...new Set(linkedDetections.flatMap((detection) => detection.finding_ids))];
+      const linkedFindings = linkedFindingIds.map((id) => findings.find((finding) => finding.id === id)).filter((finding): finding is Finding => Boolean(finding));
+      const unresolvedFindingIds = linkedFindingIds.filter((id) => !findings.some((finding) => finding.id === id));
+      return <article className="incident-card" key={item.id}>
+        <div className="incident-card-head">
+          <div className="incident-card-title"><span className="incident-id">INCIDENT-{item.id}</span><h3>{item.title}</h3><div className="incident-meta"><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span><span className="tag">{titleCase(item.status)}</span><span>Created {formatDate(item.created_at)}</span></div></div>
+          <button className="secondary-button" aria-expanded={expanded} onClick={() => setExpandedIncidentIds((current) => expanded ? current.filter((id) => id !== item.id) : [...current, item.id])}>{expanded ? "Hide investigation" : "Investigate incident"}</button>
+        </div>
+        {canOperate && <div className="incident-actions incident-card-actions">
+          <label>Status<select aria-label={"Update incident " + item.id + " status"} value={incidentStatuses[item.id] ?? item.status} onChange={(event) => setIncidentStatuses((current) => ({...current,[item.id]:event.target.value as Incident["status"]}))}>{["open","investigating","contained","resolved","closed"].map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select></label>
+          <label className="resolution-field">Resolution / analyst notes<input aria-label={"Resolution note for incident " + item.id} value={resolutionNotes[item.id] ?? item.resolution ?? ""} onChange={(event) => setResolutionNotes((current) => ({...current,[item.id]:event.target.value}))} placeholder="Required before resolving or closing" maxLength={10000}/></label>
+          <button className="primary-button compact" onClick={() => onIncidentUpdate(item.id, incidentStatuses[item.id] ?? item.status, resolutionNotes[item.id] ?? item.resolution ?? "")}>Save changes</button>
+          <button className="text-button" title={"Assign incident to " + user.email} onClick={() => onIncidentUpdate(item.id, incidentStatuses[item.id] ?? item.status, resolutionNotes[item.id] ?? item.resolution ?? "", true)}>Assign to me</button>
+        </div>}
+        {expanded && <div className="incident-investigation">
+          <section><h4>Incident description</h4><p>{item.description || "No incident description was recorded."}</p></section>
+          <section><h4>Response record</h4><dl><div><dt>Assigned analyst ID</dt><dd>{item.assigned_to_user_id ?? "Unassigned"}</dd></div><div><dt>Last updated</dt><dd>{formatDate(item.updated_at)}</dd></div><div><dt>Closed at</dt><dd>{item.closed_at ? formatDate(item.closed_at) : "Not closed"}</dd></div></dl><p className="incident-resolution">{item.resolution || "No resolution note recorded."}</p></section>
+          <section><h4>Correlated detections <span>{linkedDetections.length}</span></h4>{linkedDetections.length ? linkedDetections.map((detection) => <div className="linked-evidence-row" key={detection.id}><div><strong>{detection.title}</strong><small>{detection.rule_key} · {titleCase(detection.status)} · {detection.finding_ids.length} linked finding IDs</small></div><span className={severityClass(detection.severity)}>{titleCase(detection.severity)}</span></div>) : <p>No linked detections are present in the currently returned detection records.</p>}</section>
+          <section><h4>Evidence findings <span>{linkedFindingIds.length}</span></h4>{linkedFindings.length ? linkedFindings.map((finding) => <div className="linked-evidence-row" key={finding.id}><div><strong>{finding.title}</strong><small>FINDING-{finding.id} · {titleCase(finding.source_engine)} · {titleCase(finding.status)}</small>{finding.description && <p>{finding.description}</p>}{finding.evidence_uri && <small>Evidence reference: {finding.evidence_uri}</small>}</div><span className={severityClass(finding.severity)}>{titleCase(finding.severity)}</span></div>) : <p>No linked finding details are available in the current findings result set.</p>}{unresolvedFindingIds.length > 0 && <p className="integration-note">{unresolvedFindingIds.length} linked finding ID(s) are outside the currently loaded findings result set.</p>}</section>
+        </div>}
+      </article>;
+    })}</div>
+  </div>;
 }
 
 function SeverityBreakdown({ findings }: { findings: Finding[] }) {
