@@ -10,6 +10,7 @@ def test_manager_sync_creates_registered_agents_and_preserves_analyst_fields(cli
     auth=headers(db_session)
     class FakeAdapter:
         is_configured=True
+        normalize_agent=staticmethod(__import__("app.integrations.wazuh_manager",fromlist=["WazuhManagerAdapter"]).WazuhManagerAdapter.normalize_agent)
         async def collect_agents(self):
             return [{"id":"004","name":"api-node","ip":"10.2.0.4","status":"active","lastKeepAlive":"2026-11-08T10:00:00Z","os":{"name":"Ubuntu","version":"24.04"}},
                 {"id":"000","name":"manager","ip":"127.0.0.1","status":"active"}]
