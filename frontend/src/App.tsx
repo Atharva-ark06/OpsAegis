@@ -39,7 +39,17 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
   return <div className="empty-state"><span className="empty-mark">—</span><strong>{title}</strong><p>{detail}</p></div>;
 }
 
-function LoginScreen({ onLogin }: { onLogin: (email: string, password: string) => Promise<void> }) {
+type ThemePreference = "dark" | "light" | "system";
+function ThemeToggle({ theme, onChange }: { theme: ThemePreference; onChange: (value: ThemePreference) => void }) {
+  return <label className="theme-control" aria-label="Color theme">
+    <span className="theme-control-label">THEME</span>
+    <select aria-label="Color theme" value={theme} onChange={(event) => onChange(event.target.value as ThemePreference)}>
+      <option value="dark">Dark</option><option value="light">Light</option><option value="system">System</option>
+    </select>
+  </label>;
+}
+
+function LoginScreen({ onLogin, theme, onThemeChange }: { onLogin: (email: string, password: string) => Promise<void>; theme: ThemePreference; onThemeChange: (value: ThemePreference) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -240,7 +250,7 @@ function App() {
   if (authState === "loading" || (token && !user && authState !== "idle")) {
     return <main className="auth-loading"><div className="loading-mark">OA</div><span>Verifying your session…</span></main>;
   }
-  if (!token || !user) return <LoginScreen onLogin={handleLogin} />;
+  if (!token || !user) return <LoginScreen onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -258,7 +268,7 @@ function App() {
     <main className="main-area">
       <header className="main-header">
         <div><p className="breadcrumb">OPSAEGIS <span>/</span> {pageTitle.toUpperCase()}</p><h1>{pageTitle}</h1></div>
-        <div className="header-actions"><span className="role-chip">{titleCase(user.role)}</span><button className="secondary-button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button></div>
+        <div className="header-actions"><ThemeToggle theme={theme} onChange={setTheme} /><span className="role-chip">{titleCase(user.role)}</span><button className="secondary-button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button></div>
       </header>
 
       {loadState === "loading" && <div className="loading-banner"><span className="spinner" /> Syncing records from OpsAegis API…</div>}

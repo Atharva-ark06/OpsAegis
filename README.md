@@ -145,3 +145,9 @@ No provider key or live provider lookup is included. Without credentials the wor
 Wazuh alert collection resolves upstream agent identity from alert evidence and upserts one endpoint asset per Wazuh agent ID. New findings link to that asset; existing analyst-selected asset associations are preserved. Repeated collection refreshes the endpoint name, observed IP and last-seen timestamp without overwriting its environment or asset type.
 
 This is alert-observed inventory, not a substitute for the Wazuh Manager agents API. It does not prove current online status, collect OS inventory, or discover agents that have not generated an ingested alert. CrowdSec IP-only records are not automatically mapped because an IP match can be ambiguous.
+
+
+### Frontend appearance
+- Dark, light, and system-following themes are available from the authenticated header and sign-in screen.
+- Theme preference is stored locally in the browser; no theme preference or browser storage value is sent to the API.
+- System mode follows the operating system color-scheme preference. Theme changes apply without a page reload.
