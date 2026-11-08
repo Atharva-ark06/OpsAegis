@@ -38,6 +38,12 @@ services:
     cpus: 0.5
 
   migrate:
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     build:
       context: ./backend
       dockerfile: Dockerfile.production
@@ -59,6 +65,12 @@ services:
     cpus: 0.5
 
   backend:
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     build:
       context: ./backend
       dockerfile: Dockerfile.production
@@ -83,6 +95,12 @@ services:
     cpus: 1.0
 
   detection-worker:
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     build:
       context: ./backend
       dockerfile: Dockerfile.production
@@ -102,6 +120,12 @@ services:
     cpus: 0.5
 
   frontend:
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     build:
       context: ./frontend
       dockerfile: Dockerfile.production
