@@ -1,6 +1,6 @@
 # OpsAegis — Project Status
 
-Updated for the Stage 3 milestones merged through PR #3 and the proposed Wazuh integration work in PR #4.
+Updated for merged PRs #3 and #4 and the PR #5 authenticated frontend implementation branch.
 
 ## Implemented and merged
 
@@ -33,6 +33,19 @@ This PR introduces:
 - Collection audit event and adapter/route tests using mocked HTTP responses.
 
 **The adapter code does not mean a live Wazuh instance is connected.** Live validation requires an authorized Wazuh Indexer URL and read-only credentials in the backend environment.
+
+## PR #5 — Authenticated frontend workspace (in progress)
+
+The PR #5 branch replaces the static starter screen with:
+- Email/password login against the existing JWT endpoint and authenticated session verification.
+- Session-scoped browser token handling, automatic local token clearing on API 401 responses, and sign-out.
+- Authenticated asset, finding and incident list views backed by existing API endpoints.
+- Overview counts and recent records sourced from the API (each list currently requests up to 200 records).
+- Wazuh Indexer health display and a role-gated read-only collection action for admin/analyst accounts.
+- Explicit disconnected/planned states for engines without adapters, plus loading, empty, error, refresh and responsive states.
+- API client unit tests and CI execution before the frontend build.
+
+The UI does not create incidents automatically, implement record editing/deletion, or claim server-side token revocation. The backend currently has no refresh/revocation endpoint. The browser stores the short-lived bearer token in sessionStorage; this is tab-scoped but remains accessible to page JavaScript.
 
 ## Not implemented yet
 
