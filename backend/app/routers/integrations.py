@@ -206,7 +206,7 @@ async def collect_crowdsec_alerts(db: Session=Depends(get_db),
         "integration.crowdsec.alerts.collect","crowdsec-lapi-alerts",None)
     limit=min(max(int(settings.crowdsec_max_results),1),1000)
     return {"integration":"crowdsec-lapi-alerts","received":len(incoming),"inserted":inserted,"updated":updated,
-        "truncated_possible":len(incoming)>=limit,"max_results":limit,
+        "truncated_possible":getattr(adapter,"last_alert_count",len(incoming))>=limit,"max_results":limit,
         "data_scope":"bounded_alert_history","authentication":"dedicated_machine_jwt"}
 
 def _match_crowdsec_asset(db: Session, item) -> Asset | None:
