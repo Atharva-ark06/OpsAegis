@@ -278,7 +278,7 @@ Use the read-only operator validation script to check database/Redis reachabilit
 python backend/scripts/validate_integrations.py --env-file .env --output artifacts/integration-diagnostics.json
 \`\`\`
 
-Add \`--include-nvd\` only when you want one read-only lookup of a fixed public CVE. VirusTotal and AbuseIPDB are not queried, so this check does not consume their API quota. See [Live Integration Validation](docs/INTEGRATION_VALIDATION.md) for status meanings, safety boundaries and troubleshooting. A successful health check is not proof of telemetry ingestion or production readiness.
+Add \`--include-nvd\` only when you want one read-only lookup of a fixed public CVE. VirusTotal and AbuseIPDB are not queried, so this check does not consume their API quota. See [Live Integration Validation](docs/INTEGRATION_VALIDATION.md) for status meanings, safety boundaries and troubleshooting. See the [Phase 5 staging execution checklist](docs/PHASE5_EXECUTION_CHECKLIST.md) and [staging evidence register](docs/PHASE5_STAGING_EVIDENCE.md) for the production-readiness exit criteria. A successful health check is not proof of telemetry ingestion or production readiness.
 
 
 ## Automated security checks

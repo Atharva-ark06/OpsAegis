@@ -1,4 +1,7 @@
 from pathlib import Path
+import sys
+
+from scripts import validate_integrations as diagnostics
 from types import SimpleNamespace
 
 from scripts.validate_integrations import (
@@ -139,3 +142,56 @@ def test_detection_worker_is_required_only_in_production():
 
     assert detection_worker_check(production, redis)["status"] == "failed"
     assert detection_worker_check(development, redis)["status"] == "skipped"
+
+
+
+def test_strict_cli_fails_when_a_configured_provider_was_not_probed(
+    monkeypatch, tmp_path: Path
+):
+    async def partial_report(include_nvd):
+        return {
+            "tool": "OpsAegis operational diagnostics",
+            "overall": "partial",
+            "summary": {"passed": 2, "not_probed": 1},
+            "checks": [],
+            "safety": {
+                "scans_launched": False,
+                "configuration_changed": False,
+                "secrets_printed": False,
+                "provider_ioc_lookups_sent": False,
+            },
+        }
+
+    monkeypatch.setattr(diagnostics, "run_checks", partial_report)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["validate_integrations.py", "--strict", "--env-file", str(tmp_path / ".env")],
+    )
+
+    assert diagnostics.main() == 3
+
+
+def test_non_strict_cli_keeps_partial_diagnostics_as_informational(
+    monkeypatch, tmp_path: Path
+):
+    async def partial_report(include_nvd):
+        return {
+            "tool": "OpsAegis operational diagnostics",
+            "overall": "partial",
+            "summary": {"passed": 2, "not_probed": 1},
+            "checks": [],
+            "safety": {
+                "scans_launched": False,
+                "configuration_changed": False,
+                "secrets_printed": False,
+                "provider_ioc_lookups_sent": False,
+            },
+        }
+
+    monkeypatch.setattr(diagnostics, "run_checks", partial_report)
+    monkeypatch.setattr(
+        sys, "argv",
+        ["validate_integrations.py", "--env-file", str(tmp_path / ".env")],
+    )
+
+    assert diagnostics.main() == 0

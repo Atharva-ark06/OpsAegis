@@ -4,7 +4,7 @@ from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-_PLACEHOLDER_SECRET_MARKERS = ("change-me", "changeme", "change_me", "placeholder", "your-secret", "your-password", "replace-me", "replace_me")
+_PLACEHOLDER_SECRET_MARKERS = ("change-me", "changeme", "change_me", "placeholder", "your-secret", "your-password", "replace-me", "replace_me", "development-only")
 
 
 def _is_placeholder_secret(value: str) -> bool:
@@ -14,7 +14,7 @@ def _is_placeholder_secret(value: str) -> bool:
 
 class Settings(BaseSettings):
     environment: str = Field(default="development", validation_alias="OPS_AEGIS_ENV")
-    secret_key: str = Field(default="development-only-change-this", validation_alias="OPS_AEGIS_SECRET_KEY")
+    secret_key: str = Field(default="development-only-change-this-secret-key-not-for-production", validation_alias="OPS_AEGIS_SECRET_KEY")
     access_token_minutes: int = Field(default=15, validation_alias="OPS_AEGIS_ACCESS_TOKEN_MINUTES")
     auth_login_ip_limit: int = Field(default=30, validation_alias="AUTH_LOGIN_IP_LIMIT")
     auth_login_email_limit: int = Field(default=5, validation_alias="AUTH_LOGIN_EMAIL_LIMIT")
