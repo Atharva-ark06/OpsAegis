@@ -39,7 +39,6 @@ docker compose --env-file .env.production -f compose.production.yaml ps
 The Compose stack:
 - Runs PostgreSQL and password-protected Redis on a private, internal-only data network; neither publishes a host port.
 - Runs the API and detection worker as an unprivileged UID with read-only root filesystems, dropped Linux capabilities and no-new-privileges; only bounded temporary filesystems are writable.
-- Uses Redis heartbeat-based Docker health checks for the detection worker and the opt-in Nuclei worker; an alive container without a current worker heartbeat is reported unhealthy.
 - Runs Alembic migrations in a one-shot service before the API and worker start.
 - Serves the compiled React application from an unprivileged Nginx container on port 8080, bound to host loopback only.
 - Proxies same-origin `/api/` requests to the API and applies baseline browser security headers.
@@ -56,24 +55,7 @@ docker compose --env-file .env.production -f compose.production.yaml ps
 docker compose --env-file .env.production -f compose.production.yaml logs --tail=100 backend detection-worker frontend migrate
 ```
 
-The API container health check requires both PostgreSQL and Redis readiness. The migration service must exit successfully before the API and worker are started. The Nginx container exposes a local `/healthz` check. Worker health checks require a live Redis heartbeat key; inspect `docker compose ps` for `healthy`/`unhealthy` state and use the worker logs for diagnosis.
-
-### Worker lease and restart recovery
-
-The detection worker uses a renewable Redis lease and a persisted per-run fencing token. If a worker loses ownership during evaluation, it does not mark the run successful; a new lease owner clears stale ownership during startup recovery and retries the durable run within its attempt budget. A stale worker cannot finalize a run after another owner has reclaimed it. Correlation writes are deterministic/idempotent, so a recovered evaluation can safely refresh the same detection rather than create a duplicate incident.
-
-The Nuclei worker has a separate Redis lease and heartbeat. Its Docker health check reports unhealthy when the heartbeat expires. Nuclei remains disabled by default and is only started with the `scanner` Compose profile after authorized staging and host/cloud DNS/IP egress controls have been independently verified.
-
-Useful PowerShell commands:
-
-```powershell
-docker compose --env-file .env.production -f compose.production.yaml ps
-docker compose --env-file .env.production -f compose.production.yaml logs --tail=100 detection-worker
-# Only when the isolated scanner has been intentionally enabled:
-docker compose --env-file .env.production -f compose.production.yaml --profile scanner logs --tail=100 nuclei-worker
-```
-
-A restart test should be performed in staging: stop the worker while a scheduled run is queued/running, start it again, then verify the run history reaches a terminal state and only one correlated detection/incident exists. Do not kill Redis on a production system to test recovery.
+The API container health check requires both PostgreSQL and Redis readiness. The migration service must exit successfully before the API and worker are started. The Nginx container exposes a local `/healthz` check.
 
 To stop the stack without deleting data:
 
@@ -87,5 +69,5 @@ Do not use `down -v` unless you intentionally want to delete the persistent data
 
 - This is a production-oriented container baseline, not a complete managed production service. TLS termination, DNS, firewall rules, host hardening, secret-manager integration, off-host backups, monitoring/alerting, log retention, restore drills and incident runbooks remain operator responsibilities.
 - No live production deployment or restore test is claimed by CI.
-- Nuclei runs only in the opt-in isolated worker image; it remains disabled until staging authorization and host/cloud egress restrictions are verified. Shannon remains dependent on its separately deployed runner and is disabled by default.
+- Nuclei remains blocked in production because scan execution has not yet moved to an isolated scanner worker. Shannon remains dependent on its separately deployed runner and is disabled by default.
 - Use a staging environment and explicit authorization before connecting real security engines or scanning targets.
