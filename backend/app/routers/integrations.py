@@ -120,7 +120,7 @@ async def wazuh_manager_health(actor: User = Depends(require_roles(*OPERATORS)))
     return {"integration":"wazuh-manager-api","configured":True,"status":"healthy" if healthy else "unhealthy","capability":"read_agent_inventory"}
 
 @router.post("/wazuh-manager/sync")
-async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User | None=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
     adapter=WazuhManagerAdapter()
     if not adapter.is_configured: raise HTTPException(status_code=503,detail="Wazuh Manager API is not configured")
     try: incoming=await adapter.collect_agents()
@@ -145,7 +145,7 @@ async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depe
             if item["last_seen_at"] and (previous is None or item["last_seen_at"]>previous):asset.last_seen_at=item["last_seen_at"];changed=True
             if changed:updated+=1
             else:unchanged+=1
-        db.add(AuditLog(actor_user_id=actor.id,action="integration.wazuh_manager.sync",target="wazuh-manager-api",
+        db.add(AuditLog(actor_user_id=actor.id if actor else None,action="integration.wazuh_manager.sync",target="wazuh-manager-api",
             detail=json.dumps({"received":len(incoming),"created":created,"updated":updated,"unchanged":unchanged,"skipped":skipped,
                 "truncated_possible":len(incoming)>=settings.wazuh_manager_max_agents})))
         db.commit()
@@ -158,18 +158,25 @@ async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depe
 
 @router.post("/wazuh/collect")
 async def collect_wazuh_alerts(since: datetime | None=Query(default=None,description="Timezone-aware lower bound for @timestamp"),
-    db: Session=Depends(get_db),actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
-    start=since or (datetime.now(timezone.utc)-timedelta(minutes=15))
-    if start.tzinfo is None: raise HTTPException(status_code=422,detail="since must include a timezone")
-    if start>datetime.now(timezone.utc): raise HTTPException(status_code=422,detail="since cannot be in the future")
-    if start<datetime.now(timezone.utc)-timedelta(days=30): raise HTTPException(status_code=422,detail="since cannot be more than 30 days ago")
-    try: incoming=await WazuhIndexerAdapter().collect_findings(start)
+    until: datetime | None=Query(default=None,description="Timezone-aware upper bound for @timestamp"),
+    db: Session=Depends(get_db),actor: User | None=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+    now=datetime.now(timezone.utc)
+    start=since or (now-timedelta(minutes=15))
+    end=until or now
+    if start.tzinfo is None or end.tzinfo is None:
+        raise HTTPException(status_code=422,detail="since and until must include a timezone")
+    if end>now: raise HTTPException(status_code=422,detail="until cannot be in the future")
+    if start>end: raise HTTPException(status_code=422,detail="since must be earlier than until")
+    if start<now-timedelta(days=30): raise HTTPException(status_code=422,detail="since cannot be more than 30 days ago")
+    try: incoming=await WazuhIndexerAdapter().collect_findings(start,end)
     except WazuhAdapterError as exc:
         if str(exc)=="Wazuh Indexer is not configured": raise HTTPException(status_code=503,detail="Wazuh Indexer integration is not configured") from None
         raise HTTPException(status_code=502,detail="Wazuh Indexer request failed; check backend integration logs") from None
     inserted,updated=_persist_findings(db,actor,incoming,"wazuh","integration.wazuh.collect","wazuh-indexer",start)
     limit=settings.wazuh_indexer_max_results
-    return {"integration":"wazuh-indexer","since":start.isoformat(),"received":len(incoming),"inserted":inserted,"updated":updated,"truncated_possible":len(incoming)>=limit,"max_results":limit}
+    return {"integration":"wazuh-indexer","since":start.isoformat(),"until":end.isoformat(),
+        "received":len(incoming),"inserted":inserted,"updated":updated,"truncated_possible":len(incoming)>=limit,"max_results":limit}
+
 
 @router.get("/crowdsec/health")
 async def crowdsec_health(actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
@@ -257,7 +264,7 @@ def _upsert_wazuh_asset(db: Session, item) -> Asset | None:
     return asset
 
 
-def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_action: str,target: str,
+def _persist_findings(db: Session,actor: User | None,incoming: list,engine: str,audit_action: str,target: str,
     since: datetime | None) -> tuple[int,int]:
     inserted=updated=0
     try:
@@ -284,7 +291,7 @@ def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_a
                 existing.last_seen_at=max(previous,item.observed_at); existing.evidence=item.evidence
                 # Keep analyst triage state and first_seen_at unchanged.
                 updated+=1
-        db.add(AuditLog(actor_user_id=actor.id,action=audit_action,target=target,detail=json.dumps({
+        db.add(AuditLog(actor_user_id=actor.id if actor else None,action=audit_action,target=target,detail=json.dumps({
             "since":since.isoformat() if since else None,"received":len(incoming),"inserted":inserted,"updated":updated})))
         db.commit()
     except IntegrityError:

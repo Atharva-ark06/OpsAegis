@@ -38,7 +38,7 @@ def test_collection_persists_and_updates_without_duplicates(client, db_session, 
     class FakeAdapter:
         is_configured = True
 
-        async def collect_findings(self, since):
+        async def collect_findings(self, since, until=None):
             return [NormalizedFinding(
                 source_engine="wazuh",
                 source_native_id="doc-123",

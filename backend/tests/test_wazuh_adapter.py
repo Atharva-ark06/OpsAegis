@@ -131,3 +131,33 @@ async def test_query_is_bounded_and_uses_timestamp_lower_bound():
     await adapter.collect_findings(datetime(2026, 11, 8, 9, tzinfo=timezone.utc))
     assert captured["size"] == 25
     assert captured["query"]["range"]["@timestamp"]["gte"] == "2026-11-08T09:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_query_includes_exact_upper_bound_when_supplied():
+    captured = {}
+
+    def handler(request):
+        captured.update(__import__("json").loads(request.content))
+        return httpx.Response(200, json={"hits": {"hits": []}})
+
+    adapter = WazuhIndexerAdapter(config(), transport=httpx.MockTransport(handler))
+    await adapter.collect_findings(
+        datetime(2026, 11, 8, 9, tzinfo=timezone.utc),
+        datetime(2026, 11, 8, 10, tzinfo=timezone.utc),
+    )
+    bounds = captured["query"]["range"]["@timestamp"]
+    assert bounds["gte"] == "2026-11-08T09:00:00+00:00"
+    assert bounds["lte"] == "2026-11-08T10:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_query_rejects_invalid_upper_bound():
+    adapter = WazuhIndexerAdapter(config(), transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, json={"hits": {"hits": []}})
+    ))
+    with pytest.raises(WazuhAdapterError, match="end time"):
+        await adapter.collect_findings(
+            datetime(2026, 11, 8, 10, tzinfo=timezone.utc),
+            datetime(2026, 11, 8, 9, tzinfo=timezone.utc),
+        )

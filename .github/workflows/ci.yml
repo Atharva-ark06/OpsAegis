@@ -22,7 +22,7 @@ jobs:
         run: pip install -r backend/requirements.txt
       - name: Verify application configuration exports and API startup imports
         working-directory: backend
-        run: python -c "from app.config import Settings, settings; from app.main import app; assert isinstance(settings, Settings); assert app.title == 'OpsAegis API'; print('Application settings and API imports are valid')"
+        run: python -c "from app.config import Settings, settings; from app.main import app; assert isinstance(settings, Settings); assert app.title == 'OpsAegis API'; from app.collection_worker import schedule_due; print('Application settings, collection worker and API imports are valid')"
       - name: Verify Alembic environment and complete migration chain
         working-directory: backend
         env:
@@ -141,7 +141,7 @@ jobs:
       - name: Validate production Compose configuration
         run: docker compose --env-file .env.production -f compose.production.yaml config --quiet
       - name: Build production API, migration, worker and frontend images
-        run: docker compose --env-file .env.production -f compose.production.yaml build migrate backend detection-worker nuclei-worker frontend
+        run: docker compose --env-file .env.production -f compose.production.yaml build migrate backend detection-worker collection-worker nuclei-worker frontend
       - name: Start production stack for ephemeral smoke test
         run: docker compose --env-file .env.production -f compose.production.yaml up -d --no-build
       - name: Verify migrations, service health and frontend-to-API readiness
@@ -153,7 +153,7 @@ jobs:
           test -n "$migration_id"
           migration_exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$migration_id")"
           test "$migration_exit_code" = "0"
-          for service in postgres redis backend detection-worker frontend; do
+          for service in postgres redis backend detection-worker collection-worker frontend; do
             container_id="$(${compose[@]} ps -q "$service")"
             if [ -z "$container_id" ]; then
               echo "Missing container for $service"
