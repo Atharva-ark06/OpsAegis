@@ -195,7 +195,7 @@ def test_worker_does_not_start_run_after_lease_is_lost(db_session, monkeypatch):
     )
     db_session.add(run)
     db_session.commit()
-    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: test_session_factory())
     lost = threading.Event()
     lost.set()
     process_run(run.id, lost, "stale-worker")
@@ -204,7 +204,7 @@ def test_worker_does_not_start_run_after_lease_is_lost(db_session, monkeypatch):
     assert run.attempts == 0
 
 
-def test_worker_records_success_counts_exact_window_and_duration(db_session, monkeypatch):
+def test_worker_records_success_counts_exact_window_and_duration(db_session, test_session_factory, monkeypatch):
     import threading
     now = datetime.now(timezone.utc)
     schedule = IntegrationSchedule(source="wazuh-indexer-alerts", enabled=False,
@@ -224,7 +224,7 @@ def test_worker_records_success_counts_exact_window_and_duration(db_session, mon
         assert current_run.window_end_at - current_run.window_start_at == timedelta(minutes=15)
         return {"received": 12, "inserted": 4, "updated": 3, "truncated_possible": True}
 
-    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: test_session_factory())
     monkeypatch.setattr("app.collection_worker._collect", fake_collect)
     process_run(run.id, threading.Event(), "valid-worker-token")
     db_session.refresh(run)
@@ -238,7 +238,7 @@ def test_worker_records_success_counts_exact_window_and_duration(db_session, mon
     assert run.worker_token is None
 
 
-def test_worker_uses_bounded_retry_and_sanitized_error_code(db_session, monkeypatch):
+def test_worker_uses_bounded_retry_and_sanitized_error_code(db_session, test_session_factory, monkeypatch):
     import threading
     now = datetime.now(timezone.utc)
     schedule = IntegrationSchedule(source="wazuh-manager-agents", enabled=False,
@@ -255,7 +255,7 @@ def test_worker_uses_bounded_retry_and_sanitized_error_code(db_session, monkeypa
     async def fail_collection(_run, _db):
         raise RuntimeError("sensitive upstream response must not be persisted")
 
-    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: test_session_factory())
     monkeypatch.setattr("app.collection_worker._collect", fail_collection)
     process_run(run.id, threading.Event(), "valid-worker-token")
     db_session.refresh(run)
