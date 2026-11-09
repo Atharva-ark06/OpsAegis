@@ -37,7 +37,7 @@ Phase 6 does not retroactively mark Phase 5 staging or production checks as pass
 
 ### Phase 6.1 — Collection orchestration
 
-Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer alert windows only. CrowdSec remains deferred pending a separate least-privilege decision. Schedules are disabled by default; durable run history, a separate Redis-leased worker, bounded retries and manual-run parity are implemented in the current review branch. Live Redis interruption, lease-loss and real-source staging drills remain required.
+Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer alert windows only. CrowdSec remains deferred pending a separate least-privilege decision. Schedules are disabled by default; durable run history, a separate Redis-leased worker, bounded retries and manual-run parity are implemented in the current review branch. Automated tests exercise Redis interruption, lease loss, queue deduplication and restart recovery; live staging drills with real Redis and source systems remain required.
 - Durable per-integration schedule and run history.
 - Per-source enable/disable controls, minimum intervals, bounded lookback and result caps.
 - Lease fencing, retry/backoff, overlap prevention and manual run parity.
