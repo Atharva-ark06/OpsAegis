@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, login, saveAccessToken } from "./api";
+import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, login, saveAccessToken } from "./api";
 
 function mockResponse(status: number, payload: unknown) {
   return {
@@ -90,6 +90,28 @@ describe("OpsAegis API client", () => {
       "http://localhost:8000/api/v1/integrations/shannon/health",
       expect.objectContaining({ headers: expect.any(Headers) }),
     );
+  });
+
+  it("requests a bounded, filtered read-only playbook execution page with the session token", async () => {
+    saveAccessToken("analyst-session");
+    const page = {
+      items: [{
+        id: 7, approval_id: 12, action_id: "wazuh.agent_isolate", action_version: "1.0.0",
+        status: "pending", compensation_status: "not_requested",
+        created_at: "2026-11-09T10:00:00Z", updated_at: "2026-11-09T10:00:00Z",
+        started_at: null, completed_at: null,
+      }],
+      count: 1, limit: 25, offset: 0, has_more: false, execution_enabled: false,
+    };
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200, page));
+
+    await expect(getPlaybookExecutions({ status: "pending", limit: 25, offset: 0 })).resolves.toEqual(page);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/playbooks/executions?limit=25&offset=0&status=pending",
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
+    const options = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(new Headers(options.headers).get("Authorization")).toBe("Bearer analyst-session");
   });
 
   it("removes the session token on explicit sign out", () => {
