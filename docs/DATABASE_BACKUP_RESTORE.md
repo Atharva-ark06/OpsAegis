@@ -19,7 +19,7 @@ Never commit backup files, manifests or restore environment files. PostgreSQL ar
 From the repository root:
 
 ```powershell
-.ops\backup-postgres.ps1 -EnvFile .env.production
+.\ops\backup-postgres.ps1 -EnvFile .env.production
 ```
 
 The script:
@@ -37,7 +37,7 @@ The default destination is the repository's ignored `backups\` directory. The sc
 Use the exact archive path printed by the backup command:
 
 ```powershell
-.ops\verify-postgres-backup.ps1 -BackupPath .\backups\opsaegis-postgres-YYYYMMDDTHHMMSSZ.dump -EnvFile .env.production
+.\ops\verify-postgres-backup.ps1 -BackupPath .\backups\opsaegis-postgres-YYYYMMDDTHHMMSSZ.dump -EnvFile .env.production
 ```
 
 Verification checks the manifest, recomputes SHA-256, copies the archive temporarily into the running PostgreSQL container and asks `pg_restore --list` to parse its directory. The temporary container-side copy is removed afterward.
@@ -65,7 +65,7 @@ Keep `.env.restore` private. On Windows, restrict its ACL to your account and SY
 ## 4. Run an isolated restore drill
 
 ```powershell
-.ops\restore-postgres-drill.ps1 -BackupPath .\backups\opsaegis-postgres-YYYYMMDDTHHMMSSZ.dump -RestoreEnvFile .env.restore
+.\ops\restore-postgres-drill.ps1 -BackupPath .\backups\opsaegis-postgres-YYYYMMDDTHHMMSSZ.dump -RestoreEnvFile .env.restore
 ```
 
 The script:
