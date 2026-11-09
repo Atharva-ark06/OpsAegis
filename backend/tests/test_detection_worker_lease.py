@@ -61,11 +61,10 @@ def test_old_worker_cannot_complete_after_new_owner_reclaims_run(
     lease_lost = threading.Event()
     monkeypatch.setattr(worker, "SessionLocal", test_session_factory)
 
-    def simulate_recovery_by_new_owner(*args, **kwargs):
-        with test_session_factory() as new_owner_db:
-            current = new_owner_db.get(ScheduledDetectionRun, run.id)
-            current.worker_token = "new-owner"
-            new_owner_db.commit()
+    def simulate_recovery_by_new_owner(window_minutes, auth_threshold, db, actor, evaluation_time):
+        current = db.get(ScheduledDetectionRun, run.id)
+        current.worker_token = "new-owner"
+        db.commit()
         return {"created": 0, "refreshed": 0, "incidents_created": 0}
 
     monkeypatch.setattr(worker, "evaluate_detections", simulate_recovery_by_new_owner)
