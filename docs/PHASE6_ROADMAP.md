@@ -51,9 +51,13 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - Redacted export and audit coverage.
 
 ### Phase 6.3 — Playbook framework
-- Versioned, schema-validated playbooks.
-- Dry-run and approval workflow.
-- Allowlisted action adapters, idempotency, timeout and rollback/compensation contracts.
+
+**First bounded increment:** a code-defined, versioned incident-investigation playbook catalogue with strict typed inputs, role-gated preconditions, bounded read-only context lookup and audited dry-run previews. It has no action adapters and cannot execute external actions. This is a foundation only; approval workflows and execution remain future work.
+
+- [x] Versioned playbook definition and strict input validation.
+- [x] Operator-only dry-run preview with bounded lookback and audit record.
+- [ ] Approval workflow and separation of requester/approver.
+- [ ] Allowlisted action adapters, idempotency, timeout and rollback/compensation contracts.
 - No automatic containment or blocking by default.
 
 ### Phase 6.4 — Reporting and operational metrics
