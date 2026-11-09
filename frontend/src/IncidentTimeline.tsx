@@ -46,7 +46,7 @@ export function IncidentTimeline({ incidentId, canOperate }: { incidentId: numbe
 
   return <section className="incident-timeline">
     <div className="panel-heading"><div><p className="eyebrow">PROVENANCE-AWARE RECORD</p><h4>Investigation timeline</h4></div>
-      <button className="secondary-button compact" disabled={busy} onClick={() => void exportEvidence()}>Export redacted evidence</button>
+      {canOperate && <button className="secondary-button compact" disabled={busy} onClick={() => void exportEvidence()}>Export redacted evidence</button>}
     </div>
     {error && <div className="inline-error" role="alert">{error}</div>}
     {canOperate && <form className="timeline-note-form" onSubmit={submit}>
