@@ -239,7 +239,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - These checks are point-in-time operational signals only. They do not prove worker restart recovery, scanner egress restrictions, live event ingestion or production readiness.
 
 
-## PostgreSQL backup and isolated restore tooling (PR #37 — proposed)
+## PostgreSQL backup and isolated restore tooling (PR #37 — merged)
 - Adds a PowerShell backup command that runs PostgreSQL custom-format pg_dump inside the production database container without putting the database password in the command line.
 - Creates a timestamped archive and a JSON manifest with file size, UTC timestamp and SHA-256; checks archive readability with pg_restore before copying it to the host.
 - Adds a separate integrity command that validates the manifest/hash and parses the archive directory using the PostgreSQL container's pg_restore utility.
@@ -247,3 +247,11 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Ignores local backup artifacts and the dedicated restore environment file; documents encryption, off-host retention, Redis backup boundaries and recovery evidence.
 - Adds a Windows CI job that parses every PowerShell operations script for syntax errors.
 - These scripts do not encrypt or upload backups, schedule retention, back up Redis, connect a restored database to the application, or prove disaster-recovery readiness. Operators must perform the drill in their own environment.
+
+
+## Staging validation evidence register (PR #38 — proposed)
+- Adds a structured evidence register for Phase 5, separating implemented, CI-tested, staging-validated, production-validated, blocked and not-configured states.
+- Records each live validation item with environment, timestamp, operator, sanitized evidence reference, result/counts and follow-up action; no credentials or raw sensitive payloads belong in the register.
+- Defines read-only diagnostics as connectivity checks only. Passing health checks do not prove event ingestion, correlation, notification delivery, worker recovery or production readiness.
+- Explicitly tracks Wazuh Manager inventory and Indexer alerts/vulnerability ingestion, CrowdSec collection, Nuclei egress controls and authorized staging readiness, Shannon bridge, Redis scheduler/worker recovery, end-to-end detection, authentication/RBAC/secrets, deployment/migrations/storage and PostgreSQL restore/off-host retention/RPO/RTO.
+- No live services are contacted by this documentation change. No scan, deployment, backup or restore is performed. All unverified live checks remain pending until an operator records evidence from the intended staging/production environment.
