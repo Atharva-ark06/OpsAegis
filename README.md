@@ -268,7 +268,7 @@ The CI workflow now runs a dedicated preflight job first. It verifies the shared
 
 ## Live integration diagnostics
 
-Use the read-only operator validation script to check configured Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon endpoints without launching scans or changing data:
+Use the read-only operator validation script to check database/Redis reachability, detection and isolated Nuclei worker heartbeats, and configured Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon endpoints. It never launches scans or changes application data:
 
 \`\`\`powershell
 python backend/scripts/validate_integrations.py --env-file .env --output artifacts/integration-diagnostics.json

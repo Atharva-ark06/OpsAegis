@@ -28,7 +28,7 @@ Run the existing read-only diagnostic from the deployment host/network with oper
 python backend/scripts/validate_integrations.py --env-file .env --output artifacts/integration-diagnostics.json
 ```
 
-The report intentionally distinguishes passed, failed, skipped and not-probed integrations. A skipped or not-probed result is not a pass. VirusTotal and AbuseIPDB are not queried by this diagnostic to avoid unexpected quota consumption. Add `--include-nvd` only when one public NVD lookup is explicitly intended.
+The report checks database and Redis connectivity, the detection-worker heartbeat (required in production), and the isolated Nuclei-worker heartbeat when both Nuclei enablement flags are set. It then checks configured Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon endpoints. The report distinguishes passed, failed, skipped and not-probed checks. A skipped or not-probed result is not a pass. VirusTotal and AbuseIPDB are not queried by this diagnostic to avoid unexpected quota consumption. Add `--include-nvd` only when one public NVD lookup is explicitly intended. The diagnostic never launches Nuclei or changes application data.
 
 After endpoint diagnostics pass, perform separately authorized, bounded validation of:
 1. Wazuh Manager inventory sync and Wazuh Indexer alert/vulnerability collection using a disposable lab agent and known test events.

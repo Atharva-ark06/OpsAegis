@@ -1,6 +1,25 @@
 from pathlib import Path
+from types import SimpleNamespace
 
-from scripts.validate_integrations import parse_env_file, summarize
+from scripts.validate_integrations import (
+    DETECTION_HEARTBEAT,
+    NUCLEI_HEARTBEAT,
+    detection_worker_check,
+    nuclei_worker_check,
+    parse_env_file,
+    summarize,
+)
+
+
+class FakeRedis:
+    def __init__(self, values=None, error=None):
+        self.values = values or {}
+        self.error = error
+
+    def get(self, key):
+        if self.error:
+            raise self.error
+        return self.values.get(key)
 
 
 def test_parse_env_file_supports_export_quotes_and_ignores_comments(tmp_path: Path):
@@ -56,3 +75,44 @@ def test_summary_passes_only_when_all_configured_checks_pass():
     ])
     assert overall == "passed"
     assert counts == {"passed": 1, "skipped": 1}
+
+
+def test_nuclei_worker_is_skipped_when_both_execution_flags_are_disabled():
+    config = SimpleNamespace(nuclei_enabled=False, nuclei_worker_enabled=False)
+    result = nuclei_worker_check(config, FakeRedis())
+    assert result["status"] == "skipped"
+
+
+def test_nuclei_worker_rejects_mismatched_enablement_flags():
+    config = SimpleNamespace(nuclei_enabled=True, nuclei_worker_enabled=False)
+    result = nuclei_worker_check(config, FakeRedis())
+    assert result["status"] == "failed"
+    assert "both be true" in result["detail"]
+
+
+def test_nuclei_worker_requires_a_live_heartbeat_when_enabled():
+    config = SimpleNamespace(nuclei_enabled=True, nuclei_worker_enabled=True)
+    healthy = nuclei_worker_check(config, FakeRedis({NUCLEI_HEARTBEAT: "2026-11-09T00:00:00+00:00"}))
+    missing = nuclei_worker_check(config, FakeRedis())
+    assert healthy["status"] == "passed"
+    assert missing["status"] == "failed"
+
+
+def test_detection_worker_is_required_in_production_but_optional_in_development():
+    production = SimpleNamespace(environment="production")
+    development = SimpleNamespace(environment="development")
+    assert detection_worker_check(production, FakeRedis())["status"] == "failed"
+    assert detection_worker_check(development, FakeRedis())["status"] == "skipped"
+    assert detection_worker_check(
+        production, FakeRedis({DETECTION_HEARTBEAT: "2026-11-09T00:00:00+00:00"})
+    )["status"] == "passed"
+
+
+def test_worker_heartbeat_errors_are_sanitized():
+    config = SimpleNamespace(nuclei_enabled=True, nuclei_worker_enabled=True)
+    result = nuclei_worker_check(config, FakeRedis(error=ConnectionError("private endpoint detail")))
+    assert result == {
+        "name": "nuclei_worker",
+        "status": "failed",
+        "detail": "ConnectionError",
+    }
