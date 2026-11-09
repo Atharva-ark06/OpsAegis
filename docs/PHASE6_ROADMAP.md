@@ -1,6 +1,6 @@
 # OpsAegis Phase 6 — SOC Automation & Response Orchestration
 
-**Status:** Phase 6.1–6.3 foundations are merged; Phase 6.4 operational reporting is in progress  
+**Status:** Phase 6.1–6.3 foundations are merged; Phase 6.4 operational reporting is implemented pending operator-led staging validation.  
 **Predecessor:** Phase 5 — Production readiness and end-to-end validation  
 **Release posture:** Human-approved automation; no autonomous destructive response.
 
@@ -59,7 +59,8 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - [x] Approval request/decision records with requester/approver separation, expiry and audit trail (no execution).
 - [x] Fail-closed adapter interface and metadata contract: fixed action IDs/targets, independent approval requirement, deterministic SHA-256 idempotency key, 1–30 second timeout bound, and explicit compensation action contract.
 - [x] Read-only action catalogue endpoint exposes disabled state and reports that execution is unavailable when no provider adapter is registered.
-- [ ] Register and validate a concrete provider adapter only after a separate integration-specific threat model, least-privilege credentials, authorized staging target, rollback drill and operator evidence.
+- [x] Draft integration-specific Wazuh agent-isolation threat model: [review document](PHASE6_WAZUH_ISOLATION_THREAT_MODEL.md). Draft only; not security-approved and does not authorize adapter implementation.
+- [ ] Review threat model, verify version-specific Wazuh API permissions, provision least-privilege credentials, and complete authorized staging isolation/unisolation + rollback evidence before considering a concrete adapter.
 - No automatic containment or blocking by default.
 
 ### Phase 6.4 — Reporting and operational metrics
@@ -113,6 +114,3 @@ Before implementing 6.1, settle:
 - database and Redis recovery expectations.
 
 The first implementation should begin with Wazuh Manager inventory and Wazuh Indexer alerts, then add CrowdSec decisions and optional alert history only after the dedicated machine-credential risk is accepted.
-
-
-**Staging validation tooling (PR in review):** adds an offline comparison utility for a sanitized aggregate report export and operator-authored expected metrics. The utility does not contact staging services or create evidence; the live validation checkbox remains open until an authorized operator completes and reviews the runbook evidence.
