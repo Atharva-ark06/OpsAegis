@@ -1,6 +1,6 @@
 # OpsAegis Phase 6 — SOC Automation & Response Orchestration
 
-**Status:** Implementation in progress — Phase 6.1 foundations and a first Phase 6.2 investigation workflow are under review in PR #72  
+**Status:** Phase 6.1 and the first Phase 6.2/6.3 foundations are merged; approval workflow is in progress  
 **Predecessor:** Phase 5 — Production readiness and end-to-end validation  
 **Release posture:** Human-approved automation; no autonomous destructive response.
 
@@ -56,7 +56,7 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 
 - [x] Versioned playbook definition and strict input validation.
 - [x] Operator-only dry-run preview with bounded lookback and audit record.
-- [ ] Approval workflow and separation of requester/approver.
+- [x] Approval request/decision records with requester/approver separation, expiry and audit trail (no execution).
 - [ ] Allowlisted action adapters, idempotency, timeout and rollback/compensation contracts.
 - No automatic containment or blocking by default.
 
