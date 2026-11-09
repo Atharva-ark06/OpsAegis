@@ -86,6 +86,9 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 
 **Staging evidence tooling (PR #87):** Adds an offline evidence-register validator. CI checks the template structure only; an operator-only `--require-exit` gate requires complete UTC/version/metric evidence, no row cap, all acceptance items checked and an independent PASS. Neither mode contacts staging or changes the live-validation status. The Phase 6.4 staging item remains pending until reviewed real-environment evidence is recorded.
 
+**Isolated Wazuh staging lab scaffold (PR #88):** Adds a Windows PowerShell bootstrap for the official Wazuh Docker `v4.14.10` single-node stack, local-only host port bindings, one disposable containerized agent, local readiness/teardown scripts and offline CI safety checks. This creates a repeatable lab prerequisite only. It does not connect OpsAegis to Wazuh, record live telemetry/report evidence, implement response actions, or authorize isolate/unisolate. See [the Wazuh staging lab guide](PHASE6_WAZUH_STAGING_LAB.md). The Phase 6.4 staging evidence checklist remains pending.
+
+
 ## Security and reliability invariants
 
 - Least-privilege service credentials; secrets stay backend-side and are never included in logs or evidence exports.
