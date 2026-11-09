@@ -43,7 +43,7 @@ def test_evidence_export_is_no_store_and_redacts_secret_like_values(client, anal
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["content-disposition"].endswith(f'opsaegis-incident-{incident_id}-evidence.json"')
     payload = response.json()
-    assert payload["redaction"]["applied"] is True
+    assert payload["redaction"]["applied"] is True\n    assert any(event["type"] == "incident.evidence.export" for event in payload["timeline"]["events"])
 
     assert _redact({"api_key": "do-not-export", "message": "Bearer abc.def.ghi"}) == {
         "api_key": "[REDACTED]", "message": "Bearer [REDACTED]"
