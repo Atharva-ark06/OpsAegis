@@ -1,6 +1,6 @@
 # OpsAegis Phase 6 — SOC Automation & Response Orchestration
 
-**Status:** Phase 6.1 and the first Phase 6.2/6.3 foundations are merged; approval workflow is in progress  
+**Status:** Phase 6.1, Phase 6.2 initial workspace and Phase 6.3 governance/action-contract foundations are merged or in review  
 **Predecessor:** Phase 5 — Production readiness and end-to-end validation  
 **Release posture:** Human-approved automation; no autonomous destructive response.
 
@@ -52,12 +52,14 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 
 ### Phase 6.3 — Playbook framework
 
-**First bounded increment:** a code-defined, versioned incident-investigation playbook catalogue with strict typed inputs, role-gated preconditions, bounded read-only context lookup and audited dry-run previews. It has no action adapters and cannot execute external actions. This is a foundation only; approval workflows and execution remain future work.
+**Delivered bounded framework:** a code-defined, versioned incident-investigation catalogue with strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records and fail-closed action-adapter contracts. No provider adapter is registered or enabled; the catalogue is descriptive and has no execution endpoint.
 
 - [x] Versioned playbook definition and strict input validation.
 - [x] Operator-only dry-run preview with bounded lookback and audit record.
 - [x] Approval request/decision records with requester/approver separation, expiry and audit trail (no execution).
-- [ ] Allowlisted action adapters, idempotency, timeout and rollback/compensation contracts.
+- [x] Fail-closed adapter interface and metadata contract: fixed action IDs/targets, independent approval requirement, deterministic SHA-256 idempotency key, 1–30 second timeout bound, and explicit compensation action contract.
+- [x] Read-only action catalogue endpoint exposes disabled state and reports that execution is unavailable when no provider adapter is registered.
+- [ ] Register and validate a concrete provider adapter only after a separate integration-specific threat model, least-privilege credentials, authorized staging target, rollback drill and operator evidence.
 - No automatic containment or blocking by default.
 
 ### Phase 6.4 — Reporting and operational metrics
