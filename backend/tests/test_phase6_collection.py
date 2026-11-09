@@ -101,3 +101,18 @@ def test_manual_collection_obeys_source_minimum_interval(client, analyst_headers
         db.commit()
     too_soon = client.post("/api/v1/collections/wazuh-indexer-alerts/run", headers=analyst_headers)
     assert too_soon.status_code == 429
+
+
+def test_schedule_due_respects_minimum_interval_after_manual_run(db_session):
+    now = datetime.now(timezone.utc)
+    schedule = IntegrationSchedule(
+        source="wazuh-manager-agents", enabled=True, interval_seconds=300,
+        lookback_minutes=10, last_run_at=now - timedelta(seconds=30),
+        next_run_at=now - timedelta(seconds=5), updated_at=now,
+    )
+    db_session.add(schedule)
+    db_session.commit()
+    assert schedule_due(db_session, now) == 0
+    assert db_session.query(IntegrationCollectionRun).count() == 0
+    db_session.refresh(schedule)
+    assert schedule.next_run_at == schedule.last_run_at + timedelta(seconds=300)
