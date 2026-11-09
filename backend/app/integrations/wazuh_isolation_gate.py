@@ -38,7 +38,7 @@ def missing_isolation_evidence(
     A complete result means only that references were supplied. It does not
     validate their authenticity, prove provider behavior, or grant permission.
     """
-    if evidence is None:
+    if type(evidence) is not IsolationReadinessEvidence:
         return _REQUIRED_EVIDENCE
 
     missing: list[str] = []
