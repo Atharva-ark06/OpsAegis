@@ -55,6 +55,11 @@ def schedule_due(db, now: datetime) -> int:
     ).order_by(IntegrationSchedule.next_run_at.asc()).limit(20)).all()
     for schedule in schedules:
         due_at = as_utc(schedule.next_run_at)
+        if schedule.last_run_at is not None:
+            minimum_due = as_utc(schedule.last_run_at) + timedelta(seconds=max(60, schedule.interval_seconds))
+            if now < minimum_due:
+                schedule.next_run_at = minimum_due
+                continue
         slot = schedule.source + ":" + due_at.isoformat()
         existing = db.scalar(select(IntegrationCollectionRun).where(
             IntegrationCollectionRun.schedule_slot == slot
