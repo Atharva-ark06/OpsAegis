@@ -145,7 +145,7 @@ async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depe
             if item["last_seen_at"] and (previous is None or item["last_seen_at"]>previous):asset.last_seen_at=item["last_seen_at"];changed=True
             if changed:updated+=1
             else:unchanged+=1
-        db.add(AuditLog(actor_user_id=actor.id,action="integration.wazuh_manager.sync",target="wazuh-manager-api",
+        db.add(AuditLog(actor_user_id=actor.id if actor else None,action="integration.wazuh_manager.sync",target="wazuh-manager-api",
             detail=json.dumps({"received":len(incoming),"created":created,"updated":updated,"unchanged":unchanged,"skipped":skipped,
                 "truncated_possible":len(incoming)>=settings.wazuh_manager_max_agents})))
         db.commit()
@@ -284,7 +284,7 @@ def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_a
                 existing.last_seen_at=max(previous,item.observed_at); existing.evidence=item.evidence
                 # Keep analyst triage state and first_seen_at unchanged.
                 updated+=1
-        db.add(AuditLog(actor_user_id=actor.id,action=audit_action,target=target,detail=json.dumps({
+        db.add(AuditLog(actor_user_id=actor.id if actor else None,action=audit_action,target=target,detail=json.dumps({
             "since":since.isoformat() if since else None,"received":len(incoming),"inserted":inserted,"updated":updated})))
         db.commit()
     except IntegrityError:
