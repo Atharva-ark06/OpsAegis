@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import SessionLocal
 from app.models.entities import AuditLog, NucleiScanRun, NucleiTarget
-from app.routers.nuclei import execute, persist_findings
+from app.routers.nuclei import WorkerLeaseLost, execute, persist_findings
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO"))
 log=logging.getLogger("opsaegis.nuclei-worker")
@@ -28,7 +28,8 @@ def enqueue_due(db,client):
   marker=f"opsaegis:nuclei:enqueue:{run.id}"
   if client.set(marker,"1",nx=True,ex=60): client.lpush(QUEUE,str(run.id)); n+=1
  return n
-def process(scan_id):
+def process(scan_id,lease_lost):
+ if lease_lost.is_set(): return
  with SessionLocal() as db:
   run=db.get(NucleiScanRun,scan_id)
   if run is None or run.status!="queued": return
@@ -38,14 +39,22 @@ def process(scan_id):
   run.status="running"; run.attempts+=1; run.started_at=utcnow(); run.error_code=None
   target_url=target.url; asset_id=target.asset_id; actor_id=run.requested_by; db.commit()
  try:
-  records=asyncio.run(execute(target_url))
+  records=asyncio.run(execute(target_url,lease_lost=lease_lost))
+  if lease_lost.is_set(): raise WorkerLeaseLost("Worker lease lost before persistence")
   with SessionLocal() as db:
    run=db.get(NucleiScanRun,scan_id)
    if run is None: return
+   if lease_lost.is_set(): raise WorkerLeaseLost("Worker lease lost before persistence")
    inserted,updated=persist_findings(db,records,asset_id=asset_id)
+   if lease_lost.is_set():
+    db.rollback()
+    raise WorkerLeaseLost("Worker lease lost before commit")
    run.status="completed"; run.findings_count=inserted+updated; run.finished_at=utcnow(); run.error_code=None
    db.add(AuditLog(actor_user_id=actor_id,action="integration.nuclei.scan.complete",target=str(scan_id),detail=json.dumps({"received":len(records),"inserted":inserted,"updated":updated,"attempts":run.attempts})))
    db.commit()
+ except WorkerLeaseLost:
+  log.warning("Scan %s stopped after worker lease loss; the next owner will recover its running row",scan_id)
+  return
  except Exception as exc:
   with SessionLocal() as db:
    run=db.get(NucleiScanRun,scan_id)
@@ -79,10 +88,12 @@ def run():
    with SessionLocal() as db: enqueue_due(db,client)
    item=client.brpop(QUEUE,timeout=2)
    if item:
-    scan_id=int(item[1]); client.delete(f"opsaegis:nuclei:enqueue:{scan_id}"); process(scan_id)
+    scan_id=int(item[1]); client.delete(f"opsaegis:nuclei:enqueue:{scan_id}"); process(scan_id,lease_lost)
  finally:
   stop_heartbeat.set(); heartbeat.join(timeout=2)
-  client.eval(RELEASE,2,LOCK,HEARTBEAT,token); client.close()
+  try: client.eval(RELEASE,2,LOCK,HEARTBEAT,token)
+  except Exception: log.exception("Could not release worker lease cleanly")
+  finally: client.close()
 def stop(_sig,_frame):
  global RUNNING
  RUNNING=False
