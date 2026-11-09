@@ -167,7 +167,7 @@ async def collect_wazuh_alerts(since: datetime | None=Query(default=None,descrip
         raise HTTPException(status_code=422,detail="since and until must include a timezone")
     if end>now: raise HTTPException(status_code=422,detail="until cannot be in the future")
     if start>end: raise HTTPException(status_code=422,detail="since must be earlier than until")
-    if start<end-timedelta(days=30): raise HTTPException(status_code=422,detail="since cannot be more than 30 days before until")
+    if start<now-timedelta(days=30): raise HTTPException(status_code=422,detail="since cannot be more than 30 days ago")
     try: incoming=await WazuhIndexerAdapter().collect_findings(start,end)
     except WazuhAdapterError as exc:
         if str(exc)=="Wazuh Indexer is not configured": raise HTTPException(status_code=503,detail="Wazuh Indexer integration is not configured") from None
