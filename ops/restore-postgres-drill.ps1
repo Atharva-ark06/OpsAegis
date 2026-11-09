@@ -28,8 +28,10 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
     throw "Backup manifest is missing: $manifestPath"
 }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$backupSize = (Get-Item -LiteralPath $BackupPath).Length
 $actualHash = (Get-FileHash -LiteralPath $BackupPath -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($manifest.backup_file -ne [System.IO.Path]::GetFileName($BackupPath) -or
+if ($backupSize -ne [long]$manifest.size_bytes -or
+    $manifest.backup_file -ne [System.IO.Path]::GetFileName($BackupPath) -or
     $manifest.format -ne "postgresql-custom" -or
     -not $manifest.archive_listing_verified -or
     $actualHash -ne [string]$manifest.sha256) {
