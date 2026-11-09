@@ -229,7 +229,7 @@ class WazuhManagerAdapter:
         os_data = item.get("os") if isinstance(item.get("os"), dict) else {}
         parts = [
             str(os_data.get(key)).strip()
-            for key in ("name", "version)
+            for key in ("name", "version")
             if os_data.get(key)
         ]
         os_name = " ".join(parts)[:255] or (
