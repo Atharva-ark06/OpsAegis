@@ -210,8 +210,9 @@ def test_wazuh_vulnerability_sync_preserves_remediation_and_nvd_metadata(
     assert finding.status == FindingStatus.triaged
     assert vulnerability.status == VulnerabilityStatus.accepted
     assert vulnerability.remediation_notes == "Exception approved by security team"
-    assert vulnerability.nvd_modified_at == cached_at
-    assert vulnerability.nvd_data_updated_at == cached_at
+    # SQLite drops timezone metadata on DateTime round-trips; these test values are UTC.
+    assert vulnerability.nvd_modified_at.replace(tzinfo=timezone.utc) == cached_at
+    assert vulnerability.nvd_data_updated_at.replace(tzinfo=timezone.utc) == cached_at
     assert vulnerability.cvss_score == 9.1
     assert vulnerability.cvss_severity == "critical"
     assert db_session.query(Finding).filter_by(
