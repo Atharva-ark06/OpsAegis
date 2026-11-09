@@ -60,7 +60,7 @@ Generate a password locally if needed:
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Keep `.env.restore` private. The restore script rejects additional variables so production application credentials cannot accidentally be passed into the drill container.
+Keep `.env.restore` private. On Windows, restrict its ACL to your account and SYSTEM (for example, use `icacls .env.restore /inheritance:r /grant:r "<your-account>:R" "SYSTEM:F"`). The restore script rejects additional variables so production application credentials cannot accidentally be passed into the drill container.
 
 ## 4. Run an isolated restore drill
 
