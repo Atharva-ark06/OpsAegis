@@ -221,10 +221,19 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - This does not constitute a live Redis failover/restart drill or production deployment validation.
 
 
-## Integration ingestion contract coverage (PR #35 — proposed)
+## Integration ingestion contract coverage (PR #35 — merged)
 - Adds API-level regression coverage for CrowdSec active-decision ingestion, Wazuh Manager inventory refresh and Wazuh Vulnerability Detector refresh.
 - Verifies repeat collection is idempotent and audited, analyst triage and first-seen timestamps remain intact, and source refresh does not overwrite analyst-managed asset classification/environment.
 - Verifies vulnerability refresh updates source-derived severity while preserving analyst remediation status/notes and NVD cache metadata.
 - Adds viewer-role denial tests for the covered sync operations.
 - Adds a Phase 5 runbook that separates mocked CI evidence from required live-service, staging, deployment, backup/restore and security validation.
 - These tests use mocked adapters and disposable SQLite; they do not claim live Wazuh/CrowdSec/provider connectivity or production readiness.
+
+
+## Operational diagnostics for datastore and worker health (PR #36 — proposed)
+- Extends the read-only operator diagnostic to check database SELECT 1 and Redis PING before external integrations.
+- Reports the detection-worker Redis heartbeat as required in production; development environments may explicitly report a missing worker as skipped.
+- Checks the isolated Nuclei-worker heartbeat only when both NUCLEI_ENABLED and NUCLEI_WORKER_ENABLED are enabled; mismatched flags or a missing heartbeat fail closed.
+- Corrects the Nuclei diagnostic guidance to reflect the dedicated worker architecture. The diagnostic never launches a scan or changes configuration/data.
+- Adds unit coverage for worker heartbeat states, environment-specific detection-worker expectations and sanitized Redis failures.
+- These checks are point-in-time operational signals only. They do not prove worker restart recovery, scanner egress restrictions, live event ingestion or production readiness.
