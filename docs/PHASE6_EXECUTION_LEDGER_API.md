@@ -19,3 +19,8 @@ The response intentionally excludes target identifiers, parameter digests, idemp
 ## Safety boundary
 
 This is a GET-only inspection route. It has no create, update, retry, claim, dispatch, provider, or compensation operation. `execution_enabled` remains false. The Wazuh adapter remains disabled and unregistered.
+
+
+## Dashboard visibility
+
+The overview now includes an admin/analyst-only execution ledger panel backed by this GET endpoint. It supports status filtering and bounded 25-record pagination, displays execution and compensation states with lifecycle timestamps, and provides an explicit read-only/disabled notice. It does not expose sensitive target, digest, idempotency or provider fields and has no action controls.

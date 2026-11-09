@@ -338,3 +338,37 @@ export const getOperationsTrends = (since: string, until: string, bucket: "day" 
 export const getOperationalThresholds = (): Promise<OperationalThresholds> => request("/reports/operations/thresholds");
 export const updateOperationalThresholds = (payload: Omit<OperationalThresholds, "updated_at">): Promise<OperationalThresholds> =>
   request("/reports/operations/thresholds", {method:"PUT", body:JSON.stringify(payload)});
+
+
+export type PlaybookExecutionStatus = "pending" | "claimed" | "executing" | "succeeded" | "failed" | "outcome_unknown";
+export type PlaybookCompensationStatus = "not_requested" | "requested" | "executing" | "succeeded" | "failed" | "outcome_unknown";
+export interface PlaybookExecutionRecord {
+  id: number;
+  approval_id: number;
+  action_id: string;
+  action_version: string;
+  status: PlaybookExecutionStatus;
+  compensation_status: PlaybookCompensationStatus;
+  created_at: string | null;
+  updated_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+export interface PlaybookExecutionPage {
+  items: PlaybookExecutionRecord[];
+  count: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+  execution_enabled: false;
+}
+export const getPlaybookExecutions = (
+  filters: { status?: PlaybookExecutionStatus; limit?: number; offset?: number } = {},
+): Promise<PlaybookExecutionPage> => {
+  const params = new URLSearchParams({
+    limit: String(filters.limit ?? 50),
+    offset: String(filters.offset ?? 0),
+  });
+  if (filters.status) params.set("status", filters.status);
+  return request("/playbooks/executions?" + params.toString());
+};

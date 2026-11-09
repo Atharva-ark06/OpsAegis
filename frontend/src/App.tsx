@@ -6,6 +6,7 @@ import { VulnerabilityPanel } from "./VulnerabilityPanel";
 import { CollectionPanel } from "./CollectionPanel";
 import { IncidentTimeline } from "./IncidentTimeline";
 import { OperationsPanel } from "./OperationsPanel";
+import { ExecutionLedgerPanel } from "./ExecutionLedgerPanel";
 import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan, ShannonHealth, getShannonHealth } from "./api";
 import { describeEngineHealth } from "./engineHealth";
 import {
@@ -432,6 +433,7 @@ function App() {
         </section>
         <SeverityBreakdown findings={findings} />
         <OperationsPanel isAdmin={user.role === "admin"} refreshKey={refreshKey} />
+        {canOperate && <ExecutionLedgerPanel refreshKey={refreshKey} />}
         <section className="overview-grid">
           <article className="panel"><div className="panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h3>Recent findings</h3></div><button className="text-button" onClick={() => setView("findings")}>View all <span>→</span></button></div>
             {findings.length ? <div className="activity-list">{findings.slice(0, 5).map((item) => <div className="activity-row" key={item.id}><span className={"activity-icon " + item.severity}>{item.severity === "critical" || item.severity === "high" ? "!" : "•"}</span><div className="activity-copy"><strong>{item.title}</strong><small>{titleCase(item.source_engine)} · {formatDate(item.last_seen_at)}</small></div><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></div>)}</div> : <EmptyState title="No findings yet" detail="Verified findings will be listed here." />}
