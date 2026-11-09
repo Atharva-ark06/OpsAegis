@@ -105,4 +105,54 @@ describe("OpsAegis API client", () => {
     await expect(request).rejects.toBeInstanceOf(ApiError);
     await expect(request).rejects.toMatchObject({ status: 0 });
   });
+
+
+  it("formats structured validation errors without assuming every item is an object", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(422, {
+      detail: [{ msg: "Email is required" }, "Password is required", null],
+    }));
+
+    await expect(getAssets()).rejects.toMatchObject({
+      message: "Email is required; Password is required; Invalid request",
+      status: 422,
+    });
+  });
+
+  it("uses a status-based message when an error response is not JSON", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      json: async () => { throw new SyntaxError("not JSON"); },
+    } as Response);
+
+    await expect(getAssets()).rejects.toMatchObject({
+      message: "Request failed (502).",
+      status: 502,
+    });
+  });
+
+  it("accepts successful no-content responses", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      json: async () => { throw new Error("204 must not parse a body"); },
+    } as Response);
+
+    await expect(getAssets()).resolves.toBeUndefined();
+  });
+
+  it("returns a useful API error when a successful response contains invalid JSON", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => { throw new SyntaxError("Unexpected token"); },
+    } as Response);
+
+    await expect(getAssets()).rejects.toMatchObject({
+      name: "ApiError",
+      message: "The OpsAegis API returned an invalid or empty JSON response.",
+      status: 200,
+    });
+  });
+
 });
