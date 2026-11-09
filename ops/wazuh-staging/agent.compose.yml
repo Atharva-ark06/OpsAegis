@@ -1,0 +1,12 @@
+# OpsAegis-only disposable test agent.
+# This file is combined with the official Wazuh v4.14.10 single-node stack.
+# The agent is reachable only on the Compose project network; no host ports.
+services:
+  opsaegis-disposable-agent:
+    image: wazuh/wazuh-agent:4.14.10
+    hostname: opsaegis-disposable-agent
+    restart: "no"
+    environment:
+      - WAZUH_MANAGER_SERVER=wazuh.manager
+    depends_on:
+      - wazuh.manager
