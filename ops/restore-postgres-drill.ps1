@@ -60,6 +60,7 @@ foreach ($requiredName in @("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD")
 $containerName = "opsaegis-restore-drill-$([guid]::NewGuid().ToString('N').Substring(0, 8))"
 $remotePath = "/tmp/opsaegis-restore.dump"
 $containerCreated = $false
+$restoreCheckPath = $null
 
 try {
     # No port publishing and --network none keep this temporary database isolated.
@@ -89,16 +90,48 @@ try {
 
     $restoreScript = @'
 set -eu
-PGPASSWORD="$POSTGRES_PASSWORD" pg_restore --exit-on-error --no-owner --no-acl --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" /tmp/opsaegis-restore.dump
-migration="$(PGPASSWORD="$POSTGRES_PASSWORD" psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --command='SELECT version_num FROM alembic_version')"
-tables="$(PGPASSWORD="$POSTGRES_PASSWORD" psql --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1 --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --command="SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")"
+export PGPASSWORD="$POSTGRES_PASSWORD"
+
+pg_restore --exit-on-error --no-owner --no-acl \
+  --username="$POSTGRES_USER" \
+  --dbname="$POSTGRES_DB" \
+  /tmp/opsaegis-restore.dump
+
+migration="$(psql --no-psqlrc --tuples-only --no-align \
+  -v ON_ERROR_STOP=1 \
+  --username="$POSTGRES_USER" \
+  --dbname="$POSTGRES_DB" \
+  --command='SELECT version_num FROM alembic_version')"
+
+tables="$(psql --no-psqlrc --tuples-only --no-align \
+  -v ON_ERROR_STOP=1 \
+  --username="$POSTGRES_USER" \
+  --dbname="$POSTGRES_DB" \
+  --command="SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")"
+
 test -n "$migration"
 test "$tables" -gt 0
-printf 'Alembic revision: %s\nPublic tables restored: %s\n' "$migration" "$tables"
+
+printf 'Alembic revision: %s\\nPublic tables restored: %s\n' "$migration" "$tables"
 '@
-    $result = & docker exec $containerName sh -ec $restoreScript
+
+    $restoreCheckPath = Join-Path $env:TEMP "$containerName-restore-check.sh"
+    [System.IO.File]::WriteAllText(
+        $restoreCheckPath,
+        $restoreScript,
+        [System.Text.Encoding]::ASCII
+    )
+
+    & docker cp $restoreCheckPath "$($containerName):/tmp/restore-check.sh"
     if ($LASTEXITCODE -ne 0) {
-        throw "Restore or post-restore schema checks failed."
+        throw "Could not copy the restore verification script."
+    }
+
+    $result = & docker exec $containerName sh /tmp/restore-check.sh
+    $restoreExitCode = $LASTEXITCODE
+
+    if ($restoreExitCode -ne 0) {
+        throw "Restore or post-restore schema checks failed. Exit code: $restoreExitCode"
     }
 
     Write-Output "Isolated PostgreSQL restore drill passed."
@@ -112,6 +145,10 @@ printf 'Alembic revision: %s\nPublic tables restored: %s\n' "$migration" "$table
     }
 }
 finally {
+    if ($restoreCheckPath -and (Test-Path -LiteralPath $restoreCheckPath)) {
+        Remove-Item -LiteralPath $restoreCheckPath -Force -ErrorAction SilentlyContinue
+    }
+
     if ($containerCreated -and -not $KeepContainer) {
         & docker rm --force $containerName | Out-Null
     }
