@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.entities import IntegrationCollectionRun, IntegrationSchedule, User, UserRole, utc_now
+from app.models.entities import AuditLog, IntegrationCollectionRun, IntegrationSchedule, User, UserRole, utc_now
 from app.security import get_current_user, require_roles
 
 router = APIRouter(prefix="/collections", tags=["collection orchestration"])
@@ -72,6 +72,9 @@ def update_schedule(source: str, payload: ScheduleUpdate, db: Session = Depends(
     item.updated_by_user_id = actor.id
     item.updated_at = now
     item.next_run_at = now + timedelta(seconds=payload.interval_seconds) if payload.enabled else None
+    db.add(AuditLog(actor_user_id=actor.id, action="collection.schedule.update",
+                    target=f"collection-schedule:{source}",
+                    detail=f"enabled:{item.enabled};interval_seconds:{item.interval_seconds};lookback_minutes:{item.lookback_minutes}"))
     db.commit()
     db.refresh(item)
     return _schedule_payload(item, source)
@@ -95,6 +98,9 @@ def request_collection(source: str, db: Session = Depends(get_db),
         requested_by_user_id=actor.id, next_attempt_at=now, created_at=now,
     )
     db.add(run)
+    db.flush()
+    db.add(AuditLog(actor_user_id=actor.id, action="collection.run.request",
+                    target=f"collection-run:{run.id}", detail=f"source:{source}"))
     db.commit()
     db.refresh(run)
     return _run_payload(run)
