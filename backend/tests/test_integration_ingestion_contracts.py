@@ -358,3 +358,39 @@ def test_crowdsec_refresh_preserves_existing_analyst_asset_assignment(
     assert response.status_code == 200
     db_session.refresh(finding)
     assert finding.asset_id == selected.id
+
+
+def test_crowdsec_alert_collection_is_separate_audited_and_maps_only_exact_ip(
+    client, db_session, analyst_headers, monkeypatch
+):
+    asset = Asset(name="crowdsec-lab", asset_type="endpoint", environment="staging",
+                  ip_address="203.0.113.123")
+    db_session.add(asset)
+    db_session.commit()
+
+    class FakeCrowdSecAdapter:
+        is_alerts_configured = True
+
+        async def collect_alerts(self):
+            return [NormalizedFinding(
+                source_engine="crowdsec-alert",
+                source_native_id="alert-123",
+                title="CrowdSec alert: crowdsecurity/ssh-bf",
+                description="SSH brute force detected",
+                severity="high",
+                observed_at=datetime(2026, 11, 9, 10, tzinfo=timezone.utc),
+                asset_reference="203.0.113.123",
+                evidence={"alert_id": "alert-123", "source": {"scope": "Ip", "value": "203.0.113.123"}},
+            )]
+
+    monkeypatch.setattr(integrations_router, "CrowdSecLapiAdapter", FakeCrowdSecAdapter)
+    response = client.post("/api/v1/integrations/crowdsec/alerts/collect", headers=analyst_headers)
+    assert response.status_code == 200
+    assert response.json()["data_scope"] == "bounded_alert_history"
+    finding = db_session.query(Finding).filter_by(
+        source_engine="crowdsec-alert", source_native_id="alert-123"
+    ).one()
+    assert finding.asset_id == asset.id
+    assert db_session.query(AuditLog).filter_by(
+        action="integration.crowdsec.alerts.collect"
+    ).count() == 1
