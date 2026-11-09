@@ -2,7 +2,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ShannonPanel } from "./ShannonPanel";
 import { DetectionsPanel } from "./DetectionsPanel";
 import { ThreatIntelPanel } from "./ThreatIntelPanel";
-import { VulnerabilityPanel } from "./VulnerabilityPanel";\nimport { CollectionPanel } from "./CollectionPanel";\nimport { IncidentTimeline } from "./IncidentTimeline";
+import { VulnerabilityPanel } from "./VulnerabilityPanel";
+import { CollectionPanel } from "./CollectionPanel";
+import { IncidentTimeline } from "./IncidentTimeline";
 import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan, ShannonHealth, getShannonHealth } from "./api";
 import { describeEngineHealth } from "./engineHealth";
 import {
@@ -190,6 +192,7 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
           <section><h4>Response record</h4><dl><div><dt>Assigned analyst ID</dt><dd>{item.assigned_to_user_id ?? "Unassigned"}</dd></div><div><dt>Last updated</dt><dd>{formatDate(item.updated_at)}</dd></div><div><dt>Closed at</dt><dd>{item.closed_at ? formatDate(item.closed_at) : "Not closed"}</dd></div></dl><p className="incident-resolution">{item.resolution || "No resolution note recorded."}</p></section>
           <section><h4>Correlated detections <span>{linkedDetections.length}</span></h4>{linkedDetections.length ? linkedDetections.map((detection) => <div className="linked-evidence-row" key={detection.id}><div><strong>{detection.title}</strong><small>{detection.rule_key} · {titleCase(detection.status)} · {detection.finding_ids.length} linked finding IDs</small></div><span className={severityClass(detection.severity)}>{titleCase(detection.severity)}</span></div>) : <p>No linked detections are present in the currently returned detection records.</p>}</section>
           <section><h4>Evidence findings <span>{linkedFindingIds.length}</span></h4>{linkedFindings.length ? linkedFindings.map((finding) => <div className="linked-evidence-row" key={finding.id}><div><strong>{finding.title}</strong><small>FINDING-{finding.id} · {titleCase(finding.source_engine)} · {titleCase(finding.status)}</small>{finding.description && <p>{finding.description}</p>}{finding.evidence_uri && <small>Evidence reference: {finding.evidence_uri}</small>}</div><span className={severityClass(finding.severity)}>{titleCase(finding.severity)}</span></div>) : <p>No linked finding details are available in the current findings result set.</p>}{unresolvedFindingIds.length > 0 && <p className="integration-note">{unresolvedFindingIds.length} linked finding ID(s) are outside the currently loaded findings result set.</p>}</section>
+          <IncidentTimeline incidentId={item.id} canOperate={canOperate} />
         </div>}
       </article>;
     })}</div>
