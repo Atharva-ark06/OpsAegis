@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,6 +24,14 @@ _KEY_VALUE = re.compile(r"(?i)\b(api[_-]?key|access[_-]?token|client[_-]?secret|
 
 class AnalystNoteCreate(BaseModel):
     note: str = Field(min_length=1, max_length=5000)
+
+    @field_validator("note")
+    @classmethod
+    def note_must_contain_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Note must contain non-whitespace text")
+        return value
 
 
 def _redact(value: Any) -> Any:
