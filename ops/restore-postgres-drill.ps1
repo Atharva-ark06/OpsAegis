@@ -37,10 +37,21 @@ if ($manifest.backup_file -ne [System.IO.Path]::GetFileName($BackupPath) -or
 }
 
 # Validate required variable names without displaying or logging their values.
-$envText = Get-Content -LiteralPath $RestoreEnvFile -Raw
+$definedValues = @{}
+foreach ($line in Get-Content -LiteralPath $RestoreEnvFile) {
+    $trimmed = $line.Trim()
+    if (-not $trimmed -or $trimmed.StartsWith("#")) {
+        continue
+    }
+    $parts = $trimmed -split "=", 2
+    if ($parts.Count -ne 2 -or $parts[0].Trim() -notin @("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD")) {
+        throw "Use a dedicated restore env file containing only POSTGRES_DB, POSTGRES_USER and POSTGRES_PASSWORD."
+    }
+    $definedValues[$parts[0].Trim()] = $parts[1].Trim()
+}
 foreach ($requiredName in @("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD")) {
-    if ($envText -notmatch "(?m)^\s*$requiredName\s*=") {
-        throw "Restore environment file must define $requiredName."
+    if (-not $definedValues.ContainsKey($requiredName) -or [string]::IsNullOrWhiteSpace($definedValues[$requiredName])) {
+        throw "Restore environment file must define a non-empty $requiredName."
     }
 }
 
@@ -58,7 +69,7 @@ try {
 
     $ready = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
-        & docker exec $containerName pg_isready -U postgres | Out-Null
+        & docker exec $containerName pg_isready | Out-Null
         if ($LASTEXITCODE -eq 0) {
             $ready = $true
             break
