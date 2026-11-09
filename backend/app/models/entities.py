@@ -333,3 +333,14 @@ class PlaybookApproval(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class OperationalThreshold(Base):
+    __tablename__ = "operational_thresholds"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    collection_failure_rate_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
+    source_stale_after_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    detection_to_incident_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    incident_resolution_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=240)
+    updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
