@@ -11,6 +11,10 @@ from pathlib import Path
 from typing import Any
 
 
+DETECTION_HEARTBEAT = "opsaegis:detection:worker:heartbeat"
+NUCLEI_HEARTBEAT = "opsaegis:nuclei:worker:heartbeat"
+
+
 def parse_env_file(path: Path) -> dict[str, str]:
     """Parse simple KEY=VALUE entries without interpolation or shell execution."""
     values: dict[str, str] = {}
@@ -35,16 +39,64 @@ def parse_env_file(path: Path) -> dict[str, str]:
 
 def summarize(checks: list[dict[str, str]]) -> tuple[str, dict[str, int]]:
     counts = dict(Counter(item["status"] for item in checks))
-    configured = sum(counts.get(status, 0) for status in ("passed", "failed", "not_probed"))
+    performed = counts.get("passed", 0) + counts.get("failed", 0)
+    configured_but_unprobed = counts.get("not_probed", 0)
     if counts.get("failed", 0):
         overall = "failed"
-    elif configured == 0:
+    elif performed == 0 and configured_but_unprobed == 0:
         overall = "no_configured_integrations"
-    elif counts.get("not_probed", 0):
+    elif configured_but_unprobed:
         overall = "partial"
     else:
         overall = "passed"
     return overall, counts
+
+
+def heartbeat_check(
+    name: str,
+    client: Any,
+    key: str,
+    *,
+    enabled: bool,
+    missing_status: str = "failed",
+) -> dict[str, str]:
+    """Return a sanitized status for a Redis-backed worker heartbeat."""
+    if not enabled:
+        return {"name": name, "status": "skipped", "detail": "Worker is not enabled"}
+    try:
+        alive = bool(client.get(key))
+    except Exception as exc:
+        return {"name": name, "status": "failed", "detail": type(exc).__name__}
+    if alive:
+        return {"name": name, "status": "passed", "detail": "Active Redis heartbeat observed"}
+    detail = "No active Redis heartbeat observed"
+    if missing_status == "skipped":
+        detail = "No heartbeat observed in this non-production environment"
+    return {"name": name, "status": missing_status, "detail": detail}
+
+
+def nuclei_worker_check(config: Any, client: Any) -> dict[str, str]:
+    """Check the isolated Nuclei worker; never start a scan or enable execution."""
+    if not config.nuclei_enabled and not config.nuclei_worker_enabled:
+        return {"name": "nuclei_worker", "status": "skipped", "detail": "Nuclei execution is disabled"}
+    if config.nuclei_enabled != config.nuclei_worker_enabled:
+        return {
+            "name": "nuclei_worker",
+            "status": "failed",
+            "detail": "NUCLEI_ENABLED and NUCLEI_WORKER_ENABLED must both be true",
+        }
+    return heartbeat_check("nuclei_worker", client, NUCLEI_HEARTBEAT, enabled=True)
+
+
+def detection_worker_check(config: Any, client: Any) -> dict[str, str]:
+    """Require a live detection worker in production; keep dev-only setups explicit."""
+    return heartbeat_check(
+        "detection_worker",
+        client,
+        DETECTION_HEARTBEAT,
+        enabled=True,
+        missing_status="failed" if config.environment.lower() == "production" else "skipped",
+    )
 
 
 async def run_checks(include_nvd: bool) -> dict[str, Any]:
@@ -53,7 +105,11 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
     if backend_root not in sys.path:
         sys.path.insert(0, backend_root)
 
+    from redis import Redis
+    from sqlalchemy import text
+
     from app.config import Settings
+    from app.database import engine
     from app.integrations.crowdsec import CrowdSecLapiAdapter
     from app.integrations.nvd import NVDAdapter
     from app.integrations.shannon import ShannonRunnerAdapter
@@ -72,8 +128,40 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
             if result is False or result is None:
                 raise RuntimeError("unhealthy_response")
             checks.append({"name": name, "status": "passed", "detail": detail})
-        except Exception as exc:  # Adapter errors are sanitized; never print response bodies or credentials.
+        except Exception as exc:  # Never print response bodies or credentials.
             checks.append({"name": name, "status": "failed", "detail": type(exc).__name__})
+
+    def database_ping() -> bool:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return True
+
+    await probe("database", True, database_ping, detail="Database SELECT 1 succeeded")
+
+    redis_client = Redis.from_url(
+        config.redis_url,
+        decode_responses=True,
+        socket_connect_timeout=2,
+        socket_timeout=2,
+    )
+    redis_available = False
+    try:
+        await probe("redis", True, redis_client.ping, detail="Redis PING succeeded")
+        try:
+            redis_available = bool(redis_client.ping())
+        except Exception:
+            redis_available = False
+        if redis_available:
+            checks.append(detection_worker_check(config, redis_client))
+            checks.append(nuclei_worker_check(config, redis_client))
+        else:
+            checks.append({"name": "detection_worker", "status": "failed", "detail": "Redis unavailable; heartbeat cannot be checked"})
+            if config.nuclei_enabled or config.nuclei_worker_enabled:
+                checks.append({"name": "nuclei_worker", "status": "failed", "detail": "Redis unavailable; heartbeat cannot be checked"})
+            else:
+                checks.append({"name": "nuclei_worker", "status": "skipped", "detail": "Nuclei execution is disabled"})
+    finally:
+        redis_client.close()
 
     manager = WazuhManagerAdapter(config)
     indexer = WazuhIndexerAdapter(config)
@@ -108,19 +196,6 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
     else:
         checks.append({"name": "abuseipdb", "status": "skipped", "detail": "Not configured"})
 
-    if config.nuclei_enabled:
-        checks.append({
-            "name": "nuclei",
-            "status": "failed",
-            "detail": "NUCLEI_ENABLED is true; the legacy API-process scanner must remain disabled",
-        })
-    else:
-        checks.append({
-            "name": "nuclei",
-            "status": "skipped",
-            "detail": "Execution is disabled; this diagnostic never launches a scan",
-        })
-
     if include_nvd:
         await probe(
             "nvd_public_api",
@@ -131,13 +206,13 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
     else:
         checks.append({
             "name": "nvd_public_api",
-            "status": "not_probed",
-            "detail": "Use --include-nvd to make one read-only public CVE lookup",
+            "status": "skipped",
+            "detail": "Optional probe not requested; use --include-nvd for one public CVE lookup",
         })
 
     overall, counts = summarize(checks)
     return {
-        "tool": "OpsAegis integration diagnostics",
+        "tool": "OpsAegis operational diagnostics",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "environment": config.environment,
         "overall": overall,
@@ -154,14 +229,24 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run bounded, read-only health checks for configured OpsAegis integrations."
+        description="Run bounded, read-only service, worker and integration health checks."
     )
-    parser.add_argument("--env-file", type=Path, default=Path(".env"),
-                        help="Local env file to load (default: .env in the current directory)")
-    parser.add_argument("--include-nvd", action="store_true",
-                        help="Make one read-only lookup for the fixed public CVE-2021-44228")
-    parser.add_argument("--output", type=Path,
-                        help="Optional path for a JSON report; the report never contains credentials")
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        default=Path(".env"),
+        help="Local env file to load (default: .env in the current directory)",
+    )
+    parser.add_argument(
+        "--include-nvd",
+        action="store_true",
+        help="Make one read-only lookup for the fixed public CVE-2021-44228",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path for a JSON report; the report never contains credentials",
+    )
     args = parser.parse_args()
 
     for key, value in parse_env_file(args.env_file).items():
@@ -171,7 +256,7 @@ def main() -> int:
         report = asyncio.run(run_checks(args.include_nvd))
     except Exception as exc:
         report = {
-            "tool": "OpsAegis integration diagnostics",
+            "tool": "OpsAegis operational diagnostics",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "overall": "configuration_error",
             "error_type": type(exc).__name__,
@@ -189,7 +274,7 @@ def main() -> int:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered + "\n", encoding="utf-8")
 
-    if report["overall"] == "failed" or report["overall"] == "configuration_error":
+    if report["overall"] in {"failed", "configuration_error"}:
         return 1
     if report["overall"] == "no_configured_integrations":
         return 2
