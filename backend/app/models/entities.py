@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
-from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, ForeignKey, Integer, JSON, String, Text, Index, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum as SqlEnum, ForeignKey, Integer, JSON, String, Text, Index, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -344,3 +344,44 @@ class OperationalThreshold(Base):
     incident_resolution_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=240)
     updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+
+class PlaybookExecution(Base):
+    """Durable action/compensation ledger; deliberately not connected to a dispatcher."""
+
+    __tablename__ = "playbook_executions"
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_playbook_executions_idempotency_key"),
+        UniqueConstraint("approval_id", "action_id", name="uq_playbook_executions_approval_action"),
+        CheckConstraint(
+            "status IN ('pending', 'claimed', 'executing', 'succeeded', 'failed', 'outcome_unknown')",
+            name="ck_playbook_executions_status",
+        ),
+        CheckConstraint(
+            "compensation_status IN ('not_requested', 'requested', 'executing', 'succeeded', 'failed', 'outcome_unknown')",
+            name="ck_playbook_executions_compensation_status",
+        ),
+        Index("ix_playbook_executions_status_created_at", "status", "created_at"),
+        Index("ix_playbook_executions_approval_id", "approval_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    approval_id: Mapped[int] = mapped_column(
+        ForeignKey("playbook_approvals.id", ondelete="RESTRICT"), nullable=False
+    )
+    action_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    action_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    parameters_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
+    compensation_status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="not_requested"
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    provider_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    safe_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
