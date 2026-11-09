@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -71,7 +71,7 @@ def update_schedule(source: str, payload: ScheduleUpdate, db: Session = Depends(
     item.lookback_minutes = payload.lookback_minutes
     item.updated_by_user_id = actor.id
     item.updated_at = now
-    item.next_run_at = now + __import__("datetime").timedelta(seconds=payload.interval_seconds) if payload.enabled else None
+    item.next_run_at = now + timedelta(seconds=payload.interval_seconds) if payload.enabled else None
     db.commit()
     db.refresh(item)
     return _schedule_payload(item, source)
