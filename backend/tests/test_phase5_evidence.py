@@ -37,19 +37,33 @@ def test_exit_gate_rejects_pending_live_evidence():
 
 
 def test_exit_gate_accepts_documented_staging_and_accepted_exclusions():
-    text = matrix("Staging-validated")
+    text = matrix("Staging-validated — evidence: EVID-123")
     text = text.replace(
         "| Nuclei isolated worker | Implemented | Record live evidence | Staging-validated |",
         "| Nuclei isolated worker | Implemented | Explicitly excluded | Out of scope - accepted |",
     )
     text = text.replace(
-        "| Shannon bridge | Implemented | Explicitly excluded | Staging-validated |",
+        "| Shannon bridge | Implemented | Explicitly excluded | Not configured - accepted; accepted: DEC-002 |",
         "| Shannon bridge | Implemented | Explicitly excluded | Not configured - accepted |",
     )
     assert MODULE.validate_evidence_register(text, require_exit=True) == []
 
 
 def test_exit_gate_does_not_treat_no_evidence_declaration_as_complete():
-    text = matrix("Staging-validated") + "\nLive environment evidence supplied for this register: none\n"
+    text = matrix("Staging-validated — evidence: EVID-123") + "\nLive environment evidence supplied for this register: none\n"
     assert any("no live environment evidence" in error.lower()
                for error in MODULE.validate_evidence_register(text, require_exit=True))
+
+
+def test_exit_gate_requires_evidence_reference_for_validated_workstream():
+    errors = MODULE.validate_evidence_register(matrix("Staging-validated"), require_exit=True)
+    assert any("evidence reference" in error.lower() for error in errors)
+
+
+def test_exit_gate_requires_acceptance_reference_for_exclusions():
+    text = matrix("Staging-validated — evidence: EVID-123").replace(
+        "| Nuclei isolated worker | Implemented | Record live evidence | Staging-validated — evidence: EVID-123 |",
+        "| Nuclei isolated worker | Implemented | Explicitly excluded | Out of scope - accepted |",
+    )
+    errors = MODULE.validate_evidence_register(text, require_exit=True)
+    assert any("acceptance reference" in error.lower() for error in errors)
