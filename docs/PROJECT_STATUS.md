@@ -333,3 +333,9 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Adds persisted singleton operational thresholds. Administrators can configure collection terminal-failure percentage, source freshness age, detection-to-incident SLA and incident-resolution SLA; changes are audit logged. Analysts/viewers can read thresholds and computed breach summaries but cannot change settings.
 - Threshold breaches are evaluated from the same persisted report metrics over a rolling seven-day window. They do not trigger external notifications or response actions.
 - Automated tests cover bucket counts, weekly mode, authentication, role restrictions, validation and threshold audit records. CI must validate this branch; no live staging data is claimed.
+
+
+## Phase 6.4 — staging validation tooling (PR in review)
+- Adds an offline validator comparing a sanitized aggregate report export with independently recorded expected source counts, failure rate, detection-to-incident timing and incident-resolution timing.
+- The validator fails closed on UTC-window mismatch, missing sources/metrics, row caps and missing data-quality limitations. It reports metric mismatches without dumping raw report payloads.
+- Adds an operator runbook and evidence template. The utility does not call staging, generate events, or claim live validation; Phase 6.4 staging evidence remains pending until an authorized operator runs and reviews it.

@@ -73,8 +73,7 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - [x] Daily/weekly trend buckets for persisted collection runs, detections, incidents and audited resolutions.
 - [x] Dashboard trend visualizations with explicit empty states and row-cap warnings.
 - [x] Administrator-managed, audited thresholds for collection failure rate, source freshness, detection-to-incident time and incident resolution time; read-only threshold breach evaluation.
-- [ ] Staging validation against known source data and measured event timelines.
-- [ ] Staging validation against known source data and measured event timelines.
+- [ ] Run the operator-led staging validation procedure against known source records and measured event timelines; record reviewed sanitized evidence.
 
 ## Security and reliability invariants
 
@@ -114,3 +113,6 @@ Before implementing 6.1, settle:
 - database and Redis recovery expectations.
 
 The first implementation should begin with Wazuh Manager inventory and Wazuh Indexer alerts, then add CrowdSec decisions and optional alert history only after the dedicated machine-credential risk is accepted.
+
+
+**Staging validation tooling (PR in review):** adds an offline comparison utility for a sanitized aggregate report export and operator-authored expected metrics. The utility does not contact staging services or create evidence; the live validation checkbox remains open until an authorized operator completes and reviews the runbook evidence.
