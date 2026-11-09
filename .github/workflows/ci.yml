@@ -59,7 +59,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - run: npm install
+      - name: Generate lockfile from declared dependencies
+        working-directory: frontend
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - run: npm ci
         working-directory: frontend
       - run: npm test
         working-directory: frontend
