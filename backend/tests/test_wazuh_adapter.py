@@ -161,3 +161,95 @@ async def test_query_rejects_invalid_upper_bound():
             datetime(2026, 11, 8, 10, tzinfo=timezone.utc),
             datetime(2026, 11, 8, 9, tzinfo=timezone.utc),
         )
+
+
+@pytest.mark.asyncio
+async def test_alert_search_rejects_timed_out_or_failed_shards():
+    from app.integrations.wazuh import WazuhAdapterError
+
+    for extra in (
+        {"timed_out": True},
+        {"_shards": {"failed": 1}},
+    ):
+        def handler(request, extra=extra):
+            return httpx.Response(
+                200,
+                json={**extra, "hits": {"hits": []}},
+            )
+
+        adapter = WazuhIndexerAdapter(
+            config(),
+            transport=httpx.MockTransport(handler),
+        )
+        with pytest.raises(WazuhAdapterError, match="timed out|failed shards"):
+            await adapter.collect_findings(
+                datetime(2026, 11, 8, 9, tzinfo=timezone.utc)
+            )
+
+
+@pytest.mark.asyncio
+async def test_alert_index_pattern_is_scoped_to_wazuh_alert_indices():
+    for pattern in ("*", "_all", "wazuh-alerts-*,other-index", "other-index-*"):
+        adapter = WazuhIndexerAdapter(config(wazuh_indexer_index_pattern=pattern))
+        with pytest.raises(WazuhAdapterError, match="scoped"):
+            await adapter.collect_findings(
+                datetime(2026, 11, 8, 9, tzinfo=timezone.utc)
+            )
+
+
+@pytest.mark.asyncio
+async def test_indexer_rejects_url_path_and_disabled_tls_verification():
+    path_adapter = WazuhIndexerAdapter(
+        config(wazuh_indexer_url="https://indexer.example:9200/proxy")
+    )
+    with pytest.raises(WazuhAdapterError, match="origin-only"):
+        await path_adapter.healthcheck()
+
+    tls_adapter = WazuhIndexerAdapter(config(wazuh_indexer_verify_tls=False))
+    with pytest.raises(WazuhAdapterError, match="TLS verification"):
+        await tls_adapter.healthcheck()
+
+
+@pytest.mark.asyncio
+async def test_vulnerability_query_uses_documented_wazuh_state_index_pattern():
+    captured = {}
+
+    def handler(request):
+        captured["path"] = request.url.path
+        return httpx.Response(
+            200,
+            json={
+                "timed_out": False,
+                "_shards": {"failed": 0},
+                "hits": {
+                    "total": {"value": 0, "relation": "eq"},
+                    "hits": [],
+                },
+            },
+        )
+
+    adapter = WazuhIndexerAdapter(
+        config(),
+        transport=httpx.MockTransport(handler),
+    )
+    records, total, truncated = await adapter.collect_vulnerabilities()
+    assert captured["path"] == "/wazuh-states-vulnerabilities-*/_search"
+    assert records == [] and total == 0 and truncated is False
+
+
+@pytest.mark.asyncio
+async def test_vulnerability_query_rejects_failed_shards():
+    adapter = WazuhIndexerAdapter(
+        config(),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                json={
+                    "_shards": {"failed": 1},
+                    "hits": {"total": 0, "hits": []},
+                },
+            )
+        ),
+    )
+    with pytest.raises(WazuhAdapterError, match="failed shards"):
+        await adapter.collect_vulnerabilities()
