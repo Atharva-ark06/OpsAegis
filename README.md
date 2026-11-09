@@ -9,7 +9,7 @@ A unified security operations and threat-response platform integrating Wazuh, Cr
 - FastAPI backend, PostgreSQL persistence, Redis service, Alembic migrations and JWT/RBAC.
 - Authenticated React/TypeScript operational workspace (PR #5).
 - Wazuh Indexer read-only alert ingestion with source-event deduplication.
-- CrowdSec Local API read-only active-decision ingestion (PR #6).
+- CrowdSec Local API active-decision ingestion and optional bounded alert-history collection (PR #6; alert history requires a separate machine credential).
 - No fabricated alerts, live metrics or engine connectivity claims.
 
 A built adapter is not proof of a live connection. Configure and verify each authorized engine endpoint before expecting its records.
@@ -23,7 +23,7 @@ Login throttling, strict JWT claim validation and failed-login audit controls ar
 | Engine | Role | Integration status |
 |---|---|---|
 | Wazuh | Endpoint telemetry and SIEM alerts | Indexer read-only adapter |
-| CrowdSec | Behavioural threat decisions | LAPI active-decision adapter |
+| CrowdSec | Behavioural threat decisions and detection alerts | LAPI bouncer decision adapter; optional machine-JWT alert adapter |
 | Nuclei | Authorized vulnerability scanning | Authorized target registry and safe-profile scans |
 | Shannon | Authorized AI-assisted application testing | External isolated-runner control-plane adapter (runner deployment required) |
 
@@ -171,7 +171,7 @@ No provider key or live provider lookup is included. Without credentials the wor
 
 Wazuh alert collection resolves upstream agent identity from alert evidence and upserts one endpoint asset per Wazuh agent ID. New findings link to that asset; existing analyst-selected asset associations are preserved. Repeated collection refreshes the endpoint name, observed IP and last-seen timestamp without overwriting its environment or asset type.
 
-This is alert-observed inventory, not a substitute for the Wazuh Manager agents API. It does not prove current online status, collect OS inventory, or discover agents that have not generated an ingested alert. CrowdSec IP-only records are not automatically mapped because an IP match can be ambiguous.
+This is alert-observed inventory, not a substitute for the Wazuh Manager agents API. It does not prove current online status, collect OS inventory, or discover agents that have not generated an ingested alert. CrowdSec IP-only records are linked only when one exact existing asset IP match is unambiguous; range and ambiguous matches remain unassigned.
 
 
 ### Frontend appearance
