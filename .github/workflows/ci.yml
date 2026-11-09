@@ -114,9 +114,74 @@ jobs:
           ref: ${{ github.ref }}
       - name: Check Docker Compose availability
         run: docker compose version
-      - name: Prepare placeholder environment file for Compose validation
-        run: cp .env.production.example .env.production
+      - name: Create isolated production-stack smoke-test credentials
+        shell: bash
+        run: |
+          db_password="$(openssl rand -hex 24)"
+          redis_password="$(openssl rand -hex 24)"
+          app_secret="$(openssl rand -hex 48)"
+          cat > .env.production <<EOF
+          OPS_AEGIS_ENV=production
+          OPS_AEGIS_SECRET_KEY=${app_secret}
+          OPS_AEGIS_ACCESS_TOKEN_MINUTES=15
+          OPS_AEGIS_ALLOWED_HOSTS=127.0.0.1,localhost
+          POSTGRES_DB=opsaegis
+          POSTGRES_USER=opsaegis
+          POSTGRES_PASSWORD=${db_password}
+          DATABASE_URL=postgresql+psycopg://opsaegis:${db_password}@postgres:5432/opsaegis
+          REDIS_PASSWORD=${redis_password}
+          REDIS_URL=redis://:${redis_password}@redis:6379/0
+          CORS_ORIGINS=https://soc.example.test
+          NUCLEI_ENABLED=false
+          NUCLEI_WORKER_ENABLED=false
+          SHANNON_ENABLED=false
+          EOF
       - name: Validate production Compose configuration
-        run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+        run: docker compose --env-file .env.production -f compose.production.yaml config --quiet
       - name: Build production API, migration, worker and frontend images
-        run: docker compose --env-file .env.production.example -f compose.production.yaml build migrate backend detection-worker nuclei-worker frontend
+        run: docker compose --env-file .env.production -f compose.production.yaml build migrate backend detection-worker nuclei-worker frontend
+      - name: Start production stack for ephemeral smoke test
+        run: docker compose --env-file .env.production -f compose.production.yaml up -d --no-build
+      - name: Verify migrations, service health and frontend-to-API readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          compose=(docker compose --env-file .env.production -f compose.production.yaml)
+          migration_id="$(${compose[@]} ps -aq migrate)"
+          test -n "$migration_id"
+          migration_exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$migration_id")"
+          test "$migration_exit_code" = "0"
+          for service in postgres redis backend detection-worker frontend; do
+            container_id="$(${compose[@]} ps -q "$service")"
+            if [ -z "$container_id" ]; then
+              echo "Missing container for $service"
+              exit 1
+            fi
+            health="starting"
+            for attempt in $(seq 1 60); do
+              health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id")"
+              if [ "$health" = "healthy" ]; then
+                break
+              fi
+              if [ "$health" = "unhealthy" ]; then
+                echo "$service became unhealthy"
+                exit 1
+              fi
+              sleep 3
+            done
+            if [ "$health" != "healthy" ]; then
+              echo "$service did not become healthy (last state: $health)"
+              exit 1
+            fi
+            echo "$service: healthy"
+          done
+          curl --fail --silent --show-error http://127.0.0.1:8080/healthz
+          curl --fail --silent --show-error http://127.0.0.1:8080/ | head -c 200 >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready | python -c "import json,sys; data=json.load(sys.stdin); assert data.get('status') == 'ready', data; assert data.get('database') == 'ok' and data.get('redis') == 'ok', data; print('API readiness: database and Redis are ready')"
+          ${compose[@]} ps
+      - name: Collect production stack logs on failure
+        if: failure()
+        run: docker compose --env-file .env.production -f compose.production.yaml logs --no-color --tail=150
+      - name: Stop smoke-test stack and remove ephemeral volumes
+        if: always()
+        run: docker compose --env-file .env.production -f compose.production.yaml down -v --remove-orphans
