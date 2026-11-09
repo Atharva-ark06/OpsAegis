@@ -48,7 +48,7 @@
 
 ## Remaining
 - Independently validate the Nuclei worker in an authorized staging environment with enforceable egress controls, pinned templates and restart/lease-loss tests.
-- Validate Redis scheduler and worker recovery under restart/failure conditions.
+- Validate Redis scheduler and both worker recovery paths under restart/failure conditions in authorized staging; automated fencing tests do not replace a live Redis failover/restart drill.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
 - CrowdSec historical-alert ingestion, full pagination and safe asset association remain outstanding; broad response actions are not implemented.
 - Production secrets management, monitoring and operational runbooks.
@@ -210,3 +210,12 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Worker image pins Nuclei v3.4.10 and nuclei-templates v10.3.1, installs templates at build time and passes the directory explicitly to the scanner. Runtime template downloads/updates are disabled.
 - Adds regression tests for lease-loss process termination and explicit template-directory use.
 - This does not validate deployment-level egress policy or authorize any live scan.
+
+
+## Scheduled detection worker fencing and health (PR #34 — proposed)
+- Persisted a per-run worker fencing token; completion and retry/failure updates are conditional on the current token, so a stale worker cannot finalize a run after a new owner has reclaimed it.
+- A worker that detects lease loss leaves its durable run for startup recovery rather than marking it successful. Correlation evaluation is idempotent and may be repeated safely.
+- Startup recovery clears stale worker ownership and requeues interrupted runs within the existing attempt budget.
+- Production Compose now reports detection-worker and opt-in Nuclei-worker health from Redis heartbeat keys rather than container process state alone.
+- Added tests for lease loss before execution, lease loss during evaluation and stale-owner completion rejection.
+- This does not constitute a live Redis failover/restart drill or production deployment validation.
