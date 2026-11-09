@@ -12,6 +12,7 @@ from app.playbook_execution import recovery_guidance
         ("succeeded", "not_requested", "separate_approval_required"),
         ("failed", "not_requested", "verify_provider_state"),
         ("outcome_unknown", "not_requested", "reconcile_provider_state"),
+        ("outcome_unknown", "requested", "reconcile_provider_state"),
         ("succeeded", "requested", "operator_review_required"),
         ("succeeded", "executing", "operator_review_required"),
         ("succeeded", "succeeded", "verify_unisolated_state"),
