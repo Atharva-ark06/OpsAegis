@@ -123,7 +123,7 @@ describe("OpsAegis API client", () => {
       ok: false,
       status: 502,
       json: async () => { throw new SyntaxError("not JSON"); },
-    } as Response);
+    } as unknown as Response);
 
     await expect(getAssets()).rejects.toMatchObject({
       message: "Request failed (502).",
@@ -136,7 +136,7 @@ describe("OpsAegis API client", () => {
       ok: true,
       status: 204,
       json: async () => { throw new Error("204 must not parse a body"); },
-    } as Response);
+    } as unknown as Response);
 
     await expect(getAssets()).resolves.toBeUndefined();
   });
@@ -146,7 +146,7 @@ describe("OpsAegis API client", () => {
       ok: true,
       status: 200,
       json: async () => { throw new SyntaxError("Unexpected token"); },
-    } as Response);
+    } as unknown as Response);
 
     await expect(getAssets()).rejects.toMatchObject({
       name: "ApiError",
