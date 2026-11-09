@@ -35,7 +35,11 @@ if ($manifest.format -ne "postgresql-custom" -or -not $manifest.archive_listing_
     throw "Manifest does not identify a verified PostgreSQL custom-format archive."
 }
 
+$backupSize = (Get-Item -LiteralPath $BackupPath).Length
 $actualHash = (Get-FileHash -LiteralPath $BackupPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($backupSize -ne [long]$manifest.size_bytes) {
+    throw "Backup size does not match its manifest."
+}
 if ($actualHash -ne [string]$manifest.sha256) {
     throw "SHA-256 mismatch. The backup may be incomplete or modified."
 }
