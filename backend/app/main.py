@@ -18,6 +18,7 @@ from app.routers.collections import router as collections_router
 from app.routers.incident_timeline import router as incident_timeline_router
 from app.routers.playbooks import router as playbooks_router
 from app.routers.reports import router as reports_router
+from app.routers.operational_trends import router as operational_trends_router
 
 app = FastAPI(
     title="OpsAegis API",
@@ -57,7 +58,7 @@ async def add_security_headers(request: Request, call_next):
 for router in (
     health_router, auth_router, assets_router, findings_router, incidents_router,
     integrations_router, nuclei_router, shannon_router, detections_router,
-    threat_intel_router, vulnerabilities_router, collections_router, incident_timeline_router, playbooks_router, reports_router,
+    threat_intel_router, vulnerabilities_router, collections_router, incident_timeline_router, playbooks_router, reports_router, operational_trends_router,
 ):
     app.include_router(router, prefix="/api/v1")
 
