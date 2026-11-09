@@ -89,7 +89,8 @@ def get_incident_timeline(incident_id: int, db: Session = Depends(get_db),
         events.append({
             "id": f"audit:{audit.id}", "type": audit.action,
             "occurred_at": audit.created_at, "actor_user_id": audit.actor_user_id,
-            "summary": ("Analyst updated incident" if audit.action == "incident.update" else\n                        "Evidence export generated" if audit.action == "incident.evidence.export" else "Analyst note added"),
+            "summary": ("Analyst updated incident" if audit.action == "incident.update" else
+                        "Evidence export generated" if audit.action == "incident.evidence.export" else "Analyst note added"),
             "details": {"change": audit.detail or ""},
             "provenance": "audit_log",
         })
