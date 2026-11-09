@@ -56,6 +56,17 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+  collection-worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://opsaegis:change-me@postgres:5432/opsaegis}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    command: ["python", "-m", "app.collection_worker"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
   frontend:
     build: ./frontend
     ports:
