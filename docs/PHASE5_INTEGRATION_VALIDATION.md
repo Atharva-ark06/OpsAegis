@@ -25,8 +25,10 @@ These tests use mocked adapters and a disposable SQLite test database. They do n
 Run the existing read-only diagnostic from the deployment host/network with operator-owned credentials:
 
 ```powershell
-python backend/scripts/validate_integrations.py --env-file .env --output artifacts/integration-diagnostics.json
+python backend/scripts/validate_integrations.py --env-file .env.production --strict --output artifacts/phase5-integration-diagnostics.json
 ```
+
+Use `--strict` for the Phase 5 staging gate. It returns exit code 3 when the overall result is `partial` or `no_configured_integrations`; exit code 1 indicates failed/configuration-error checks, and exit code 0 indicates the probed checks passed. A skipped check is not a live validation. The strict flag does not turn disabled or unconfigured integrations into passes; review the individual rows and obtain explicit owner acceptance for anything out of scope.
 
 The report checks database and Redis connectivity, the detection-worker heartbeat (required in production), and the isolated Nuclei-worker heartbeat when both Nuclei enablement flags are set. It then checks configured Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon endpoints. The report distinguishes passed, failed, skipped and not-probed checks. A skipped or not-probed result is not a pass. VirusTotal and AbuseIPDB are not queried by this diagnostic to avoid unexpected quota consumption. Add `--include-nvd` only when one public NVD lookup is explicitly intended. The diagnostic never launches Nuclei or changes application data.
 

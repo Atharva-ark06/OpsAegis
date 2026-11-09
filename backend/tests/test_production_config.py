@@ -29,6 +29,7 @@ def test_valid_production_configuration_is_accepted():
     ("override", "message"),
     [
         ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this"}, "OPS_AEGIS_SECRET_KEY"),
+        ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this-secret-key-not-for-production"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "short"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "a" * 48}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "CHANGE_ME_GENERATE_WITH_PYTHON_SECRETS_123456"}, "OPS_AEGIS_SECRET_KEY"),
@@ -65,6 +66,8 @@ def test_development_keeps_local_sqlite_and_loopback_defaults():
     assert settings.database_url.startswith("sqlite:")
     assert settings.allowed_origins == ["http://localhost:5173"]
     assert settings.allowed_hosts == ["localhost", "127.0.0.1", "testserver"]
+    assert len(settings.secret_key) >= 32
+    assert "development-only" in settings.secret_key
 
 
 def test_url_encoded_database_and_redis_passwords_are_validated_after_decoding():
