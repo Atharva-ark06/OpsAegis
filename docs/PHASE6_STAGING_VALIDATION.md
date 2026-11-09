@@ -71,7 +71,7 @@ From the repository root, save the sanitized response from the authenticated rep
 python ops/validate-phase6-reporting.py --report artifacts/phase6-report.json --expected artifacts/phase6-expected.json
 ```
 
-Exit codes: `0` means the supplied metrics matched; `1` means mismatches, missing data, or row-cap/incomplete results; `2` means input files could not be read as valid JSON. Exit code 0 does not independently prove staging identity, authorization, source completeness, or service health.
+Exit codes: `0` means the supplied metrics matched; `1` means mismatches, missing data, or row-cap/incomplete results; `2` means input files could not be read as valid JSON. Exit code 0 does not independently prove staging identity, authorization, source completeness, or service health.\n\nAfter the report comparison, record the sanitized result in `docs/PHASE6_STAGING_EVIDENCE.md` and run the structural register check:\n\n```powershell\npython ops/validate-phase6-evidence.py\n```\n\nOnly after the operator and independent reviewer have verified every evidence item, completed every checklist item, and recorded a PASS should the strict gate be run:\n\n```powershell\npython ops/validate-phase6-evidence.py --require-exit\n```\n\nThe strict gate is a manual release check; CI must run structural mode only. Neither mode contacts staging or validates the underlying evidence.
 
 ## Sanitized evidence record
 
