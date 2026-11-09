@@ -13,6 +13,7 @@ from app.playbook_actions import (
     derive_idempotency_key,
     validate_action_contract,
     validate_idempotency_key,
+    validate_action_request,
 )
 
 
@@ -156,39 +157,32 @@ class _SuccessfulAdapter:
         return ActionResult("compensated", "provider-123", "Compensation completed")
 
 
-def test_adapter_execution_timeout_is_enforced():
-    request = ActionRequest(
-        action_id="test.action",
-        target_id="target-1",
-        parameters={},
-        idempotency_key="a" * 64,
-        approval_id=1,
+def _valid_request(*, action_id="test.action", target_id="target-1", approval_id=1, parameters=None):
+    parameters = {} if parameters is None else parameters
+    return ActionRequest(
+        action_id=action_id,
+        target_id=target_id,
+        parameters=parameters,
+        idempotency_key=derive_idempotency_key(approval_id, action_id, target_id, parameters),
+        approval_id=approval_id,
     )
+
+
+def test_adapter_execution_timeout_is_enforced():
+    request = _valid_request()
     with pytest.raises(ActionAdapterTimeout):
         asyncio.run(execute_with_timeout(_HangingAdapter(), request, _enabled_test_spec()))
 
 
 def test_adapter_compensation_timeout_is_enforced():
-    request = ActionRequest(
-        action_id="test.action",
-        target_id="target-1",
-        parameters={},
-        idempotency_key="b" * 64,
-        approval_id=1,
-    )
+    request = _valid_request()
     result = ActionResult("completed", "provider-123", "Action completed")
     with pytest.raises(ActionAdapterTimeout):
         asyncio.run(compensate_with_timeout(_HangingAdapter(), request, result, _enabled_test_spec()))
 
 
 def test_adapter_calls_require_registered_enabled_spec_and_valid_idempotency():
-    request = ActionRequest(
-        action_id="test.action",
-        target_id="target-1",
-        parameters={},
-        idempotency_key="c" * 64,
-        approval_id=1,
-    )
+    request = _valid_request()
     disabled = ActionSpec(
         action_id="test.action",
         version="1.0.0",
@@ -215,16 +209,60 @@ def test_adapter_calls_require_registered_enabled_spec_and_valid_idempotency():
 
 
 def test_adapter_execution_and_compensation_return_distinct_results():
-    request = ActionRequest(
-        action_id="test.action",
-        target_id="target-1",
-        parameters={},
-        idempotency_key="d" * 64,
-        approval_id=1,
-    )
+    request = _valid_request()
     adapter = _SuccessfulAdapter()
     result = asyncio.run(execute_with_timeout(adapter, request, _enabled_test_spec()))
     compensated = asyncio.run(compensate_with_timeout(adapter, request, result, _enabled_test_spec()))
     assert result.status == "completed"
     assert compensated.status == "compensated"
     assert result is not compensated
+
+
+
+def test_adapter_request_must_match_the_registered_action():
+    request = _valid_request(action_id="other.action")
+    with pytest.raises(ValueError, match="does not match"):
+        validate_action_request(request, _enabled_test_spec())
+
+
+def test_adapter_request_idempotency_key_must_bind_exact_target_and_parameters():
+    request = _valid_request(target_id="target-1")
+    altered = ActionRequest(
+        action_id=request.action_id,
+        target_id="target-2",
+        parameters=request.parameters,
+        idempotency_key=request.idempotency_key,
+        approval_id=request.approval_id,
+    )
+    with pytest.raises(ValueError, match="does not match"):
+        validate_action_request(altered, _enabled_test_spec())
+
+
+@pytest.mark.parametrize(
+    "approval_id,target_id,parameters",
+    [
+        (0, "target-1", {}),
+        (True, "target-1", {}),
+        (1, "", {}),
+        (1, " target-1", {}),
+        (1, "x" * 257, {}),
+        (1, "target-1", []),
+    ],
+)
+def test_adapter_request_rejects_invalid_approval_target_or_parameters(approval_id, target_id, parameters):
+    request = ActionRequest(
+        action_id="test.action",
+        target_id=target_id,
+        parameters=parameters,
+        idempotency_key="a" * 64,
+        approval_id=approval_id,
+    )
+    with pytest.raises(ValueError):
+        validate_action_request(request, _enabled_test_spec())
+
+
+def test_idempotency_derivation_rejects_non_json_and_non_finite_values():
+    with pytest.raises(ValueError, match="canonical JSON"):
+        derive_idempotency_key(1, "test.action", "target-1", {"value": object()})
+    with pytest.raises(ValueError, match="canonical JSON"):
+        derive_idempotency_key(1, "test.action", "target-1", {"value": float("nan")})

@@ -52,7 +52,7 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 
 ### Phase 6.3 — Playbook framework
 
-**Delivered bounded framework:** a code-defined, versioned incident-investigation catalogue with strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records and fail-closed action-adapter contracts. No provider adapter is registered or enabled; the catalogue is descriptive and has no execution endpoint.
+**Status: bounded framework complete; provider-specific response integration deferred.** The delivered framework includes a code-defined, versioned incident-investigation catalogue, strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records, a durable execution/compensation ledger, read-only operator visibility and fail-closed adapter contracts. No provider adapter is registered or enabled, and no execution endpoint or worker exists.
 
 - [x] Versioned playbook definition and strict input validation.
 - [x] Operator-only dry-run preview with bounded lookback and audit record.
@@ -63,7 +63,8 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - [x] Add a durable execution/compensation ledger schema and fail-closed state-transition guards: [ledger foundation](PHASE6_PLAYBOOK_EXECUTION_LEDGER.md). No dispatch endpoint, worker or provider adapter is added.
 - [x] Add a bounded admin/analyst read-only execution-ledger API with status/approval filters and a minimized response: [read API](PHASE6_EXECUTION_LEDGER_API.md). No mutation or dispatch operation is exposed.
 - [x] Surface execution and compensation lifecycle states in an admin/analyst-only dashboard panel with status filtering and bounded pagination; the panel remains read-only.
-- [ ] Review threat model, verify version-specific Wazuh API permissions, provision least-privilege credentials, and complete authorized staging isolation/unisolation + rollback evidence before considering a concrete adapter.
+**Deferred integration gate — not part of the completed framework increment:** a concrete Wazuh adapter must remain out of scope until the threat model receives independent security approval, the deployed Wazuh version/API and least-privilege permissions are verified, credentials are provisioned through the operator's secret manager, and written authorization plus disposable staging isolation/unisolation/rollback evidence is reviewed. These are prerequisites for a separate adapter proposal, not evidence that the framework itself is incomplete.
+
 - No automatic containment or blocking by default.
 
 ### Phase 6.4 — Reporting and operational metrics

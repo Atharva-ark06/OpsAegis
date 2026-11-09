@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import json
 import re
 from dataclasses import asdict, dataclass
@@ -90,19 +91,29 @@ def derive_idempotency_key(
     parameters: dict[str, Any],
 ) -> str:
     """Return a stable SHA-256 key for one approved action request."""
-    if approval_id < 1 or not action_id or not target_id:
-        raise ValueError("Approval, action and target identifiers are required")
-    canonical = json.dumps(
-        {
-            "approval_id": approval_id,
-            "action_id": action_id,
-            "target_id": target_id,
-            "parameters": parameters,
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-    )
+    if type(approval_id) is not int or approval_id < 1:
+        raise ValueError("A positive approval identifier is required")
+    if not isinstance(action_id, str) or not action_id.strip() or action_id != action_id.strip():
+        raise ValueError("A canonical action identifier is required")
+    if not isinstance(target_id, str) or not target_id.strip() or target_id != target_id.strip():
+        raise ValueError("A canonical target identifier is required")
+    if not isinstance(parameters, dict):
+        raise ValueError("Action parameters must be a JSON object")
+    try:
+        canonical = json.dumps(
+            {
+                "approval_id": approval_id,
+                "action_id": action_id,
+                "target_id": target_id,
+                "parameters": parameters,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Action parameters must contain canonical JSON values") from exc
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -127,6 +138,33 @@ def validate_idempotency_key(value: str) -> str:
 
 
 
+def validate_action_request(request: ActionRequest, spec: ActionSpec) -> None:
+    """Bind every adapter call to the exact registered action and approved request digest."""
+    if request.action_id != spec.action_id:
+        raise ValueError("Action request does not match the registered action")
+    if type(request.approval_id) is not int or request.approval_id < 1:
+        raise ValueError("A positive approval identifier is required")
+    if (
+        not isinstance(request.target_id, str)
+        or not request.target_id.strip()
+        or request.target_id != request.target_id.strip()
+        or len(request.target_id) > 256
+    ):
+        raise ValueError("A canonical target identifier of at most 256 characters is required")
+    if not isinstance(request.parameters, dict):
+        raise ValueError("Action parameters must be a JSON object")
+
+    validate_idempotency_key(request.idempotency_key)
+    expected = derive_idempotency_key(
+        request.approval_id,
+        request.action_id,
+        request.target_id,
+        request.parameters,
+    )
+    if not hmac.compare_digest(request.idempotency_key, expected):
+        raise ValueError("Idempotency key does not match the approved action request")
+
+
 class ActionAdapterTimeout(TimeoutError):
     """Raised when an adapter exceeds its server-enforced execution deadline."""
 
@@ -144,7 +182,7 @@ async def execute_with_timeout(
 ) -> ActionResult:
     """Execute only a registered adapter and enforce its declared deadline."""
     _require_executable_adapter(spec)
-    validate_idempotency_key(request.idempotency_key)
+    validate_action_request(request, spec)
     try:
         return await asyncio.wait_for(adapter.execute(request), timeout=spec.timeout_seconds)
     except asyncio.TimeoutError as exc:
@@ -159,7 +197,7 @@ async def compensate_with_timeout(
 ) -> ActionResult:
     """Run the declared compensation path with the same bounded deadline."""
     _require_executable_adapter(spec)
-    validate_idempotency_key(request.idempotency_key)
+    validate_action_request(request, spec)
     try:
         return await asyncio.wait_for(
             adapter.compensate(request, result),
