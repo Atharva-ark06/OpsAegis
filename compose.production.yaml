@@ -133,6 +133,7 @@ services:
     cpus: 0.5
 
   collection-worker:
+    env_file: .env.production
     init: true
     read_only: true
     tmpfs:
