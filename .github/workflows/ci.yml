@@ -79,6 +79,32 @@ jobs:
       - run: pytest -q
         working-directory: runner/shannon-bridge
 
+  ops-scripts:
+    needs: preflight
+    name: PowerShell operations script syntax
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse operational PowerShell scripts
+        shell: pwsh
+        run: |
+          $scripts = Get-ChildItem -Path ops -Filter '*.ps1'
+          if (-not $scripts) { throw 'No operational PowerShell scripts were found.' }
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $script.FullName,
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$($script.Name): $_" }
+              throw "PowerShell syntax validation failed for $($script.Name)."
+            }
+            Write-Host "PowerShell syntax valid: $($script.Name)"
+          }
+
   production-container:
     needs: preflight
     runs-on: ubuntu-latest

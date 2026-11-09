@@ -71,6 +71,10 @@ Use a unique database password of at least 16 characters and encode reserved URL
 
 The existing `docker-compose.yml` is a local development stack, not a production deployment recipe. Production still requires a reviewed deployment topology, TLS termination, secrets management, network policy, backups, monitoring and isolated scanner/runner infrastructure. These configuration checks do not constitute a production deployment or live integration validation.
 
+## PostgreSQL backup and restore
+
+Production operators can create a PostgreSQL custom-format backup, verify its SHA-256/archive directory, and run a full restore drill in a disposable container with no network or published ports. See [the PostgreSQL backup and restore runbook](docs/DATABASE_BACKUP_RESTORE.md). The PowerShell scripts are under `ops/`. Backups are sensitive and are not encrypted by these scripts; use encrypted off-host storage and a separately managed retention policy. Redis backup is outside this workflow.
+
 ## Development checks
 
     cd backend
