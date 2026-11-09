@@ -1,5 +1,15 @@
 # OpsAegis — Project Status
 
+## Phase 5 active checkpoint (2026-11-09)
+
+Phase 5 remains **in progress**. PR #64 merged the frontend toolchain upgrades and enforced npm dependency audit. The two planned Phase 5 PRs are intended to close repository-side gaps:
+
+- **PR 1:** committed frontend lockfile, deterministic `npm ci` in both frontend Dockerfiles, committed-lockfile security audit and race-free production image build.
+- **PR 2:** end-to-end Wazuh ingestion/correlation/incident/notification contract test, strict diagnostics exit behavior, and an ephemeral production Compose smoke test covering migrations, service health and frontend-to-API readiness.
+
+These automated checks are not live staging evidence. No current live staging evidence has been supplied for Wazuh/CrowdSec ingestion, Redis recovery, Nuclei egress enforcement, Shannon VM isolation, TLS/host security, off-host retention or RPO/RTO. Keep Nuclei and Shannon disabled until their documented safety gates are independently met. Phase 5 must not be marked complete until the evidence register contains the required sanitized operator results or the project owner explicitly accepts disabled/out-of-scope items.
+
+
 ## Implemented and merged
 - FastAPI, PostgreSQL, Alembic, Redis, JWT/RBAC and audit logging.
 - Authenticated React/TypeScript workspace.
