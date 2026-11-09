@@ -73,7 +73,7 @@ The repository implementation and automated CI foundations for Phase 5 are in pl
 
 The repository-side validator checks evidence-register structure in CI. Run `python ops/validate-phase5-evidence.py --require-exit` only after staging evidence is recorded and every disabled/out-of-scope item has been explicitly accepted. A green CI run does not close Phase 5.
 
-## Phase 6 implementation in review (PR #72)
+## Phase 6 implementation (PR #72 merged)
 
 - Adds disabled-by-default schedules for Wazuh Manager registered-agent inventory and Wazuh Indexer alert windows, durable collection run history, a dedicated Redis-leased worker, bounded retries, restart recovery and run fencing. Manual runs use the same Wazuh sync functions as scheduled runs. CrowdSec, scanners and response actions are not part of this worker.
 - Adds an incident investigation timeline combining audit changes, analyst notes, correlated detections and linked findings with provenance labels, plus a redacted JSON export. Binary attachments, retention enforcement and stronger chain-of-custody controls remain future work.
@@ -292,3 +292,10 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Verifies disabled Nuclei does not query Redis, mismatched enablement flags fail without probing, and enabled Nuclei requires the dedicated worker heartbeat.
 - Verifies diagnostic exception details expose only exception class names, not potentially sensitive exception messages.
 - These tests validate local decision logic only. They do not contact external services, prove live integration connectivity, validate egress policy or replace staging recovery drills.
+
+
+## Phase 6.3 first increment (next PR)
+
+- Adds a versioned, code-defined incident-investigation playbook catalogue.
+- Adds strict typed input validation, admin/analyst-only dry-run previews, bounded read-only context lookup and audit records.
+- No external action adapter, command execution, scanner invocation, containment, notification or approval bypass is introduced. Approval and controlled execution remain separate future increments.
