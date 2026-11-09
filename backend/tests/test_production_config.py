@@ -29,6 +29,7 @@ def test_valid_production_configuration_is_accepted():
     ("override", "message"),
     [
         ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this"}, "OPS_AEGIS_SECRET_KEY"),
+        ({"OPS_AEGIS_SECRET_KEY": "development-only-change-this-secret-key-not-for-production"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "short"}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "a" * 48}, "OPS_AEGIS_SECRET_KEY"),
         ({"OPS_AEGIS_SECRET_KEY": "CHANGE_ME_GENERATE_WITH_PYTHON_SECRETS_123456"}, "OPS_AEGIS_SECRET_KEY"),
