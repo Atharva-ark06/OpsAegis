@@ -59,23 +59,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - name: Generate lockfile from declared dependencies
-        working-directory: frontend
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - run: npm ci
         working-directory: frontend
       - run: npm test
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
-      - name: Publish generated lockfile for committing
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-package-lock
-          path: frontend/package-lock.json
-          if-no-files-found: error
-          retention-days: 3
 
   runner:
     needs: preflight
@@ -117,10 +106,12 @@ jobs:
           }
 
   production-container:
-    needs: preflight
+    needs: [preflight, frontend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
       - name: Check Docker Compose availability
         run: docker compose version
       - name: Prepare placeholder environment file for Compose validation
