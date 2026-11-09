@@ -202,3 +202,66 @@ def test_worker_does_not_start_run_after_lease_is_lost(db_session, monkeypatch):
     db_session.refresh(run)
     assert run.status == "queued"
     assert run.attempts == 0
+
+
+def test_worker_records_success_counts_exact_window_and_duration(db_session, monkeypatch):
+    import threading
+    now = datetime.now(timezone.utc)
+    schedule = IntegrationSchedule(source="wazuh-indexer-alerts", enabled=False,
+        interval_seconds=300, lookback_minutes=15, updated_at=now)
+    db_session.add(schedule)
+    db_session.flush()
+    run = IntegrationCollectionRun(
+        schedule_id=schedule.id, schedule_slot="success:window", source=schedule.source,
+        lookback_minutes=15, status="queued", attempts=0, next_attempt_at=now, created_at=now,
+    )
+    db_session.add(run)
+    db_session.commit()
+
+    async def fake_collect(current_run, _db):
+        assert current_run.window_start_at is not None
+        assert current_run.window_end_at is not None
+        assert current_run.window_end_at - current_run.window_start_at == timedelta(minutes=15)
+        return {"received": 12, "inserted": 4, "updated": 3, "truncated_possible": True}
+
+    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.collection_worker._collect", fake_collect)
+    process_run(run.id, threading.Event(), "valid-worker-token")
+    db_session.refresh(run)
+    assert run.status == "succeeded"
+    assert run.attempts == 1
+    assert run.received == 12
+    assert run.created_count == 4
+    assert run.updated_count == 3
+    assert run.truncated_possible is True
+    assert run.duration_ms is not None
+    assert run.worker_token is None
+
+
+def test_worker_uses_bounded_retry_and_sanitized_error_code(db_session, monkeypatch):
+    import threading
+    now = datetime.now(timezone.utc)
+    schedule = IntegrationSchedule(source="wazuh-manager-agents", enabled=False,
+        interval_seconds=300, lookback_minutes=10, updated_at=now)
+    db_session.add(schedule)
+    db_session.flush()
+    run = IntegrationCollectionRun(
+        schedule_id=schedule.id, schedule_slot="retry:one", source=schedule.source,
+        lookback_minutes=10, status="queued", attempts=0, next_attempt_at=now, created_at=now,
+    )
+    db_session.add(run)
+    db_session.commit()
+
+    async def fail_collection(_run, _db):
+        raise RuntimeError("sensitive upstream response must not be persisted")
+
+    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: db_session)
+    monkeypatch.setattr("app.collection_worker._collect", fail_collection)
+    process_run(run.id, threading.Event(), "valid-worker-token")
+    db_session.refresh(run)
+    assert run.status == "retrying"
+    assert run.attempts == 1
+    assert run.error_code == "RuntimeError"
+    assert run.finished_at is None
+    assert run.next_attempt_at > now
+    assert run.worker_token is None
