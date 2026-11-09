@@ -4,7 +4,10 @@ from app.models.entities import Incident, PlaybookApproval, PlaybookExecution, U
 from app.security import create_access_token
 
 
-def _ledger_record(db_session, *, approval_id, status="pending", created_at=None, key="a" * 64):
+def _ledger_record(
+    db_session, *, approval_id, status="pending", compensation_status="not_requested",
+    created_at=None, key="a" * 64,
+):
     now = created_at or datetime.now(timezone.utc)
     item = PlaybookExecution(
         approval_id=approval_id,
@@ -14,7 +17,7 @@ def _ledger_record(db_session, *, approval_id, status="pending", created_at=None
         parameters_sha256="b" * 64,
         idempotency_key=key,
         status=status,
-        compensation_status="not_requested",
+        compensation_status=compensation_status,
         created_at=now,
         updated_at=now,
         provider_reference="provider-private-reference",
@@ -66,11 +69,30 @@ def test_execution_ledger_read_api_returns_only_safe_status_fields(client, analy
     assert item["id"] == record.id
     assert item["approval_id"] == approval.id
     assert item["status"] == "pending"
+    assert item["recovery_guidance"] == "not_applicable"
     assert "target_id" not in item
     assert "parameters_sha256" not in item
     assert "idempotency_key" not in item
     assert "provider_reference" not in item
     assert "safe_summary" not in item
+
+
+def test_execution_ledger_read_api_explains_unknown_and_failed_recovery_states(client, analyst_headers, db_session):
+    unknown_approval = _approved_ledger(db_session, suffix="-unknown")
+    failed_approval = _approved_ledger(db_session, suffix="-failed")
+    _ledger_record(
+        db_session, approval_id=unknown_approval.id, status="outcome_unknown", key="d" * 64
+    )
+    _ledger_record(
+        db_session, approval_id=failed_approval.id, status="failed", key="e" * 64
+    )
+
+    response = client.get("/api/v1/playbooks/executions?limit=10", headers=analyst_headers)
+
+    assert response.status_code == 200
+    guidance = {item["status"]: item["recovery_guidance"] for item in response.json()["items"]}
+    assert guidance["outcome_unknown"] == "reconcile_provider_state"
+    assert guidance["failed"] == "verify_provider_state"
 
 
 def test_execution_ledger_read_api_filters_and_bounds_results(client, analyst_headers, db_session):
