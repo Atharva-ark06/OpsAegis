@@ -66,47 +66,16 @@ jobs:
         run: pip-audit --strict -r backend/requirements.txt
       - name: Audit Shannon bridge dependencies
         run: pip-audit --strict -r runner/shannon-bridge/requirements.txt
-
       - name: Set up Node.js for frontend audit
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-
-      - name: Resolve frontend dependencies without lifecycle scripts
+      - name: Generate frontend lockfile
         working-directory: frontend
-        run: npm install --ignore-scripts --no-audit
-
-      - name: Capture frontend npm audit report
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install locked frontend dependencies without lifecycle scripts
         working-directory: frontend
-        shell: bash
-        run: |
-          set +e
-          npm audit --json > "$RUNNER_TEMP/npm-audit.json"
-          audit_status=$?
-          set -e
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          report_path = Path(os.environ["RUNNER_TEMP"]) / "npm-audit.json"
-          report = json.loads(report_path.read_text(encoding="utf-8"))
-          counts = report.get("metadata", {}).get("vulnerabilities", {})
-          print("Frontend npm audit severity counts:")
-          for severity in ("critical", "high", "moderate", "low", "info"):
-              print(f"  {severity}: {counts.get(severity, 0)}")
-          for name, advisory in sorted(report.get("vulnerabilities", {}).items()):
-              via = advisory.get("via", [])
-              titles = [item.get("title", "unknown advisory") for item in via if isinstance(item, dict)]
-              print(f"Package: {name}; severity: {advisory.get('severity', 'unknown')}; direct: {advisory.get('isDirect', False)}; fixAvailable: {advisory.get('fixAvailable', False)}; advisories: {', '.join(titles) or 'see attached JSON report'}")
-          PY
-          echo "npm audit exit code: $audit_status (reporting-only until the dependency baseline is remediated)"
-
-      - name: Upload frontend npm audit report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-npm-audit-report
-          path: ${{ runner.temp }}/npm-audit.json
-          if-no-files-found: warn
-          retention-days: 14
+        run: npm ci --ignore-scripts
+      - name: Enforce frontend npm vulnerability audit
+        working-directory: frontend
+        run: npm audit --audit-level=moderate
