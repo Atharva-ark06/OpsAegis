@@ -245,4 +245,5 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Adds a separate integrity command that validates the manifest/hash and parses the archive directory using the PostgreSQL container's pg_restore utility.
 - Adds an isolated restore drill using a disposable postgres:16-alpine container with no network and no published ports. It restores the archive, checks the Alembic revision and public table count, then removes the container by default.
 - Ignores local backup artifacts and the dedicated restore environment file; documents encryption, off-host retention, Redis backup boundaries and recovery evidence.
+- Adds a Windows CI job that parses every PowerShell operations script for syntax errors.
 - These scripts do not encrypt or upload backups, schedule retention, back up Redis, connect a restored database to the application, or prove disaster-recovery readiness. Operators must perform the drill in their own environment.
