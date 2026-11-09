@@ -93,7 +93,13 @@ def enqueue_pending(db, client, now: datetime) -> int:
     return count
 
 
-def process_run(run_id: int) -> None:
+class WorkerLeaseLost(RuntimeError):
+    """Raised when a worker must leave a run for the next lease owner."""
+
+
+def process_run(run_id: int, lease_lost: threading.Event | None = None) -> None:
+    if lease_lost is not None and lease_lost.is_set():
+        return
     db = SessionLocal()
     try:
         run = db.get(ScheduledDetectionRun, run_id)
@@ -104,11 +110,19 @@ def process_run(run_id: int) -> None:
         run.attempts += 1
         run.started_at = now
         run.error_code = None
+        if lease_lost is not None and lease_lost.is_set():
+            raise WorkerLeaseLost("Worker lease lost before evaluation")
         db.commit()
         result = evaluate_detections(run.window_minutes, run.auth_threshold, db, None, as_utc(run.created_at))
+        if lease_lost is not None and lease_lost.is_set():
+            # Evaluation writes are idempotent; leave the durable run as running
+            # so the next lease owner can recover and repeat it safely.
+            raise WorkerLeaseLost("Worker lease lost during evaluation")
         run = db.get(ScheduledDetectionRun, run_id)
         if run is None:
             return
+        if lease_lost is not None and lease_lost.is_set():
+            raise WorkerLeaseLost("Worker lease lost before completion")
         run.status = "succeeded"
         run.finished_at = utc_now()
         run.error_code = None
@@ -116,7 +130,13 @@ def process_run(run_id: int) -> None:
                         target=f"scheduled-run:{run.id}",
                         detail=json.dumps({"attempts": run.attempts, "created": result["created"],
                                            "refreshed": result["refreshed"]})))
+        if lease_lost is not None and lease_lost.is_set():
+            raise WorkerLeaseLost("Worker lease lost immediately before completion commit")
         db.commit()
+    except WorkerLeaseLost as exc:
+        db.rollback()
+        logger.warning("Scheduled detection run %s left for recovery after lease loss: %s", run_id, exc)
+        return
     except Exception as exc:
         db.rollback()
         run = db.get(ScheduledDetectionRun, run_id)
@@ -198,7 +218,7 @@ def run_worker() -> None:
             if item:
                 run_id = int(item[1])
                 client.delete(f"opsaegis:detection:enqueue:{run_id}")
-                process_run(run_id)
+                process_run(run_id, lease_lost)
     finally:
         stop_heartbeat.set()
         heartbeat.join(timeout=2)
