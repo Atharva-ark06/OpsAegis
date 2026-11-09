@@ -95,9 +95,14 @@ class WazuhIndexerAdapter:
                 f"Wazuh Indexer health request failed ({type(exc).__name__})"
             ) from None
 
-    async def collect_findings(self, since: datetime) -> list[NormalizedFinding]:
+    async def collect_findings(self, since: datetime, until: datetime | None = None) -> list[NormalizedFinding]:
         if since.tzinfo is None:
             raise WazuhAdapterError("Collection start time must include a timezone")
+        timestamp_range = {"gte": since.astimezone(timezone.utc).isoformat()}
+        if until is not None:
+            if until.tzinfo is None or until <= since:
+                raise WazuhAdapterError("Collection end time must be timezone-aware and later than start time")
+            timestamp_range["lte"] = until.astimezone(timezone.utc).isoformat()
         size = self.config.wazuh_indexer_max_results
         query = {
             "size": size,
@@ -105,9 +110,7 @@ class WazuhIndexerAdapter:
             "sort": [{"@timestamp": {"order": "desc"}}],
             "query": {
                 "range": {
-                    "@timestamp": {
-                        "gte": since.astimezone(timezone.utc).isoformat()
-                    }
+                    "@timestamp": timestamp_range
                 }
             },
             "_source": [
