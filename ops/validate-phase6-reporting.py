@@ -34,7 +34,7 @@ def _utc_datetime(value: Any, label: str) -> datetime:
     except ValueError as exc:
         raise ValueError(f"{label} is not a valid ISO-8601 timestamp") from exc
     if parsed.tzinfo is None or parsed.utcoffset() != timezone.utc.utcoffset(parsed):
-        raise ValueError(f"{label} must use UTC (Z or +00:00)")
+        raise ValueError(f"{label} must include an explicit UTC offset (Z or +00:00)")
     return parsed.astimezone(timezone.utc)
 
 
