@@ -128,6 +128,9 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
         updated_count = int(result.get("updated", 0))
         skipped = int(result.get("skipped", 0))
         truncated = bool(result.get("truncated_possible", False))
+        finished_at = utc_now()
+        started_at = as_utc(run.started_at) if run.started_at else finished_at
+        duration_ms = max(0, int((finished_at - started_at).total_seconds() * 1000))
         completed = db.execute(
             update(IntegrationCollectionRun)
             .where(IntegrationCollectionRun.id == run_id,
