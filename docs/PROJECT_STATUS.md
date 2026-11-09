@@ -187,20 +187,16 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Complete production secret management, monitoring, backup/restore and operational runbooks.
 
 
-### Automated secret and dependency scanning (PR #31 — proposed)
-- Adds a separate GitHub Actions security workflow for pull requests and pushes to \`main\`.
-- Scans the complete Git history with Gitleaks to detect committed credentials and tokens.
-- Audits backend and Shannon bridge Python dependency requirements with \`pip-audit --strict\`.
-- Documents secret rotation, false-positive handling and scan limitations.
-- The repository currently has no committed frontend npm lockfile, so the workflow deliberately does not claim to audit a locked frontend dependency graph.
-- A passing scan does not prove prior credential rotation, deployed-host security or absence of unknown vulnerabilities.
+### Automated secret and dependency scanning (PR #31 — merged)
+- Adds a separate GitHub Actions security workflow for pull requests and pushes to `main`.
+- Scans the complete Git history with Gitleaks and audits backend and Shannon bridge Python dependencies with `pip-audit --strict`.
+- The frontend still has no committed npm lockfile, so the workflow does not claim a locked frontend dependency audit.
+- A passing scan does not prove deployed-host security or absence of unknown vulnerabilities.
 
-
-### Secret scan finding — remediation required
-- Initial full-history Gitleaks scan identified two high-entropy values in an older `.env.example` commit under the VirusTotal and AbuseIPDB API-key variables.
-- The current `.env.example` entries are blank, but history retains the prior values. Treat both provider keys as potentially compromised and rotate/revoke them before considering a narrow scan exception or history rewrite.
-- The full-history secret scan is intentionally failing until this exposure is remediated; do not suppress it to obtain a green badge.
-- Initial Python dependency audit identified the pinned/resolved pytest 8.4.2 range as affected by PYSEC-2026-1845. The requirements range is being raised to the reported fixed pytest release and compatible pytest-asyncio major.
+### Historical secret exposure — remediation status
+- The initial full-history scan identified historical VirusTotal and AbuseIPDB key values in an older `.env.example` commit.
+- The user confirmed both provider keys were rotated and completed a local full-history rewrite followed by a clean local Gitleaks scan; rewritten branch refs were force-pushed.
+- GitHub-side cleanup of unreachable objects, cached content or pull-request refs has not been independently verified.
 
 
 ## Isolated Nuclei worker (PR #32 — merged)
