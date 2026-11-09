@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     nvd_timeout_seconds: int = Field(default=10, validation_alias="NVD_TIMEOUT_SECONDS")
     nuclei_enabled: bool = Field(default=False, validation_alias="NUCLEI_ENABLED")
     nuclei_worker_enabled: bool = Field(default=False, validation_alias="NUCLEI_WORKER_ENABLED")
+    nuclei_templates_path: str = Field(default="/opt/nuclei-templates", validation_alias="NUCLEI_TEMPLATES_PATH")
     nuclei_binary: str = Field(default="nuclei", validation_alias="NUCLEI_BINARY")
     nuclei_timeout_seconds: int = Field(default=600, validation_alias="NUCLEI_TIMEOUT_SECONDS")
     nuclei_max_output_bytes: int = Field(default=10485760, validation_alias="NUCLEI_MAX_OUTPUT_BYTES")
