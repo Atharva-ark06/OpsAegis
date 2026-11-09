@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, stage-3-foundation, "phase5/**"]
+    branches: [main, stage-3-foundation]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   preflight:
@@ -59,20 +59,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - name: Generate frontend lockfile when bootstrapping a Phase 5 branch
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/phase5/')
-        working-directory: frontend
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Commit generated lockfile on Phase 5 bootstrap branch
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/phase5/')
-        run: |
-          if [ -n "$(git status --porcelain -- frontend/package-lock.json)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add frontend/package-lock.json
-            git commit -m "chore(frontend): commit npm lockfile"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
-          fi
       - run: npm ci
         working-directory: frontend
       - run: npm test
@@ -120,10 +106,12 @@ jobs:
           }
 
   production-container:
-    needs: preflight
+    needs: [preflight, frontend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
       - name: Check Docker Compose availability
         run: docker compose version
       - name: Prepare placeholder environment file for Compose validation
