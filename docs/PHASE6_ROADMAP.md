@@ -80,9 +80,9 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - [x] Daily/weekly trend buckets for persisted collection runs, detections, incidents and audited resolutions.
 - [x] Dashboard trend visualizations with explicit empty states and row-cap warnings.
 - [x] Administrator-managed, audited thresholds for collection failure rate, source freshness, detection-to-incident time and incident resolution time; read-only threshold breach evaluation.
-- [ ] Run the operator-led staging validation procedure against known source records and measured event timelines; record reviewed sanitized evidence.
+- [x] Add CI structural validation and an operator-only strict exit gate for the Phase 6.4 evidence register. This validates register completeness only; it is not staging evidence.\n- [ ] Run the operator-led staging validation procedure against known source records and measured event timelines; record reviewed sanitized evidence.
 
-## Security and reliability invariants
+\n**Staging evidence tooling (PR #87):** Adds an offline evidence-register validator. CI checks the template structure only; an operator-only `--require-exit` gate requires complete UTC/version/metric evidence, no row cap, all acceptance items checked and an independent PASS. Neither mode contacts staging or changes the live-validation status. The Phase 6.4 staging item remains pending until reviewed real-environment evidence is recorded.\n\n## Security and reliability invariants
 
 - Least-privilege service credentials; secrets stay backend-side and are never included in logs or evidence exports.
 - No unapproved response action. A second authorized approver is required for high-impact actions.
