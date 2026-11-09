@@ -73,6 +73,12 @@ The repository implementation and automated CI foundations for Phase 5 are in pl
 
 The repository-side validator checks evidence-register structure in CI. Run `python ops/validate-phase5-evidence.py --require-exit` only after staging evidence is recorded and every disabled/out-of-scope item has been explicitly accepted. A green CI run does not close Phase 5.
 
+## Phase 6 implementation in review (PR #72)
+
+- Adds disabled-by-default schedules for Wazuh Manager registered-agent inventory and Wazuh Indexer alert windows, durable collection run history, a dedicated Redis-leased worker, bounded retries, restart recovery and run fencing. Manual runs use the same Wazuh sync functions as scheduled runs. CrowdSec, scanners and response actions are not part of this worker.
+- Adds an incident investigation timeline combining audit changes, analyst notes, correlated detections and linked findings with provenance labels, plus a redacted JSON export. Binary attachments, retention enforcement and stronger chain-of-custody controls remain future work.
+- Automated tests were added for schedule enqueue/recovery, role/allowlist enforcement, analyst notes and redaction. They have not been run in this environment; CI must validate the branch. No live integration or staging result is claimed.
+
 ## Phase 6 kickoff
 
 Phase 6 begins with the [SOC Automation & Response Orchestration roadmap](PHASE6_ROADMAP.md). Its first increment is durable, bounded, read-only integration collection scheduling. Human approval, auditability and fail-closed behavior remain mandatory; autonomous destructive response is explicitly out of scope.
