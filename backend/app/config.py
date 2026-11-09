@@ -114,6 +114,8 @@ class Settings(BaseSettings):
                     raise ValueError("Production CORS_ORIGINS cannot use loopback hosts")
             if self.nuclei_enabled and not self.nuclei_worker_enabled:
                 raise ValueError("Production Nuclei execution requires NUCLEI_WORKER_ENABLED=true and the isolated worker service")
+        if bool(self.crowdsec_machine_id) != bool(self.crowdsec_machine_password):
+            raise ValueError("CROWDSEC_MACHINE_ID and CROWDSEC_MACHINE_PASSWORD must be configured together")
         for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
                             ("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
                             ("CROWDSEC_TIMEOUT_SECONDS", self.crowdsec_timeout_seconds)):
