@@ -77,7 +77,7 @@ class WazuhIndexerAdapter:
         suffix = pattern[len(_INDEX_PATTERN_PREFIX):] if isinstance(pattern, str) and pattern.startswith(_INDEX_PATTERN_PREFIX) else ""
         if not suffix or (
             suffix != "*"
-            and not re.fullmatch(r"[A-Za-z0-9._-]+\\*?", suffix)
+            and not re.fullmatch(r"[A-Za-z0-9._-]+\*?", suffix)
         ):
             raise WazuhAdapterError(
                 "Wazuh alert index pattern must be scoped to wazuh-alerts-*"
