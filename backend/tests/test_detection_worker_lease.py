@@ -76,3 +76,17 @@ def test_old_worker_cannot_complete_after_new_owner_reclaims_run(
     assert run.worker_token == "new-owner"
     assert run.finished_at is None
     assert db_session.query(AuditLog).filter_by(action="detection.schedule.complete").count() == 0
+
+
+
+def test_startup_recovery_clears_stale_worker_token(db_session):
+    run = make_run(db_session)
+    run.status = "running"
+    run.worker_token = "previous-owner"
+    db_session.commit()
+
+    assert worker.recover_interrupted_runs(db_session) == 1
+
+    db_session.refresh(run)
+    assert run.status == "queued"
+    assert run.worker_token is None
