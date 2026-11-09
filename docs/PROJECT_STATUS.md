@@ -22,7 +22,7 @@
 - Only enabled registered targets can be scanned. No arbitrary CLI flags, template paths or user-supplied scan targets.
 - Fixed profile disables Interactsh/update checks, bounds rate, concurrency, runtime and output, and excludes DoS/fuzz/intrusive/headless templates.
 - Findings deduplicate by template ID + matched URL + matcher name and preserve analyst triage.
-- Disabled by default; install Nuclei and explicitly set NUCLEI_ENABLED=true.
+- Disabled by default; the dedicated worker image pins Nuclei v3.4.10 and nuclei-templates v10.3.1. Enable both NUCLEI_ENABLED and NUCLEI_WORKER_ENABLED only after staging authorization and network controls are verified.
 - Execution is isolated in the dedicated non-root Nuclei worker container (PR #32). The worker is opt-in, uses resource limits and a renewable Redis lease; external DNS/IP egress enforcement remains an operator responsibility.
 
 ## Incident response workflow (PR #10)
