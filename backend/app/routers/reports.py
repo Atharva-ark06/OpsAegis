@@ -208,7 +208,7 @@ def export_operations_report(
     until: datetime | None = Query(default=None),
     db: Session = Depends(get_db),
     actor: User = Depends(get_current_user),
-) -> Response | dict:
+):
     start, end = _window(since, until)
     report = build_operations_report(db, start, end)
     if format == "json":
