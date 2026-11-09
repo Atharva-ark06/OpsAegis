@@ -70,9 +70,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - name: Generate frontend lockfile
-        working-directory: frontend
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Install locked frontend dependencies without lifecycle scripts
         working-directory: frontend
         run: npm ci --ignore-scripts
