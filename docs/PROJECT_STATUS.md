@@ -176,13 +176,13 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Adds an operator-run, read-only diagnostic CLI using the existing Wazuh Manager, Wazuh Indexer, CrowdSec and Shannon adapters.
 - Loads local environment values without printing credentials; reports only sanitized check outcomes.
 - NVD reachability is opt-in and uses one fixed public CVE lookup. VirusTotal and AbuseIPDB are not queried to avoid unexpected API quota use.
-- The diagnostic never launches a scan or writes application data. Nuclei remains disabled and is reported as unsafe if its legacy API-process execution flag is enabled.
+- The diagnostic never launches a scan or writes application data. It checks the dedicated Nuclei worker heartbeat only when both Nuclei enablement flags are set; Nuclei remains disabled by default.
 - A passing check validates only the checked endpoint at that moment; it does not prove telemetry ingestion, worker reliability or production readiness.
 
 ### Remaining validation
 - Run the diagnostic from the actual deployment network with operator-provided credentials and review the sanitized report.
 - Validate Wazuh alert and vulnerability ingestion, Manager inventory sync, CrowdSec decisions and threat-intelligence lookups using authorized test data.
-- Move Nuclei execution out of the API process into a separately isolated scanner worker with enforceable egress restrictions before enabling scans.
+- Independently enforce and validate host/cloud DNS/IP egress restrictions for the isolated Nuclei worker before any authorized staging scan.
 - Deploy and independently validate the Shannon bridge on a disposable staging VM.
 - Complete production secret management, monitoring, backup/restore and operational runbooks.
 
@@ -230,10 +230,19 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - These tests use mocked adapters and disposable SQLite; they do not claim live Wazuh/CrowdSec/provider connectivity or production readiness.
 
 
-## Operational diagnostics for datastore and worker health (PR #36 — proposed)
+## Operational diagnostics for datastore and worker health (PR #36 — merged)
 - Extends the read-only operator diagnostic to check database SELECT 1 and Redis PING before external integrations.
 - Reports the detection-worker Redis heartbeat as required in production; development environments may explicitly report a missing worker as skipped.
 - Checks the isolated Nuclei-worker heartbeat only when both NUCLEI_ENABLED and NUCLEI_WORKER_ENABLED are enabled; mismatched flags or a missing heartbeat fail closed.
 - Corrects the Nuclei diagnostic guidance to reflect the dedicated worker architecture. The diagnostic never launches a scan or changes configuration/data.
 - Adds unit coverage for worker heartbeat states, environment-specific detection-worker expectations and sanitized Redis failures.
 - These checks are point-in-time operational signals only. They do not prove worker restart recovery, scanner egress restrictions, live event ingestion or production readiness.
+
+
+## PostgreSQL backup and isolated restore tooling (PR #37 — proposed)
+- Adds a PowerShell backup command that runs PostgreSQL custom-format pg_dump inside the production database container without putting the database password in the command line.
+- Creates a timestamped archive and a JSON manifest with file size, UTC timestamp and SHA-256; checks archive readability with pg_restore before copying it to the host.
+- Adds a separate integrity command that validates the manifest/hash and parses the archive directory using the PostgreSQL container's pg_restore utility.
+- Adds an isolated restore drill using a disposable postgres:16-alpine container with no network and no published ports. It restores the archive, checks the Alembic revision and public table count, then removes the container by default.
+- Ignores local backup artifacts and the dedicated restore environment file; documents encryption, off-host retention, Redis backup boundaries and recovery evidence.
+- These scripts do not encrypt or upload backups, schedule retention, back up Redis, connect a restored database to the application, or prove disaster-recovery readiness. Operators must perform the drill in their own environment.
