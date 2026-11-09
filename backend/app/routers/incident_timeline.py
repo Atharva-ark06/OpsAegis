@@ -19,7 +19,7 @@ router = APIRouter(prefix="/incidents", tags=["incident investigation"])
 OPERATORS = (UserRole.admin, UserRole.analyst)
 _SECRET_KEYS = re.compile(r"(password|secret|token|api[_-]?key|authorization|credential|cookie)", re.I)
 _BEARER = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*")
-_KEY_VALUE = re.compile(r"(?i)\b(api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*[^\s,;]+")
+_KEY_VALUE = re.compile(r"(?i)\b(api[_-]?key|access[_-]?token|token|client[_-]?secret|secret|password|authorization|credential)\s*[:=]\s*[^\s,;]+")
 
 
 class AnalystNoteCreate(BaseModel):
