@@ -180,8 +180,12 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8080/api/v1/ready | python -c "import json,sys; data=json.load(sys.stdin); assert data.get('status') == 'ready', data; assert data.get('database') == 'ok' and data.get('redis') == 'ok', data; print('API readiness: database and Redis are ready')"
           ${compose[@]} ps
       - name: Collect production stack logs on failure
-        if: failure()
+        if: failure() && hashFiles('.env.production') != ''
         run: docker compose --env-file .env.production -f compose.production.yaml logs --no-color --tail=150
       - name: Stop smoke-test stack and remove ephemeral volumes
         if: always()
-        run: docker compose --env-file .env.production -f compose.production.yaml down -v --remove-orphans
+        shell: bash
+        run: |
+          if [ -f .env.production ]; then
+            docker compose --env-file .env.production -f compose.production.yaml down -v --remove-orphans
+          fi
