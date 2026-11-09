@@ -96,7 +96,7 @@ async def _collect(run: IntegrationCollectionRun, db) -> dict[str, object]:
     if run.source == "wazuh-manager-agents":
         return await sync_wazuh_manager_agents(db, None)
     if run.source == "wazuh-indexer-alerts":
-        since = utc_now() - timedelta(minutes=run.lookback_minutes)
+        since = run.window_start_at or (utc_now() - timedelta(minutes=run.lookback_minutes))
         return await collect_wazuh_alerts(since, db, None)
     raise ValueError("UnsupportedCollectionSource")
 
@@ -113,6 +113,9 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
         run.attempts += 1
         run.started_at = utc_now()
         run.finished_at = None
+        run.window_end_at = run.started_at if run.source == "wazuh-indexer-alerts" else None
+        run.window_start_at = (run.window_end_at - timedelta(minutes=run.lookback_minutes)) if run.window_end_at else None
+        run.duration_ms = None
         run.error_code = None
         run.worker_token = worker_token
         db.commit()
@@ -130,7 +133,7 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
             .where(IntegrationCollectionRun.id == run_id,
                    IntegrationCollectionRun.status == "running",
                    IntegrationCollectionRun.worker_token == worker_token)
-            .values(status="succeeded", finished_at=utc_now(), received=received,
+            .values(status="succeeded", finished_at=finished_at, duration_ms=duration_ms, received=received,
                     created_count=created, updated_count=updated_count, skipped_count=skipped,
                     truncated_possible=truncated, error_code=None, worker_token=None)
         )
@@ -151,13 +154,15 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
             return
         now = utc_now()
         status = "retrying" if run.attempts < MAX_ATTEMPTS else "failed"
+        started_at = as_utc(run.started_at) if run.started_at else now
+        duration_ms = max(0, int((now - started_at).total_seconds() * 1000))
         next_attempt = now + timedelta(seconds=min(300, 15 * (2 ** max(0, run.attempts - 1))))
         failed = db.execute(
             update(IntegrationCollectionRun)
             .where(IntegrationCollectionRun.id == run_id,
                    IntegrationCollectionRun.status == "running",
                    IntegrationCollectionRun.worker_token == worker_token)
-            .values(status=status, error_code=type(exc).__name__[:80],
+            .values(status=status, error_code=type(exc).__name__[:80], duration_ms=duration_ms,
                     finished_at=now if status == "failed" else None,
                     next_attempt_at=next_attempt, worker_token=None)
         )
