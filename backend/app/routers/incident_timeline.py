@@ -83,13 +83,13 @@ def get_incident_timeline(incident_id: int, db: Session = Depends(get_db),
     }]
     audits = db.scalars(select(AuditLog).where(
         AuditLog.target == f"incident:{incident_id}",
-        AuditLog.action.in_(("incident.update", "incident.note.add")),
+        AuditLog.action.in_(("incident.update", "incident.note.add", "incident.evidence.export")),
     ).order_by(AuditLog.created_at.asc()).limit(500)).all()
     for audit in audits:
         events.append({
             "id": f"audit:{audit.id}", "type": audit.action,
             "occurred_at": audit.created_at, "actor_user_id": audit.actor_user_id,
-            "summary": "Analyst updated incident" if audit.action == "incident.update" else "Analyst note added",
+            "summary": ("Analyst updated incident" if audit.action == "incident.update" else\n                        "Evidence export generated" if audit.action == "incident.evidence.export" else "Analyst note added"),
             "details": {"change": audit.detail or ""},
             "provenance": "audit_log",
         })
@@ -140,6 +140,9 @@ def get_incident_timeline(incident_id: int, db: Session = Depends(get_db),
 def export_incident_evidence(incident_id: int, db: Session = Depends(get_db),
                              actor: User = Depends(require_roles(*OPERATORS))):
     incident = _incident_or_404(db, incident_id)
+    db.add(AuditLog(actor_user_id=actor.id, action="incident.evidence.export",
+                    target=f"incident:{incident_id}", detail="schema_version:1.0"))
+    db.commit()
     timeline = get_incident_timeline(incident_id, db, actor)
     payload = {
         "schema_version": "1.0",
