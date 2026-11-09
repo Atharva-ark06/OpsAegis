@@ -8,16 +8,16 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.entities import PlaybookExecution, User, UserRole
+from app.playbook_execution import recovery_guidance
 from app.security import require_roles
 
 router = APIRouter(prefix="/playbooks/executions", tags=["playbook execution ledger"])
 OPERATORS = (UserRole.admin, UserRole.analyst)
 EXECUTION_STATES = {"pending", "claimed", "executing", "succeeded", "failed", "outcome_unknown"}
-COMPENSATION_STATES = {"not_requested", "requested", "executing", "succeeded", "failed", "outcome_unknown"}
 
 
 def _public_execution(item: PlaybookExecution) -> dict:
-    """Expose operational status only; never return targets, hashes, keys or provider data."""
+    """Expose operational status and safe next-step guidance only."""
     return {
         "id": item.id,
         "approval_id": item.approval_id,
@@ -25,6 +25,7 @@ def _public_execution(item: PlaybookExecution) -> dict:
         "action_version": item.action_version,
         "status": item.status,
         "compensation_status": item.compensation_status,
+        "recovery_guidance": recovery_guidance(item.status, item.compensation_status),
         "created_at": item.created_at.isoformat() if item.created_at else None,
         "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         "started_at": item.started_at.isoformat() if item.started_at else None,
