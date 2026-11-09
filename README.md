@@ -142,7 +142,7 @@ The Integrations workspace includes an administrator-controlled scheduler for tw
 - Wazuh Manager registered-agent inventory.
 - Wazuh Indexer alert windows.
 
-Schedules are disabled by default. Administrators configure an interval (60–86,400 seconds) and bounded lookback (1–43,200 minutes). Admins and analysts can queue a manual run. Manual and scheduled runs use the same existing Wazuh sync paths; each execution has a durable run record with attempt count, result counts, possible truncation, sanitized error code and timestamps.
+Schedules are disabled by default. Administrators configure an interval (60–86,400 seconds) and bounded lookback (1–43,199 minutes). Admins and analysts can queue a manual run. Manual and scheduled runs use the same existing Wazuh sync paths; each execution has a durable run record with attempt count, result counts, possible truncation, sanitized error code and timestamps.
 
 A separate `collection-worker` service uses a Redis lease, worker fencing token, bounded retry/backoff and startup recovery. It does not call CrowdSec machine-credential endpoints, Nuclei, Shannon or response-action APIs. Upstream result limits and HTTP timeouts remain enforced by the existing Wazuh adapters. A green worker heartbeat is not proof that a source is configured or that telemetry was collected.
 
