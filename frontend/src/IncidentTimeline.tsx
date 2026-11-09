@@ -56,7 +56,7 @@ export function IncidentTimeline({ incidentId, canOperate }: { incidentId: numbe
     </form>}
     {events.length ? <ol className="timeline-list">{events.map((item) => <li key={item.id}>
       <span className="timeline-marker" />
-      <div className="timeline-event"><div className="timeline-event-head"><strong>{item.type.replaceAll(".", " · ")}</strong><time>{dateLabel(item.occurred_at)}</time></div>
+      <div className="timeline-event"><div className="timeline-event-head"><strong>{item.type.split(".").join(" · ")}</strong><time>{dateLabel(item.occurred_at)}</time></div>
         <p>{item.summary}</p><small>Provenance: {item.provenance}{item.actor_user_id ? " · User " + item.actor_user_id : ""}</small>
         {Object.keys(item.details).length > 0 && <pre>{JSON.stringify(item.details, null, 2)}</pre>}
       </div>
