@@ -49,7 +49,8 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("schedule_slot", name="uq_integration_collection_run_slot"),
     )
-    op.create_index("ix_integration_collection_runs_schedule_id", "integration_collection_runs", ["schedule_id"])\n    op.create_index("ix_integration_collection_runs_source", "integration_collection_runs", ["source"])
+    op.create_index("ix_integration_collection_runs_schedule_id", "integration_collection_runs", ["schedule_id"])
+    op.create_index("ix_integration_collection_runs_source", "integration_collection_runs", ["source"])
     op.create_index("ix_integration_collection_runs_status", "integration_collection_runs", ["status"])
     op.create_index("ix_integration_collection_runs_created_at", "integration_collection_runs", ["created_at"])
     op.create_table(
@@ -66,7 +67,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_incident_notes_incident_id", table_name="incident_notes")
     op.drop_table("incident_notes")
-    op.drop_index("ix_integration_collection_runs_created_at", table_name="integration_collection_runs")\n    op.drop_index("ix_integration_collection_runs_schedule_id", table_name="integration_collection_runs")
+    op.drop_index("ix_integration_collection_runs_created_at", table_name="integration_collection_runs")
+    op.drop_index("ix_integration_collection_runs_schedule_id", table_name="integration_collection_runs")
     op.drop_index("ix_integration_collection_runs_status", table_name="integration_collection_runs")
     op.drop_index("ix_integration_collection_runs_source", table_name="integration_collection_runs")
     op.drop_table("integration_collection_runs")
