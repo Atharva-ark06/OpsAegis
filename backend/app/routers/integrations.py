@@ -120,7 +120,7 @@ async def wazuh_manager_health(actor: User = Depends(require_roles(*OPERATORS)))
     return {"integration":"wazuh-manager-api","configured":True,"status":"healthy" if healthy else "unhealthy","capability":"read_agent_inventory"}
 
 @router.post("/wazuh-manager/sync")
-async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User | None=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
     adapter=WazuhManagerAdapter()
     if not adapter.is_configured: raise HTTPException(status_code=503,detail="Wazuh Manager API is not configured")
     try: incoming=await adapter.collect_agents()
@@ -158,7 +158,7 @@ async def sync_wazuh_manager_agents(db: Session=Depends(get_db),actor: User=Depe
 
 @router.post("/wazuh/collect")
 async def collect_wazuh_alerts(since: datetime | None=Query(default=None,description="Timezone-aware lower bound for @timestamp"),
-    db: Session=Depends(get_db),actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+    db: Session=Depends(get_db),actor: User | None=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
     start=since or (datetime.now(timezone.utc)-timedelta(minutes=15))
     if start.tzinfo is None: raise HTTPException(status_code=422,detail="since must include a timezone")
     if start>datetime.now(timezone.utc): raise HTTPException(status_code=422,detail="since cannot be in the future")
@@ -257,7 +257,7 @@ def _upsert_wazuh_asset(db: Session, item) -> Asset | None:
     return asset
 
 
-def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_action: str,target: str,
+def _persist_findings(db: Session,actor: User | None,incoming: list,engine: str,audit_action: str,target: str,
     since: datetime | None) -> tuple[int,int]:
     inserted=updated=0
     try:
