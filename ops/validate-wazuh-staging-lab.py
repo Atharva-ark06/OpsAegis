@@ -56,7 +56,7 @@ def main() -> int:
     if "agent_control" not in test or "opsaegis-disposable-agent" not in test:
         print("BLOCKED: local readiness test must verify the disposable agent.", file=sys.stderr)
         return 1
-    if "NOT" not in doc or "production" not in doc.lower() or "live validation" not in doc.lower():
+    if "NOT PERFORMED" not in doc or "production" not in doc.lower() or "staging validation" not in doc.lower():
         print("BLOCKED: documentation must state the staging/production non-claims.", file=sys.stderr)
         return 1
 
