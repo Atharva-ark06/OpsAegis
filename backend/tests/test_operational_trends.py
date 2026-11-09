@@ -36,7 +36,7 @@ def test_trends_return_daily_buckets_with_persisted_counts(client, analyst_heade
     assert response.status_code == 200
     body = response.json()
     assert body["bucket"] == "day"
-    assert len(body["points"]) == 3
+    assert len(body["points"]) == 4
     yesterday = next(point for point in body["points"] if point["collection_runs"] == 2)
     assert yesterday["collection_succeeded"] == 1
     assert yesterday["collection_failed"] == 1

@@ -325,3 +325,11 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Reports mean detection-to-incident time from linked correlated detections and mean incident-to-resolution time from the first audited transition to resolved/closed.
 - Adds aggregate JSON and CSV export. The response excludes incident titles, descriptions, raw detection evidence, user identities, credentials and provider payloads.
 - Includes explicit data-quality caveats and bounded metric queries. These are repository-derived operational metrics, not proof of complete upstream telemetry or live staging health.
+
+
+## Phase 6.4 — operational trends and thresholds (PR pending review)
+- Adds authenticated daily/weekly trend buckets for persisted collection runs, correlated detections, incidents and audited resolution transitions, with a 10,000-row bound and explicit data-quality caveats.
+- Adds a dashboard operational trends panel with collection success/failure and detection/incident volume visualizations; empty data is shown as empty, never fabricated.
+- Adds persisted singleton operational thresholds. Administrators can configure collection terminal-failure percentage, source freshness age, detection-to-incident SLA and incident-resolution SLA; changes are audit logged. Analysts/viewers can read thresholds and computed breach summaries but cannot change settings.
+- Threshold breaches are evaluated from the same persisted report metrics over a rolling seven-day window. They do not trigger external notifications or response actions.
+- Automated tests cover bucket counts, weekly mode, authentication, role restrictions, validation and threshold audit records. CI must validate this branch; no live staging data is claimed.

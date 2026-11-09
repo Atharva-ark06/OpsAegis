@@ -64,13 +64,16 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 
 ### Phase 6.4 — Reporting and operational metrics
 
-**First bounded increment (PR in review):** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
+**Delivered increments:** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
 
 - [x] Collection freshness, source coverage and terminal failure rates for the two supported collection sources.
 - [x] Detection-to-incident timing from linked correlated detections and incident records.
 - [x] Incident-to-resolution timing from audited transitions to resolved/closed.
 - [x] JSON and CSV aggregate exports with explicit UTC windows and data-quality caveats.
-- [ ] Dashboard visualizations, trend buckets and operator-configurable alert thresholds.
+- [x] Daily/weekly trend buckets for persisted collection runs, detections, incidents and audited resolutions.
+- [x] Dashboard trend visualizations with explicit empty states and row-cap warnings.
+- [x] Administrator-managed, audited thresholds for collection failure rate, source freshness, detection-to-incident time and incident resolution time; read-only threshold breach evaluation.
+- [ ] Staging validation against known source data and measured event timelines.
 - [ ] Staging validation against known source data and measured event timelines.
 
 ## Security and reliability invariants

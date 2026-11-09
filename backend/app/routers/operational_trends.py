@@ -101,7 +101,7 @@ def update_operational_thresholds(
     ))
     db.commit()
     db.refresh(row)
-    return _threshold_payload(row)
+    return _threshold_payload(row, db)
 
 
 @router.get("/trends")
@@ -144,7 +144,7 @@ def get_operational_trends(
     ).all()
 
     def floor(value: datetime) -> datetime:
-        value = value.astimezone(timezone.utc)
+        value = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
         if bucket == "week":
             day = value.date()
             return datetime.combine(day - timedelta(days=day.weekday()), datetime.min.time(), timezone.utc)
