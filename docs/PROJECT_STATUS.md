@@ -249,9 +249,16 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - These scripts do not encrypt or upload backups, schedule retention, back up Redis, connect a restored database to the application, or prove disaster-recovery readiness. Operators must perform the drill in their own environment.
 
 
-## Staging validation evidence register (PR #38 — proposed)
+## Staging validation evidence register (PR #38 — merged)
 - Adds a structured evidence register for Phase 5, separating implemented, CI-tested, staging-validated, production-validated, blocked and not-configured states.
 - Records each live validation item with environment, timestamp, operator, sanitized evidence reference, result/counts and follow-up action; no credentials or raw sensitive payloads belong in the register.
 - Defines read-only diagnostics as connectivity checks only. Passing health checks do not prove event ingestion, correlation, notification delivery, worker recovery or production readiness.
 - Explicitly tracks Wazuh Manager inventory and Indexer alerts/vulnerability ingestion, CrowdSec collection, Nuclei egress controls and authorized staging readiness, Shannon bridge, Redis scheduler/worker recovery, end-to-end detection, authentication/RBAC/secrets, deployment/migrations/storage and PostgreSQL restore/off-host retention/RPO/RTO.
 - No live services are contacted by this documentation change. No scan, deployment, backup or restore is performed. All unverified live checks remain pending until an operator records evidence from the intended staging/production environment.
+
+
+## Operational diagnostics regression coverage (PR #39 — proposed)
+- Adds focused unit tests for the operator diagnostic's environment-file parser, result classification, heartbeat behavior, production/development detection-worker expectations and Nuclei fail-closed enablement.
+- Verifies disabled Nuclei does not query Redis, mismatched enablement flags fail without probing, and enabled Nuclei requires the dedicated worker heartbeat.
+- Verifies diagnostic exception details expose only exception class names, not potentially sensitive exception messages.
+- These tests validate local decision logic only. They do not contact external services, prove live integration connectivity, validate egress policy or replace staging recovery drills.

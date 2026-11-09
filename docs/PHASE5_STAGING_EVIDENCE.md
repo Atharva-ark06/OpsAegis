@@ -5,7 +5,7 @@
 Use this register to distinguish implementation and automated test coverage from evidence obtained against real staging or production services. Do not mark a check complete because a feature exists, a mocked test passes, a container builds, or a health endpoint responds.
 
 **Current review baseline:** 2026-11-09  
-**Repository baseline:** `main`, merge commit for PR #37: `b1e7d93d83ddb1fc58b1ac344217d6a75683361d`  
+**Repository baseline:** `main`, merge commit for PR #38: `a2e24d868061bd0d149d908dba5f5a7ab30cc271`  
 **Live environment evidence supplied for this register:** none. All live validation items below remain pending or blocked until an operator records evidence.
 
 ## Status vocabulary
@@ -52,7 +52,7 @@ A diagnostic `passed` result means only that the bounded request/heartbeat passe
 | Docker deployment / migrations / storage | Production Compose validation and container builds; Alembic preflight; persistent volumes defined | Deploy in staging from clean state; apply migrations; verify service health, persistent data across restart, permissions, reverse proxy/TLS and rollback procedure | Pending |
 | PostgreSQL backup and restore | PowerShell backup, manifest/hash verification and isolated no-network restore drill scripts; syntax check in CI | Execute real backup, verify archive/hash, restore isolated copy, validate Alembic revision/table counts and application-level read-only smoke test; retain sanitized evidence | Pending |
 | Off-host retention / RPO / RTO | Runbook documents that encryption, off-host transfer and retention are external operator responsibilities | Configure encrypted off-host copy and retention; perform recovery timing exercise; record measured RPO/RTO and Redis recovery/backup decision | Pending |
-| Frontend dependency audit | Security workflow audits backend and Shannon Python requirements | Add/verify committed frontend lockfile and run reproducible npm dependency audit in CI | Pending |
+| Frontend dependency audit | Security workflow audits backend and Shannon Python requirements | Add/verify committed frontend lockfile and run reproducible npm dependency audit in CI | Pending |\n| Operational diagnostic decision logic | PR #39 adds unit coverage for environment parsing, status aggregation, heartbeat behavior, Nuclei fail-closed flags and exception redaction | These are local logic tests only; real service checks remain in the live-validation rows above | CI pending |
 
 ## Safe operator sequence
 
@@ -79,3 +79,8 @@ Phase 5 is not complete until:
 - all remaining blocked/not-configured items are explicitly accepted by the project owner.
 
 A green CI run is necessary evidence for code quality, not a substitute for these exit criteria.
+
+
+## PR #39 — operational diagnostic regression tests
+
+The proposed tests exercise only deterministic local helper behavior. They do not load a deployment environment, instantiate service adapters, contact Wazuh/CrowdSec/Shannon, access Redis/PostgreSQL, launch scans or write operational evidence. A passing CI run must not change any live-validation status in the matrix.
