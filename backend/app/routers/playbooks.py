@@ -244,6 +244,12 @@ def list_approval_requests(
             expiry = expiry.replace(tzinfo=timezone.utc)
         if item.status == "pending" and expiry <= now:
             item.status = "expired"
+            db.add(AuditLog(
+                actor_user_id=actor.id,
+                action="playbook.approval_expired",
+                target=f"playbook_approval:{item.id}",
+                detail=f"playbook:{item.playbook_id};version:{item.playbook_version};incident:{item.incident_id}",
+            ))
             changed = True
         results.append(_approval_response(item))
     if changed:
@@ -276,6 +282,12 @@ def decide_approval_request(
         expiry = expiry.replace(tzinfo=timezone.utc)
     if expiry <= now:
         approval.status = "expired"
+        db.add(AuditLog(
+            actor_user_id=actor.id,
+            action="playbook.approval_expired",
+            target=f"playbook_approval:{approval.id}",
+            detail=f"playbook:{approval.playbook_id};version:{approval.playbook_version};incident:{approval.incident_id}",
+        ))
         db.commit()
         raise HTTPException(status_code=409, detail="Approval request has expired")
 
