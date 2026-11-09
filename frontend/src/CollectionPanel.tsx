@@ -71,7 +71,7 @@ export function CollectionPanel({ canOperate, isAdmin }: { canOperate: boolean; 
         <div className="collection-fields">
           <label className="collection-toggle"><input type="checkbox" checked={item.enabled} disabled={!isAdmin || busy === item.source} onChange={(event) => setSchedules((current) => current.map((row) => row.source === item.source ? {...row, enabled:event.target.checked} : row))}/> Schedule enabled</label>
           <label>Interval (seconds)<input type="number" min={60} max={86400} step={60} value={item.interval_seconds} disabled={!isAdmin} onChange={(event) => setSchedules((current) => current.map((row) => row.source === item.source ? {...row, interval_seconds:Number(event.target.value)} : row))}/></label>
-          <label>Lookback (minutes)<input type="number" min={1} max={43200} value={item.lookback_minutes} disabled={!isAdmin} onChange={(event) => setSchedules((current) => current.map((row) => row.source === item.source ? {...row, lookback_minutes:Number(event.target.value)} : row))}/></label>
+          <label>Lookback (minutes)<input type="number" min={1} max={43199} value={item.lookback_minutes} disabled={!isAdmin} onChange={(event) => setSchedules((current) => current.map((row) => row.source === item.source ? {...row, lookback_minutes:Number(event.target.value)} : row))}/></label>
         </div>
         <div className="collection-schedule-foot"><small>Next run: {dateLabel(item.next_run_at)} · Last scheduled: {dateLabel(item.last_run_at)}</small><div>
           {isAdmin && <button className="primary-button compact" disabled={busy === item.source} onClick={() => void save(item)}>{busy === item.source ? "Saving…" : "Save schedule"}</button>}
