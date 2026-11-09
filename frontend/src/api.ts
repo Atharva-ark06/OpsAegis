@@ -109,15 +109,26 @@ async function request<T>(path: string, options: RequestInit = {}, authenticated
     let message = "Request failed (" + response.status + ").";
     try {
       const payload = await response.json() as { detail?: unknown };
-      if (typeof payload.detail === "string") message = payload.detail;
-      else if (Array.isArray(payload.detail)) message = payload.detail.map((item: { msg?: string }) => item.msg || "Invalid request").join("; ");
+      if (typeof payload.detail === "string") {
+        message = payload.detail;
+      } else if (Array.isArray(payload.detail)) {
+        message = payload.detail.map((item: unknown) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object" && "msg" in item && typeof item.msg === "string") return item.msg;
+          return "Invalid request";
+        }).join("; ");
+      }
     } catch {
       // Keep the status-based message when the response is not JSON.
     }
     throw new ApiError(message, response.status);
   }
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new ApiError("The OpsAegis API returned an invalid or empty JSON response.", response.status);
+  }
 }
 
 export async function login(email: string, password: string): Promise<{ access_token: string; token_type: string; expires_in: number }> {
