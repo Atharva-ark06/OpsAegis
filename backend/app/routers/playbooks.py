@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.entities import AuditLog, CorrelatedDetection, Finding, Incident, PlaybookApproval, User, UserRole
+from app.playbook_actions import ACTION_CATALOG, validate_action_contract
 from app.security import get_current_user, require_roles
 
 router = APIRouter(prefix="/playbooks", tags=["playbooks"])
@@ -45,6 +46,30 @@ class InvestigationDryRun(BaseModel):
 def list_playbooks(actor: User = Depends(get_current_user)):
     """List the static, versioned playbook definitions."""
     return {"items": list(PLAYBOOKS.values()), "count": len(PLAYBOOKS)}
+
+
+@router.get("/{playbook_id}/actions")
+def list_playbook_actions(
+    playbook_id: str,
+    actor: User = Depends(get_current_user),
+):
+    """Describe action contracts without exposing an execution path."""
+    if playbook_id not in PLAYBOOKS:
+        raise HTTPException(status_code=404, detail="Playbook not found")
+    actions = []
+    for spec in ACTION_CATALOG.values():
+        validate_action_contract(spec)
+        actions.append({
+            **spec.public_dict(),
+            "execution_available": False,
+            "reason": "No provider adapter is registered or enabled.",
+        })
+    return {
+        "playbook_id": playbook_id,
+        "items": actions,
+        "count": len(actions),
+        "external_actions_enabled": False,
+    }
 
 
 @router.post("/{playbook_id}/dry-run")
