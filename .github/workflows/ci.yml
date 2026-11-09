@@ -36,6 +36,8 @@ jobs:
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
       - name: Validate Phase 5 evidence register structure
         run: python ops/validate-phase5-evidence.py
+      - name: Validate Phase 6.4 evidence register structure (no live evidence claim)
+        run: python ops/validate-phase6-evidence.py
 
   backend:
     needs: preflight
