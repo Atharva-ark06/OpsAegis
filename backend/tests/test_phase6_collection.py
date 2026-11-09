@@ -81,3 +81,10 @@ def test_analyst_can_queue_manual_collection(client, analyst_headers):
     assert payload["status"] == "queued"
     assert payload["source"] == "wazuh-indexer-alerts"
     assert payload["lookback_minutes"] == 15
+
+
+def test_duplicate_manual_collection_is_rejected(client, analyst_headers):
+    first = client.post("/api/v1/collections/wazuh-manager-agents/run", headers=analyst_headers)
+    second = client.post("/api/v1/collections/wazuh-manager-agents/run", headers=analyst_headers)
+    assert first.status_code == 202
+    assert second.status_code == 409
