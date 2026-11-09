@@ -311,3 +311,25 @@ class IncidentNote(Base):
     author_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     note: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class PlaybookApproval(Base):
+    __tablename__ = "playbook_approvals"
+    __table_args__ = (
+        Index("ix_playbook_approvals_status_expires_at", "status", "expires_at"),
+        Index("ix_playbook_approvals_incident_id", "incident_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    playbook_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    playbook_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    incident_id: Mapped[int] = mapped_column(ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False)
+    requested_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    input_parameters: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    request_reason: Mapped[str] = mapped_column(Text, nullable=False)
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending", index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

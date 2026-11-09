@@ -294,8 +294,16 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - These tests validate local decision logic only. They do not contact external services, prove live integration connectivity, validate egress policy or replace staging recovery drills.
 
 
-## Phase 6.3 first increment (next PR)
+## Phase 6.3 first increment (PR #73 merged)
 
 - Adds a versioned, code-defined incident-investigation playbook catalogue.
 - Adds strict typed input validation, admin/analyst-only dry-run previews, bounded read-only context lookup and audit records.
 - No external action adapter, command execution, scanner invocation, containment, notification or approval bypass is introduced. Approval and controlled execution remain separate future increments.
+
+
+## Phase 6.3 second increment (approval workflow foundations)
+
+- Adds durable approval requests tied to a versioned playbook and incident, with bounded inputs and a 24-hour expiry.
+- Requires a different active administrator/analyst to approve or reject; requesters cannot approve their own requests.
+- Decisions are single-use, expiry-aware and audit-logged.
+- Approval is a recorded governance decision only: it does not execute the playbook, invoke external integrations, or enable response actions.
