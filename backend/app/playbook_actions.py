@@ -6,6 +6,7 @@ that a future integration must satisfy before it can be enabled.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -123,3 +124,46 @@ def validate_idempotency_key(value: str) -> str:
     if not IDEMPOTENCY_KEY_PATTERN.fullmatch(value):
         raise ValueError("Idempotency key must be a SHA-256 hex digest")
     return value
+
+
+
+class ActionAdapterTimeout(TimeoutError):
+    """Raised when an adapter exceeds its server-enforced execution deadline."""
+
+
+def _require_executable_adapter(spec: ActionSpec) -> None:
+    validate_action_contract(spec)
+    if not spec.enabled or not spec.adapter_registered:
+        raise RuntimeError("Action adapter is not registered and enabled")
+
+
+async def execute_with_timeout(
+    adapter: ActionAdapter,
+    request: ActionRequest,
+    spec: ActionSpec,
+) -> ActionResult:
+    """Execute only a registered adapter and enforce its declared deadline."""
+    _require_executable_adapter(spec)
+    validate_idempotency_key(request.idempotency_key)
+    try:
+        return await asyncio.wait_for(adapter.execute(request), timeout=spec.timeout_seconds)
+    except asyncio.TimeoutError as exc:
+        raise ActionAdapterTimeout("Action adapter exceeded its execution deadline") from exc
+
+
+async def compensate_with_timeout(
+    adapter: ActionAdapter,
+    request: ActionRequest,
+    result: ActionResult,
+    spec: ActionSpec,
+) -> ActionResult:
+    """Run the declared compensation path with the same bounded deadline."""
+    _require_executable_adapter(spec)
+    validate_idempotency_key(request.idempotency_key)
+    try:
+        return await asyncio.wait_for(
+            adapter.compensate(request, result),
+            timeout=spec.timeout_seconds,
+        )
+    except asyncio.TimeoutError as exc:
+        raise ActionAdapterTimeout("Action compensation exceeded its deadline") from exc
