@@ -116,6 +116,9 @@ printf 'Alembic revision: %s\\nPublic tables restored: %s\n' "$migration" "$tabl
 '@
 
     $restoreCheckPath = Join-Path $env:TEMP "$containerName-restore-check.sh"
+    # Docker's Linux container expects LF line endings; PowerShell here-strings use CRLF on Windows.
+    $restoreScript = $restoreScript.Replace("`r`n", "`n").Replace("`r", "`n")
+
     [System.IO.File]::WriteAllText(
         $restoreCheckPath,
         $restoreScript,
