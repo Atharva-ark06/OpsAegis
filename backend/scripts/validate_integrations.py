@@ -252,6 +252,11 @@ def main() -> int:
         type=Path,
         help="Optional path for a JSON report; the report never contains credentials",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return a non-zero status when any configured check was not probed or no integrations were checked",
+    )
     args = parser.parse_args()
 
     for key, value in parse_env_file(args.env_file).items():
@@ -281,6 +286,8 @@ def main() -> int:
 
     if report["overall"] in {"failed", "configuration_error"}:
         return 1
+    if args.strict and report["overall"] in {"partial", "no_configured_integrations"}:
+        return 3
     if report["overall"] == "no_configured_integrations":
         return 2
     return 0
