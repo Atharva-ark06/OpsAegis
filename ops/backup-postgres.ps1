@@ -72,11 +72,11 @@ PGPASSWORD="$POSTGRES_PASSWORD" pg_dump --format=custom --no-owner --no-acl --us
 pg_restore --list "$file" >/dev/null
 printf "archive_created_and_listed\n"
 '@
+    $remoteCreated = $true
     & docker compose --env-file $EnvFile -f $composeFile exec -T postgres sh -ec $dumpScript sh $fileName
     if ($LASTEXITCODE -ne 0) {
         throw "pg_dump or the in-container archive listing check failed."
     }
-    $remoteCreated = $true
 
     & docker cp "$($containerId):$remotePath" $tempPath
     if ($LASTEXITCODE -ne 0) {
