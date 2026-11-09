@@ -39,12 +39,12 @@ def test_exit_gate_rejects_pending_live_evidence():
 def test_exit_gate_accepts_documented_staging_and_accepted_exclusions():
     text = matrix("Staging-validated — evidence: EVID-123")
     text = text.replace(
-        "| Nuclei isolated worker | Implemented | Record live evidence | Staging-validated |",
-        "| Nuclei isolated worker | Implemented | Explicitly excluded | Out of scope - accepted |",
+        "| Nuclei isolated worker | Implemented | Record live evidence | Staging-validated — evidence: EVID-123 |",
+        "| Nuclei isolated worker | Implemented | Explicitly excluded | Out of scope - accepted; accepted: DEC-001 |",
     )
     text = text.replace(
+        "| Shannon bridge | Implemented | Record live evidence | Staging-validated — evidence: EVID-123 |",
         "| Shannon bridge | Implemented | Explicitly excluded | Not configured - accepted; accepted: DEC-002 |",
-        "| Shannon bridge | Implemented | Explicitly excluded | Not configured - accepted |",
     )
     assert MODULE.validate_evidence_register(text, require_exit=True) == []
 
