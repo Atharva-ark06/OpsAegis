@@ -19,7 +19,7 @@ def test_wazuh_collection_creates_and_reuses_agent_asset(client, db_session, mon
     observed = datetime(2026, 11, 8, 12, tzinfo=timezone.utc)
 
     class FakeAdapter:
-        async def collect_findings(self, since):
+        async def collect_findings(self, since, until=None):
             return [NormalizedFinding(source_engine="wazuh", source_native_id="agent-alert-1",
                 title="Authentication alert", description=None, severity="high", observed_at=observed,
                 asset_reference="web-01", evidence={"agent_id":"007","agent_name":"web-01","agent_ip":"10.0.0.7"})]
