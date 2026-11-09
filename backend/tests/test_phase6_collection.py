@@ -263,5 +263,8 @@ def test_worker_uses_bounded_retry_and_sanitized_error_code(db_session, monkeypa
     assert run.attempts == 1
     assert run.error_code == "RuntimeError"
     assert run.finished_at is None
-    assert run.next_attempt_at > now
+    next_attempt_at = run.next_attempt_at
+    if next_attempt_at.tzinfo is None:
+        next_attempt_at = next_attempt_at.replace(tzinfo=timezone.utc)
+    assert next_attempt_at > now
     assert run.worker_token is None
