@@ -46,11 +46,14 @@ async def test_collection_is_bounded_to_configured_maximum():
     calls=[]
     def handler(request):
         if request.url.path.endswith("authenticate"):return httpx.Response(200,json={"data":{"token":"jwt"}})
-        calls.append(request);offset=int(request.url.params["offset"])
-        items=[agent(str(i).zfill(3)) for i in range(offset,offset+2)]
-        return httpx.Response(200,json={"data":{"affected_items":items,"total_affected_items":20}})
-    results=await WazuhManagerAdapter(config(wazuh_manager_max_agents=3),transport=httpx.MockTransport(handler)).collect_agents()
-    assert len(results)==3 and len(calls)==2
+        calls.append(request)
+        offset=int(request.url.params["offset"])
+        limit=int(request.url.params["limit"])
+        items=[agent(str(i).zfill(3)) for i in range(offset,offset+limit)]
+        return httpx.Response(200,json={"data":{"affected_items":items,"total_affected_items":1000}})
+    results=await WazuhManagerAdapter(config(wazuh_manager_max_agents=503),transport=httpx.MockTransport(handler)).collect_agents()
+    assert len(results)==503 and len(calls)==2
+    assert [int(call.url.params["limit"]) for call in calls]==[500,3]
 
 def test_normalizes_manager_status_os_and_last_seen():
     item=WazuhManagerAdapter.normalize_agent(agent("001","disconnected"))
