@@ -52,10 +52,10 @@ def recovery_guidance(execution_status: str, compensation_status: str) -> str:
         return "verify_unisolated_state"
     if compensation_status in {"failed", "outcome_unknown"}:
         return "manual_recovery_required"
-    if compensation_status in {"requested", "executing"}:
-        return "operator_review_required"
     if execution_status == "outcome_unknown":
         return "reconcile_provider_state"
+    if compensation_status in {"requested", "executing"}:
+        return "operator_review_required"
     if execution_status == "succeeded":
         return "separate_approval_required"
     if execution_status == "failed":
