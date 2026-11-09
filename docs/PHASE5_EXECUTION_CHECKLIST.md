@@ -121,3 +121,17 @@ Never store secrets, bearer tokens, authorization headers, raw sensitive event p
 ## Phase 5 exit decision
 
 Phase 5 may be closed only when every required staging check has recorded evidence, failed checks have been fixed and retested, and any disabled/out-of-scope integrations are explicitly accepted by the project owner. CI success is necessary but does not substitute for staging proof.
+
+
+## 10. Validate the evidence register before sign-off
+
+From the repository root:
+
+```powershell
+python ops/validate-phase5-evidence.py
+python ops/validate-phase5-evidence.py --require-exit
+```
+
+The first command checks the matrix structure and required workstreams. The strict command is a release gate and must remain failing until every workstream has staging/production evidence or an explicitly accepted not-configured/out-of-scope disposition. Do not weaken the strict gate to make CI green. CI runs structural validation only because it cannot access restricted staging evidence.
+
+The validator does not run deployments, contact integrations, inspect secrets, perform backups or infer live success. Update the evidence register manually from sanitized operator results.
