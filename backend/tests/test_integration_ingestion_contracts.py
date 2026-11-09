@@ -249,3 +249,112 @@ def test_viewer_cannot_run_integration_syncs(client, db_session):
     for path in paths:
         response = client.post(path, headers=headers)
         assert response.status_code == 403, path
+
+def test_crowdsec_decision_links_only_one_exact_existing_ip_asset(
+    client, db_session, analyst_headers, monkeypatch
+):
+    asset = Asset(
+        name="lab-endpoint-01",
+        asset_type="endpoint",
+        environment="staging",
+        ip_address="203.0.113.77",
+    )
+    db_session.add(asset)
+    db_session.commit()
+
+    class FakeCrowdSecAdapter:
+        is_configured = True
+
+        async def collect_findings(self):
+            return [NormalizedFinding(
+                source_engine="crowdsec",
+                source_native_id="decision-exact-ip",
+                title="CrowdSec ban: Ip 203.0.113.77",
+                description="authorized test decision",
+                severity="high",
+                observed_at=datetime(2026, 11, 9, 9, tzinfo=timezone.utc),
+                asset_reference="203.0.113.77",
+                evidence={"scope": "Ip", "value": "203.0.113.77"},
+            )]
+
+    monkeypatch.setattr(integrations_router, "CrowdSecLapiAdapter", FakeCrowdSecAdapter)
+    response = client.post("/api/v1/integrations/crowdsec/collect", headers=analyst_headers)
+    assert response.status_code == 200
+    finding = db_session.query(Finding).filter_by(
+        source_engine="crowdsec", source_native_id="decision-exact-ip"
+    ).one()
+    assert finding.asset_id == asset.id
+    assert db_session.query(Asset).count() == 1
+
+
+def test_crowdsec_range_and_ambiguous_ip_decisions_remain_unmapped(
+    client, db_session, analyst_headers, monkeypatch
+):
+    first = Asset(name="endpoint-a", asset_type="endpoint", environment="unknown", ip_address="203.0.113.88")
+    second = Asset(name="endpoint-b", asset_type="endpoint", environment="unknown", ip_address="203.0.113.88")
+    db_session.add_all([first, second])
+    db_session.commit()
+
+    class FakeCrowdSecAdapter:
+        is_configured = True
+
+        async def collect_findings(self):
+            return [
+                NormalizedFinding(
+                    source_engine="crowdsec", source_native_id="decision-range",
+                    title="CrowdSec ban: Range 203.0.113.0/24", description="range decision",
+                    severity="high", observed_at=datetime(2026, 11, 9, 9, tzinfo=timezone.utc),
+                    asset_reference=None, evidence={"scope": "Range", "value": "203.0.113.0/24"},
+                ),
+                NormalizedFinding(
+                    source_engine="crowdsec", source_native_id="decision-ambiguous",
+                    title="CrowdSec ban: Ip 203.0.113.88", description="ambiguous decision",
+                    severity="high", observed_at=datetime(2026, 11, 9, 9, tzinfo=timezone.utc),
+                    asset_reference="203.0.113.88", evidence={"scope": "Ip", "value": "203.0.113.88"},
+                ),
+            ]
+
+    monkeypatch.setattr(integrations_router, "CrowdSecLapiAdapter", FakeCrowdSecAdapter)
+    response = client.post("/api/v1/integrations/crowdsec/collect", headers=analyst_headers)
+    assert response.status_code == 200
+    findings = db_session.query(Finding).filter(Finding.source_engine == "crowdsec").all()
+    assert len(findings) == 2
+    assert all(item.asset_id is None for item in findings)
+    assert db_session.query(Asset).count() == 2
+
+
+def test_crowdsec_refresh_preserves_existing_analyst_asset_assignment(
+    client, db_session, analyst_headers, monkeypatch
+):
+    selected = Asset(name="analyst-selected", asset_type="server", environment="production",
+                     ip_address="198.51.100.12")
+    observed = Asset(name="observed-ip-match", asset_type="endpoint", environment="unknown",
+                     ip_address="203.0.113.99")
+    db_session.add_all([selected, observed])
+    db_session.flush()
+    finding = Finding(
+        source_engine="crowdsec", source_native_id="decision-existing-assignment",
+        title="Prior CrowdSec decision", severity=FindingSeverity.high,
+        asset_id=selected.id, first_seen_at=datetime(2026, 11, 8, tzinfo=timezone.utc),
+        last_seen_at=datetime(2026, 11, 8, tzinfo=timezone.utc),
+        evidence={"scope": "Ip", "value": "203.0.113.99"},
+    )
+    db_session.add(finding)
+    db_session.commit()
+
+    class FakeCrowdSecAdapter:
+        is_configured = True
+
+        async def collect_findings(self):
+            return [NormalizedFinding(
+                source_engine="crowdsec", source_native_id="decision-existing-assignment",
+                title="CrowdSec ban: Ip 203.0.113.99", description="refreshed decision",
+                severity="high", observed_at=datetime(2026, 11, 9, 9, tzinfo=timezone.utc),
+                asset_reference="203.0.113.99", evidence={"scope": "Ip", "value": "203.0.113.99"},
+            )]
+
+    monkeypatch.setattr(integrations_router, "CrowdSecLapiAdapter", FakeCrowdSecAdapter)
+    response = client.post("/api/v1/integrations/crowdsec/collect", headers=analyst_headers)
+    assert response.status_code == 200
+    db_session.refresh(finding)
+    assert finding.asset_id == selected.id
