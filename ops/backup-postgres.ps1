@@ -54,7 +54,7 @@ if ([string]::IsNullOrWhiteSpace($containerId)) {
     throw "The production PostgreSQL container is not running."
 }
 
-$timestamp = [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
+$timestamp = "{0}-{1}" -f [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ"), [guid]::NewGuid().ToString("N").Substring(0, 8)
 $fileName = "opsaegis-postgres-$timestamp.dump"
 $remotePath = "/tmp/$fileName"
 $finalPath = Join-Path $OutputDirectory $fileName
