@@ -9,9 +9,10 @@ class CrowdSecAdapterError(RuntimeError):
     """Sanitized CrowdSec LAPI error; never includes credentials or response bodies."""
 
 class CrowdSecLapiAdapter:
-    """Read active decisions from CrowdSec Local API using a read-only bouncer key."""
+    """Read CrowdSec decisions with a bouncer key and optional alerts with a machine JWT."""
     def __init__(self, config: Settings = settings, *, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self.config, self.transport = config, transport
+        self.last_alert_count = 0
 
     @property
     def is_configured(self) -> bool:
@@ -101,9 +102,11 @@ class CrowdSecLapiAdapter:
             raise CrowdSecAdapterError("CrowdSec Local API returned invalid alert JSON") from None
 
         if payload is None:
+            self.last_alert_count = 0
             return []
         if not isinstance(payload, list):
             raise CrowdSecAdapterError("CrowdSec Local API returned an unexpected alerts response")
+        self.last_alert_count = len(payload)
 
         findings: list[NormalizedFinding] = []
         for alert in payload[:limit]:
@@ -120,8 +123,7 @@ class CrowdSecLapiAdapter:
                 for item in decisions[:20] if isinstance(item, dict)
             ]
             severity = (
-                "critical" if "ban" in decision_types and str(alert.get("kind") or "").lower() == "waf"
-                else "high" if "ban" in decision_types
+                "high" if "ban" in decision_types
                 else "medium" if "captcha" in decision_types
                 else "low" if "throttle" in decision_types
                 else "unknown"
