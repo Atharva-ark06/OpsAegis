@@ -68,7 +68,6 @@ def validate_evidence_register(markdown: str, *, require_exit: bool = False) -> 
         return ["Validation matrix is missing or contains no four-column workstream rows."]
 
     names = [name for name, _ in rows]
-    statuses = {name: status for name, status in rows}
     for required in REQUIRED_WORKSTREAMS:
         if not any(required.lower() in name.lower() for name in names):
             errors.append(f"Required workstream is missing: {required}")
