@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 import threading
 
-from app.models.entities import AuditLog, ScheduledDetectionRun
 from app import worker
+from app.models.entities import AuditLog, ScheduledDetectionRun
 
 
 def make_run(db):
@@ -29,10 +29,10 @@ def test_process_run_does_not_start_after_lease_is_already_lost(monkeypatch):
         raise AssertionError("A stale worker must not open a run session")
 
     monkeypatch.setattr(worker, "SessionLocal", unexpected_session)
-    worker.process_run(123, lease_lost)
+    worker.process_run(123, lease_lost, "old-owner")
 
- 
-def test_process_run_leaves_running_record_for_recovery_if_lease_lost_during_evaluation(
+
+def test_process_run_leaves_record_running_if_lease_is_lost_during_evaluation(
     db_session, test_session_factory, monkeypatch
 ):
     run = make_run(db_session)
@@ -44,10 +44,35 @@ def test_process_run_leaves_running_record_for_recovery_if_lease_lost_during_eva
         return {"created": 0, "refreshed": 0, "incidents_created": 0}
 
     monkeypatch.setattr(worker, "evaluate_detections", lose_lease_during_evaluation)
-    worker.process_run(run.id, lease_lost)
+    worker.process_run(run.id, lease_lost, "old-owner")
 
     db_session.refresh(run)
     assert run.status == "running"
     assert run.attempts == 1
+    assert run.worker_token == "old-owner"
+    assert run.finished_at is None
+    assert db_session.query(AuditLog).filter_by(action="detection.schedule.complete").count() == 0
+
+
+def test_old_worker_cannot_complete_after_new_owner_reclaims_run(
+    db_session, test_session_factory, monkeypatch
+):
+    run = make_run(db_session)
+    lease_lost = threading.Event()
+    monkeypatch.setattr(worker, "SessionLocal", test_session_factory)
+
+    def simulate_recovery_by_new_owner(*args, **kwargs):
+        with test_session_factory() as new_owner_db:
+            current = new_owner_db.get(ScheduledDetectionRun, run.id)
+            current.worker_token = "new-owner"
+            new_owner_db.commit()
+        return {"created": 0, "refreshed": 0, "incidents_created": 0}
+
+    monkeypatch.setattr(worker, "evaluate_detections", simulate_recovery_by_new_owner)
+    worker.process_run(run.id, lease_lost, "old-owner")
+
+    db_session.refresh(run)
+    assert run.status == "running"
+    assert run.worker_token == "new-owner"
     assert run.finished_at is None
     assert db_session.query(AuditLog).filter_by(action="detection.schedule.complete").count() == 0
