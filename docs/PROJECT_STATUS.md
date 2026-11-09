@@ -1,10 +1,12 @@
 # OpsAegis — Project Status
 
-## Phase 5 active checkpoint (2026-11-09)
+## Phase 5 closeout checkpoint (2026-11-09)
 
-Phase 5 remains **in progress**. Repository-side work merged through PR #67 includes the committed frontend lockfile and deterministic `npm ci`, enforced frontend dependency auditing, end-to-end Wazuh ingestion/correlation/incident/notification contract coverage, strict read-only diagnostics, and an ephemeral production Compose smoke test covering migrations, service health and frontend-to-API readiness. PR #39 also merged operational-diagnostics regression tests (merge commit `f7777f7`).
+PR #70 is merged at `61c78e66c2980b9ea435a461060d2e8483ea7b69`. It adds optional, bounded CrowdSec alert-history reads using a dedicated machine account, separate from the bouncer-key active-decision path. The feature remains opt-in because CrowdSec machine credentials have broader LAPI permissions.
 
-These automated checks are not live staging evidence. No current live staging evidence has been supplied for Wazuh/CrowdSec ingestion, Redis recovery, Nuclei egress enforcement, Shannon VM isolation, TLS/host security, off-host retention or RPO/RTO. Keep Nuclei and Shannon disabled until their documented safety gates are independently met. Phase 5 must not be marked complete until the evidence register contains the required sanitized operator results or the project owner explicitly accepts disabled/out-of-scope items.
+The repository implementation and automated CI foundations for Phase 5 are in place: deterministic frontend dependency installation/auditing, Wazuh ingestion-to-detection-to-incident-to-notification contract coverage, strict read-only diagnostics, production Compose smoke testing, operational diagnostic regression tests, CrowdSec decision/alert collection contracts, and PostgreSQL backup/restore procedures.
+
+**Phase 5 is not operationally closed.** No sanitized live staging evidence has been supplied for real Wazuh/CrowdSec ingestion, Redis/worker recovery, Nuclei egress enforcement, Shannon VM isolation, TLS/host security, backup restore, off-host retention or measured RPO/RTO. Keep Nuclei and Shannon disabled until their independent safety gates pass. The evidence register and `ops/validate-phase5-evidence.py` distinguish repository/CI checks from actual staging evidence.
 
 
 ## Implemented and merged
@@ -53,12 +55,27 @@ These automated checks are not live staging evidence. No current live staging ev
 - Worker evaluates only already-persisted findings; it does not collect telemetry, execute scans or send email/SMS/external pages.
 - Live Redis worker operation and production scheduling have not been independently validated.
 
-## Remaining
-- Independently validate the Nuclei worker in an authorized staging environment with enforceable egress controls, pinned templates and restart/lease-loss tests.
-- Validate Redis scheduler and both worker recovery paths under restart/failure conditions in authorized staging; automated fencing tests do not replace a live Redis failover/restart drill.
-- Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
-- CrowdSec active decisions and bounded historical alerts have separate ingestion paths. Exact unique-IP asset association is implemented for both; ranges, unknown IPs and ambiguous matches remain unmapped. Alert history is opt-in and requires dedicated machine credentials with broader LAPI permissions; OpsAegis uses the JWT only for GET requests. Full pagination and broad response actions are not implemented.
-- Production secrets management, monitoring and operational runbooks.
+## Remaining Phase 5 gates
+
+### Repository-side closeout
+- Keep the CrowdSec alert-history collector explicitly bounded. CrowdSec's documented `GET /v1/alerts` exposes `limit` and time filters (`since`/`until`), not an offset/page cursor. Do not claim complete historical pagination; use bounded collection windows and report possible truncation.
+- Keep Shannon classified as a reference bridge, not a production runner. Durable job state, cancellation, retry semantics, artifact retrieval and complete report parsing are not implemented; defer enabling it or scope a separately reviewed runner project.
+- Keep all collection/manual sync behavior and scanner boundaries documented; do not add broad response actions without a separate approval and threat-model review.
+
+### Live staging and production evidence
+- Deploy the production Compose stack in an authorized staging environment and verify migrations, service health, reverse proxy/TLS, persistent storage and rollback.
+- Validate Wazuh Manager inventory, Wazuh Indexer alerts/vulnerabilities, CrowdSec decisions and (only if approved) alert history using disposable lab data.
+- Demonstrate real-event ingestion → finding → detection → incident → per-user notification, including repeat/idempotency behavior.
+- Run Redis scheduler, detection worker and Nuclei worker recovery drills. Nuclei remains blocked until external DNS/IP egress enforcement and written target authorization are independently verified.
+- Validate Shannon only on a dedicated disposable VM after independent isolation, egress, budget and authorization checks; otherwise obtain explicit project-owner acceptance to keep it disabled/out of scope.
+- Execute PostgreSQL backup verification and isolated restore; configure encrypted off-host retention; measure RPO/RTO and document the Redis recovery strategy.
+- Record operator, UTC timestamp, version, expected/observed counts, sanitized evidence reference, outcome and follow-up for each evidence-register row.
+
+The repository-side validator checks evidence-register structure in CI. Run `python ops/validate-phase5-evidence.py --require-exit` only after staging evidence is recorded and every disabled/out-of-scope item has been explicitly accepted. A green CI run does not close Phase 5.
+
+## Phase 6 kickoff
+
+Phase 6 begins with the [SOC Automation & Response Orchestration roadmap](PHASE6_ROADMAP.md). Its first increment is durable, bounded, read-only integration collection scheduling. Human approval, auditability and fail-closed behavior remain mandatory; autonomous destructive response is explicitly out of scope.
 
 No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
 
