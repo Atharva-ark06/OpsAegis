@@ -22,7 +22,7 @@ jobs:
         run: pip install -r backend/requirements.txt
       - name: Verify application configuration exports and API startup imports
         working-directory: backend
-        run: python -c "from app.config import Settings, settings; from app.main import app; assert isinstance(settings, Settings); assert app.title == 'OpsAegis API'; print('Application settings and API imports are valid')"
+        run: python -c "from app.config import Settings, settings; from app.main import app; assert isinstance(settings, Settings); assert app.title == 'OpsAegis API'; from app.collection_worker import schedule_due; print('Application settings, collection worker and API imports are valid')"
       - name: Verify Alembic environment and complete migration chain
         working-directory: backend
         env:
