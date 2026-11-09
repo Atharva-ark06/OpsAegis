@@ -101,6 +101,14 @@ def request_collection(source: str, db: Session = Depends(get_db),
         db.add(schedule)
         db.flush()
     now = utc_now()
+    if schedule.last_run_at is not None:
+        last_run = schedule.last_run_at
+        if last_run.tzinfo is None:
+            last_run = last_run.replace(tzinfo=timezone.utc)
+        minimum_wait = max(60, schedule.interval_seconds)
+        if now < last_run + timedelta(seconds=minimum_wait):
+            raise HTTPException(429, "This source is inside its configured minimum collection interval")
+    schedule.last_run_at = now
     run = IntegrationCollectionRun(
         schedule_id=schedule.id, schedule_slot="manual:" + uuid4().hex, source=source,
         lookback_minutes=schedule.lookback_minutes, status="queued", attempts=0,
