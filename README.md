@@ -95,7 +95,7 @@ Production operators can create a PostgreSQL custom-format backup, verify its SH
 - Distinguish active CrowdSec decisions from historical alerts and firewall enforcement.
 - Nuclei and Shannon workers require target allowlists, explicit authorization, isolation, resource limits and audit trails before execution is enabled.
 
-See docs/PROJECT_STATUS.md and docs/SECURITY_BASELINE.md for implementation boundaries. For Phase 5 live-service and staging validation steps, see [the integration validation runbook](docs/PHASE5_INTEGRATION_VALIDATION.md).
+See docs/PROJECT_STATUS.md and docs/SECURITY_BASELINE.md for implementation boundaries. For Phase 5 live-service and staging validation steps, see [the integration validation runbook](docs/PHASE5_INTEGRATION_VALIDATION.md) and [the staging evidence register](docs/PHASE5_STAGING_EVIDENCE.md).
 
 ## Nuclei authorized scanning
 
