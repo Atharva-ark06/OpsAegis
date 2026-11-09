@@ -26,9 +26,6 @@ from app.security import get_current_user
 router = APIRouter(prefix="/reports", tags=["operational reporting"])
 MAX_WINDOW_DAYS = 90
 MAX_METRIC_ROWS = 10000
-RESOLUTION_TRANSITION = re.compile(r"status:[a-z_]+->(?:resolved|closed)$")
-
-
 def _utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
@@ -76,6 +73,7 @@ def build_operations_report(db: Session, start: datetime, end: datetime) -> dict
                 IntegrationCollectionRun.source == source,
                 IntegrationCollectionRun.status == "succeeded",
                 IntegrationCollectionRun.finished_at.is_not(None),
+                IntegrationCollectionRun.finished_at < end,
             )
             .order_by(IntegrationCollectionRun.finished_at.desc())
             .limit(1)
