@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import json
 import httpx
 import pytest
 from app.integrations.crowdsec import CrowdSecAdapterError, CrowdSecLapiAdapter
@@ -77,7 +78,8 @@ async def test_collects_alert_history_with_machine_jwt_and_read_only_get():
         calls.append(request)
         if request.url.path == "/v1/watchers/login":
             assert request.method == "POST"
-            assert request.read().decode()
+            login_body = json.loads(request.read())
+            assert login_body == {"machine_id": "opsaegis-reader", "password": "machine-secret"}
             return httpx.Response(200, json={"token": "short-lived-test-jwt", "expire": "2030-01-01T00:00:00Z"})
         assert request.url.path == "/v1/alerts"
         assert request.method == "GET"
