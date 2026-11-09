@@ -41,15 +41,16 @@ if (-not (Test-Path -LiteralPath $AgentOverlay -PathType Leaf)) {
     throw "The disposable agent Compose overlay is missing: $AgentOverlay"
 }
 
-if (Test-Path -LiteralPath $VendorDirectory) {
-    throw "Runtime directory already exists: $VendorDirectory. Inspect it first; this script will not overwrite or delete it."
-}
-
 New-Item -ItemType Directory -Path $RuntimeDirectory -Force | Out-Null
-Invoke-Checked -Command "git" -Arguments @(
-    "clone", "--depth", "1", "--branch", $WazuhTag,
-    "https://github.com/wazuh/wazuh-docker.git", $VendorDirectory
-)
+if (-not (Test-Path -LiteralPath $VendorDirectory)) {
+    Invoke-Checked -Command "git" -Arguments @(
+        "clone", "--depth", "1", "--branch", $WazuhTag,
+        "https://github.com/wazuh/wazuh-docker.git", $VendorDirectory
+    )
+}
+elseif (-not (Test-Path -LiteralPath (Join-Path $VendorDirectory ".git"))) {
+    throw "Runtime directory exists but is not a Git checkout: $VendorDirectory. Inspect it; the script will not overwrite it."
+}
 
 $checkedOutTag = (& git -C $VendorDirectory describe --tags --exact-match).Trim()
 if ($LASTEXITCODE -ne 0 -or $checkedOutTag -ne $WazuhTag) {
@@ -72,14 +73,25 @@ $portMappings = [ordered]@{
     '- "9200:9200"' = '- "127.0.0.1:9200:9200"'
     '- 443:5601' = '- "127.0.0.1:8443:5601"'
 }
+$composeChanged = $false
 foreach ($entry in $portMappings.GetEnumerator()) {
-    $count = ([regex]::Matches($composeText, [regex]::Escape($entry.Key))).Count
-    if ($count -ne 1) {
-        throw "Expected exactly one upstream port mapping '$($entry.Key)'; found $count. Refusing an unreviewed rewrite."
+    $upstreamCount = ([regex]::Matches($composeText, [regex]::Escape($entry.Key))).Count
+    $loopbackCount = ([regex]::Matches($composeText, [regex]::Escape($entry.Value))).Count
+    if ($upstreamCount -eq 1 -and $loopbackCount -eq 0) {
+        $composeText = $composeText.Replace($entry.Key, $entry.Value)
+        $composeChanged = $true
     }
-    $composeText = $composeText.Replace($entry.Key, $entry.Value)
+    elseif ($upstreamCount -eq 0 -and $loopbackCount -eq 1) {
+        # Safe rerun: this exact upstream mapping was already restricted.
+        continue
+    }
+    else {
+        throw "Expected exactly one original or already-restricted mapping for '$($entry.Key)'; found original=$upstreamCount, loopback=$loopbackCount. Refusing an unreviewed rewrite."
+    }
 }
-Set-Content -LiteralPath $composeFile -Value $composeText -Encoding utf8
+if ($composeChanged) {
+    Set-Content -LiteralPath $composeFile -Value $composeText -Encoding utf8
+}
 
 Push-Location $SingleNodeDirectory
 try {
