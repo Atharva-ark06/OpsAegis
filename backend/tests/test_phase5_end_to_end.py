@@ -52,7 +52,7 @@ def test_wazuh_ingestion_to_detection_incident_and_notification_is_idempotent(
     assert db_session.query(Finding).filter_by(source_engine="wazuh").count() == 3
 
     evaluated = client.post(
-        "/api/v1/detections/evaluate?window_minutes=15&auth_threshold=3",
+        "/api/v1/detections/evaluate?window_minutes=1440&auth_threshold=3",
         headers=analyst_headers,
     )
     assert evaluated.status_code == 200
@@ -81,7 +81,7 @@ def test_wazuh_ingestion_to_detection_incident_and_notification_is_idempotent(
     assert marked_read.json()["read_at"] is not None
 
     repeated_evaluation = client.post(
-        "/api/v1/detections/evaluate?window_minutes=15&auth_threshold=3",
+        "/api/v1/detections/evaluate?window_minutes=1440&auth_threshold=3",
         headers=analyst_headers,
     )
     assert repeated_evaluation.status_code == 200
