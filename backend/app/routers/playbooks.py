@@ -5,7 +5,7 @@ This first Phase 6.3 increment deliberately has no action adapters or execution 
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -143,12 +143,28 @@ class ApprovalRequestInput(BaseModel):
     lookback_minutes: int = Field(default=60, ge=5, le=1440)
     reason: str = Field(min_length=10, max_length=1000)
 
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 10:
+            raise ValueError("Reason must contain at least 10 non-whitespace characters")
+        return value
+
 
 class ApprovalDecisionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: str = Field(pattern="^(approve|reject)$")
     reason: str = Field(min_length=5, max_length=1000)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_reason(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 5:
+            raise ValueError("Reason must contain at least 5 non-whitespace characters")
+        return value
 
 
 def _approval_response(item: PlaybookApproval):
