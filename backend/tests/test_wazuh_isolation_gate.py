@@ -60,3 +60,16 @@ def test_evidence_gate_does_not_accept_truthy_non_string_values():
     evidence = complete_evidence()
     object.__setattr__(evidence, "written_authorization_reference", True)
     assert "written_authorization_reference" in missing_isolation_evidence(evidence)
+
+
+def test_gate_rejects_arbitrary_objects_even_with_matching_attributes():
+    class ForgedEvidence:
+        pass
+
+    forged = ForgedEvidence()
+    for field, value in complete_evidence().__dict__.items():
+        setattr(forged, field, value)
+
+    assert len(missing_isolation_evidence(forged)) == 11
+    with pytest.raises(IsolationReadinessError):
+        require_isolation_readiness(forged)
