@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, stage-3-foundation]
+    branches: [main, stage-3-foundation, "phase5/**"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   preflight:
@@ -59,23 +59,26 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - name: Generate lockfile from declared dependencies
+      - name: Generate frontend lockfile when bootstrapping a Phase 5 branch
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/phase5/')
         working-directory: frontend
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit generated lockfile on Phase 5 bootstrap branch
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/phase5/')
+        run: |
+          if ! git diff --quiet -- frontend/package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add frontend/package-lock.json
+            git commit -m "chore(frontend): commit npm lockfile"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - run: npm ci
         working-directory: frontend
       - run: npm test
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
-      - name: Publish generated lockfile for committing
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-package-lock
-          path: frontend/package-lock.json
-          if-no-files-found: error
-          retention-days: 3
 
   runner:
     needs: preflight
