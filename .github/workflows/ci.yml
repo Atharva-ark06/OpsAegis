@@ -38,6 +38,8 @@ jobs:
         run: python ops/validate-phase5-evidence.py
       - name: Validate Phase 6.4 evidence register structure (no live evidence claim)
         run: python ops/validate-phase6-evidence.py
+      - name: Validate Wazuh staging lab scaffold safety (offline only)
+        run: python ops/validate-wazuh-staging-lab.py
 
   backend:
     needs: preflight
@@ -92,7 +94,7 @@ jobs:
       - name: Parse operational PowerShell scripts
         shell: pwsh
         run: |
-          $scripts = Get-ChildItem -Path ops -Filter '*.ps1'
+          $scripts = Get-ChildItem -Path ops -Filter '*.ps1' -Recurse
           if (-not $scripts) { throw 'No operational PowerShell scripts were found.' }
           foreach ($script in $scripts) {
             $tokens = $null
