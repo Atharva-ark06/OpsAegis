@@ -212,10 +212,19 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - This does not validate deployment-level egress policy or authorize any live scan.
 
 
-## Scheduled detection worker fencing and health (PR #34 — proposed)
+## Scheduled detection worker fencing and health (PR #34 — merged)
 - Persisted a per-run worker fencing token; completion and retry/failure updates are conditional on the current token, so a stale worker cannot finalize a run after a new owner has reclaimed it.
 - A worker that detects lease loss leaves its durable run for startup recovery rather than marking it successful. Correlation evaluation is idempotent and may be repeated safely.
 - Startup recovery clears stale worker ownership and requeues interrupted runs within the existing attempt budget.
 - Production Compose now reports detection-worker and opt-in Nuclei-worker health from Redis heartbeat keys rather than container process state alone.
 - Added tests for lease loss before execution, lease loss during evaluation and stale-owner completion rejection.
 - This does not constitute a live Redis failover/restart drill or production deployment validation.
+
+
+## Integration ingestion contract coverage (PR #35 — proposed)
+- Adds API-level regression coverage for CrowdSec active-decision ingestion, Wazuh Manager inventory refresh and Wazuh Vulnerability Detector refresh.
+- Verifies repeat collection is idempotent and audited, analyst triage and first-seen timestamps remain intact, and source refresh does not overwrite analyst-managed asset classification/environment.
+- Verifies vulnerability refresh updates source-derived severity while preserving analyst remediation status/notes and NVD cache metadata.
+- Adds viewer-role denial tests for the covered sync operations.
+- Adds a Phase 5 runbook that separates mocked CI evidence from required live-service, staging, deployment, backup/restore and security validation.
+- These tests use mocked adapters and disposable SQLite; they do not claim live Wazuh/CrowdSec/provider connectivity or production readiness.
