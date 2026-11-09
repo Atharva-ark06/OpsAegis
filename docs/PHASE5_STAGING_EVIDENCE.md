@@ -5,7 +5,7 @@
 Use this register to distinguish implementation and automated test coverage from evidence obtained against real staging or production services. Do not mark a check complete because a feature exists, a mocked test passes, a container builds, or a health endpoint responds.
 
 **Current review baseline:** 2026-11-09  
-**Repository baseline:** `main`; update this SHA after the final Phase 5 PR is merged.  
+**Repository baseline:** `main` at `e3ebd66ed52cbc43afca0376b47208f91e9fba26` (2026-11-09). Refresh this SHA after subsequent merges.  
 **Live environment evidence supplied for this register:** none. All live validation items below remain pending or blocked until an operator records evidence.
 
 ## Status vocabulary
@@ -37,7 +37,9 @@ A diagnostic `passed` result means only that the bounded request/heartbeat passe
 
 ## Latest repository-side baseline
 
-- PR #64 merged the frontend dependency upgrade and enforced the npm audit. Its generated lockfile was initially an artifact only; Phase 5 PR 1 makes it a committed input to CI and both frontend Docker builds.
+- PRs #65 and #67 merged the committed frontend lockfile, deterministic `npm ci` in both frontend Dockerfiles, and lockfile-backed dependency auditing in CI.
+- PR #66's operational smoke-test and end-to-end contract changes reached `main` through PR #67.
+- PR #39's operational-diagnostics regression tests are merged (commit `f7777f7`).
 - The frontend build and tests passing in CI are not staging evidence. Docker image builds validate image construction, not live deployment, TLS, persistent storage or integration reachability.
 - The live evidence supplied for this register remains **none** until the operator records sanitized staging results below.
 
