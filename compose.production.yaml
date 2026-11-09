@@ -132,6 +132,39 @@ services:
     mem_limit: 512m
     cpus: 0.5
 
+  collection-worker:
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    environment:
+      OPS_AEGIS_ENV: production
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:?Set OPS_AEGIS_SECRET_KEY in .env.production}
+      OPS_AEGIS_ACCESS_TOKEN_MINUTES: ${OPS_AEGIS_ACCESS_TOKEN_MINUTES:-15}
+      OPS_AEGIS_ALLOWED_HOSTS: ${OPS_AEGIS_ALLOWED_HOSTS:?Set OPS_AEGIS_ALLOWED_HOSTS in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      REDIS_URL: ${REDIS_URL:?Set REDIS_URL in .env.production}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
+    command: ["python", "-m", "app.collection_worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,redis; r=redis.Redis.from_url(os.environ['REDIS_URL'],socket_connect_timeout=2,socket_timeout=2); raise SystemExit(0 if r.get('opsaegis:collection:worker:heartbeat') else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+
   nuclei-worker:
     profiles: ["scanner"]
     init: true
