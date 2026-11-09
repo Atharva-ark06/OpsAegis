@@ -11,7 +11,7 @@ These automated checks are not live staging evidence. No current live staging ev
 - FastAPI, PostgreSQL, Alembic, Redis, JWT/RBAC and audit logging.
 - Authenticated React/TypeScript workspace.
 - Wazuh Indexer read-only alert ingestion.
-- CrowdSec Local API read-only active-decision ingestion.
+- CrowdSec Local API active-decision ingestion with a bouncer key, plus optional bounded alert-history reads using dedicated machine credentials.
 - Nuclei authorized-target registry, fixed safe-profile CLI execution, scan history and JSONL finding normalization.
 - Shannon external isolated-runner control-plane adapter, authorized target registry, scan dispatch/history, proof-gated finding ingestion and audit logging.
 - Separate Shannon bridge reference implementation with exact allowlists, pinned CLI, authenticated API, fail-closed SARIF proof gate and disabled-by-default execution.
@@ -57,7 +57,7 @@ These automated checks are not live staging evidence. No current live staging ev
 - Independently validate the Nuclei worker in an authorized staging environment with enforceable egress controls, pinned templates and restart/lease-loss tests.
 - Validate Redis scheduler and both worker recovery paths under restart/failure conditions in authorized staging; automated fencing tests do not replace a live Redis failover/restart drill.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
-- CrowdSec historical-alert ingestion, full pagination and safe asset association remain outstanding; broad response actions are not implemented.
+- CrowdSec active decisions and bounded historical alerts have separate ingestion paths. Exact unique-IP asset association is implemented for both; ranges, unknown IPs and ambiguous matches remain unmapped. Alert history is opt-in and requires dedicated machine credentials with broader LAPI permissions; OpsAegis uses the JWT only for GET requests. Full pagination and broad response actions are not implemented.
 - Production secrets management, monitoring and operational runbooks.
 
 No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
@@ -84,7 +84,7 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 - New findings link to the corresponding endpoint; existing analyst-selected asset assignments are preserved.
 - Asset API exposes source engine, external ID, observed IP, agent observation state and last-seen time.
 - Source refresh does not overwrite analyst-managed asset type or environment.
-- Alert-observed inventory only: no claim of Wazuh Manager online status, OS inventory or silent-agent discovery. CrowdSec IP-only records are not auto-mapped.
+- Alert-observed inventory only: no claim of Wazuh Manager online status, OS inventory or silent-agent discovery. CrowdSec IP decisions/alerts map only on one exact, unique existing asset IP; ranges, unknown IPs and ambiguous matches remain unassigned.
 
 
 ## Vulnerability management and CVE intelligence (PR #16)

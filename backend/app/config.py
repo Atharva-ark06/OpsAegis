@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     crowdsec_ca_cert: str | None = Field(default=None, validation_alias="CROWDSEC_CA_CERT")
     crowdsec_timeout_seconds: int = Field(default=10, validation_alias="CROWDSEC_TIMEOUT_SECONDS")
     crowdsec_max_results: int = Field(default=500, validation_alias="CROWDSEC_MAX_RESULTS")
+    crowdsec_machine_id: str | None = Field(default=None, validation_alias="CROWDSEC_MACHINE_ID")
+    crowdsec_machine_password: str | None = Field(default=None, validation_alias="CROWDSEC_MACHINE_PASSWORD")
     virustotal_api_key: str | None = Field(default=None, validation_alias="VIRUSTOTAL_API_KEY")
     abuseipdb_api_key: str | None = Field(default=None, validation_alias="ABUSEIPDB_API_KEY")
     threat_intel_timeout_seconds: int = Field(default=10, validation_alias="THREAT_INTEL_TIMEOUT_SECONDS")
@@ -112,6 +114,8 @@ class Settings(BaseSettings):
                     raise ValueError("Production CORS_ORIGINS cannot use loopback hosts")
             if self.nuclei_enabled and not self.nuclei_worker_enabled:
                 raise ValueError("Production Nuclei execution requires NUCLEI_WORKER_ENABLED=true and the isolated worker service")
+        if bool(self.crowdsec_machine_id) != bool(self.crowdsec_machine_password):
+            raise ValueError("CROWDSEC_MACHINE_ID and CROWDSEC_MACHINE_PASSWORD must be configured together")
         for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
                             ("WAZUH_INDEXER_TIMEOUT_SECONDS", self.wazuh_indexer_timeout_seconds),
                             ("CROWDSEC_TIMEOUT_SECONDS", self.crowdsec_timeout_seconds)):

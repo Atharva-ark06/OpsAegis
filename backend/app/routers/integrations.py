@@ -191,11 +191,30 @@ async def collect_crowdsec_decisions(db: Session=Depends(get_db),
     return {"integration":"crowdsec-lapi","received":len(incoming),"inserted":inserted,"updated":updated,
         "truncated_possible":len(incoming)>=limit,"max_results":limit,"data_scope":"active_decisions_only"}
 
+
+@router.post("/crowdsec/alerts/collect")
+async def collect_crowdsec_alerts(db: Session=Depends(get_db),
+    actor: User=Depends(require_roles(*OPERATORS))) -> dict[str,object]:
+    adapter=CrowdSecLapiAdapter()
+    if not adapter.is_alerts_configured:
+        raise HTTPException(status_code=503,detail="CrowdSec alert history is not configured; dedicated machine credentials are required")
+    try:
+        incoming=await adapter.collect_alerts()
+    except CrowdSecAdapterError:
+        raise HTTPException(status_code=502,detail="CrowdSec alert history request failed; check backend integration logs") from None
+    inserted,updated=_persist_findings(db,actor,incoming,"crowdsec-alert",
+        "integration.crowdsec.alerts.collect","crowdsec-lapi-alerts",None)
+    limit=min(max(int(settings.crowdsec_max_results),1),1000)
+    return {"integration":"crowdsec-lapi-alerts","received":len(incoming),"inserted":inserted,"updated":updated,
+        "truncated_possible":getattr(adapter,"last_alert_count",len(incoming))>=limit,"max_results":limit,
+        "data_scope":"bounded_alert_history","authentication":"dedicated_machine_jwt"}
+
 def _match_crowdsec_asset(db: Session, item) -> Asset | None:
     """Link only a single-IP CrowdSec decision to one unambiguous existing asset."""
     evidence = item.evidence if isinstance(item.evidence, dict) else {}
-    scope = str(evidence.get("scope") or "").strip().lower()
-    value = str(evidence.get("value") or "").strip()
+    source = evidence.get("source") if isinstance(evidence.get("source"), dict) else {}
+    scope = str(evidence.get("scope") or source.get("scope") or "").strip().lower()
+    value = str(evidence.get("value") or source.get("value") or "").strip()
     if scope != "ip" or not value:
         return None
     try:
@@ -247,7 +266,7 @@ def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_a
             severity=FindingSeverity(item.severity) if item.severity in FindingSeverity._value2member_map_ else FindingSeverity.unknown
             if engine == "wazuh":
                 asset = _upsert_wazuh_asset(db, item)
-            elif engine == "crowdsec":
+            elif engine in {"crowdsec", "crowdsec-alert"}:
                 asset = _match_crowdsec_asset(db, item)
             else:
                 asset = None

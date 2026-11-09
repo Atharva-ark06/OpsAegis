@@ -9,7 +9,7 @@ A unified security operations and threat-response platform integrating Wazuh, Cr
 - FastAPI backend, PostgreSQL persistence, Redis service, Alembic migrations and JWT/RBAC.
 - Authenticated React/TypeScript operational workspace (PR #5).
 - Wazuh Indexer read-only alert ingestion with source-event deduplication.
-- CrowdSec Local API read-only active-decision ingestion (PR #6).
+- CrowdSec Local API active-decision ingestion and optional bounded alert-history collection (PR #6; alert history requires a separate machine credential).
 - No fabricated alerts, live metrics or engine connectivity claims.
 
 A built adapter is not proof of a live connection. Configure and verify each authorized engine endpoint before expecting its records.
@@ -23,13 +23,13 @@ Login throttling, strict JWT claim validation and failed-login audit controls ar
 | Engine | Role | Integration status |
 |---|---|---|
 | Wazuh | Endpoint telemetry and SIEM alerts | Indexer read-only adapter |
-| CrowdSec | Behavioural threat decisions | LAPI active-decision adapter |
+| CrowdSec | Behavioural threat decisions and detection alerts | LAPI bouncer decision adapter; optional machine-JWT alert adapter |
 | Nuclei | Authorized vulnerability scanning | Authorized target registry and safe-profile scans |
 | Shannon | Authorized AI-assisted application testing | External isolated-runner control-plane adapter (runner deployment required) |
 
 ## CrowdSec Local API integration
 
-OpsAegis reads CrowdSec Local API endpoint /v1/decisions using a bouncer API key in the X-Api-Key header. Bouncer credentials grant read-only decision access. OpsAegis does not create, delete or enforce decisions.
+OpsAegis reads active decisions from /v1/decisions using a dedicated bouncer API key in the X-Api-Key header. Bouncer credentials are read-only and cannot access alert history. Optional historical alert ingestion uses a separate dedicated machine ID/password to obtain a short-lived JWT and then calls only GET /v1/alerts. CrowdSec machine credentials have broader LAPI permissions than bouncer keys; keep these optional values blank unless the project owner explicitly accepts that credential risk. The implementation never sends alert/decision create, update or delete requests.
 
 Configure the backend .env:
 
@@ -38,17 +38,20 @@ Configure the backend .env:
 | CROWDSEC_LAPI_URL | HTTPS Local API base URL, e.g. https://crowdsec.internal:8080 |
 | CROWDSEC_API_KEY | Dedicated bouncer API key |
 | CROWDSEC_CA_CERT | Optional trusted CA certificate path |
+| CROWDSEC_MACHINE_ID | Optional dedicated CrowdSec machine login; enables alert-history collection |
+| CROWDSEC_MACHINE_PASSWORD | Optional password for that dedicated machine; backend only |
 | CROWDSEC_TIMEOUT_SECONDS | Request timeout, 1–60 seconds |
-| CROWDSEC_MAX_RESULTS | Maximum decisions per collection, 1–1000 |
+| CROWDSEC_MAX_RESULTS | Maximum decisions or alerts per collection, 1–1000 |
 
-Create a dedicated key on the CrowdSec host with the command cscli bouncers add opsaegis-readonly. Store the generated key only in the backend environment. Do not use machine login/password credentials or frontend variables.
+Create a dedicated bouncer key on the CrowdSec host with cscli bouncers add opsaegis-readonly. Store it only in the backend environment. For optional alert history, use a separate dedicated machine account—not the CrowdSec agent's production credentials—and store its login/password only in the backend environment. Machine credentials can authenticate to broader LAPI operations, so this optional integration is disabled unless both values are explicitly configured. OpsAegis exchanges them for a short-lived JWT and issues only GET /v1/alerts; it never calls alert/decision mutation endpoints. Do not expose either credential type to frontend variables.
 
 After configuration, restart the backend. Authenticated admin/analyst endpoints:
 
 - GET /api/v1/integrations/crowdsec/health
 - POST /api/v1/integrations/crowdsec/collect
+- POST /api/v1/integrations/crowdsec/alerts/collect (optional machine credentials required)
 
-Collection imports active decisions, not the complete CrowdSec alert history. It retains decision ID, scope, value, action, scenario, origin and duration as bounded evidence. The current LAPI decision response does not provide a reliable event timestamp, so ingestion time is used as observation time. Repeated collection deduplicates by decision ID and preserves analyst triage status. Collection is manual/pull-based; scheduled polling is not yet implemented.
+Active-decision collection imports /v1/decisions and retains decision ID, scope, value, action, scenario, origin and duration as bounded evidence. The current decision response does not provide a reliable event timestamp, so ingestion time is used as observation time. Optional alert-history collection uses /v1/watchers/login and GET /v1/alerts with a bounded limit; it records alert metadata and a bounded decision summary but deliberately excludes raw event payloads. Decision and alert findings use separate source namespaces and deduplicate independently. Both collection paths are manual/pull-based; scheduled polling is not yet implemented.
 
 ## Wazuh Indexer integration
 
@@ -169,7 +172,7 @@ No provider key or live provider lookup is included. Without credentials the wor
 
 Wazuh alert collection resolves upstream agent identity from alert evidence and upserts one endpoint asset per Wazuh agent ID. New findings link to that asset; existing analyst-selected asset associations are preserved. Repeated collection refreshes the endpoint name, observed IP and last-seen timestamp without overwriting its environment or asset type.
 
-This is alert-observed inventory, not a substitute for the Wazuh Manager agents API. It does not prove current online status, collect OS inventory, or discover agents that have not generated an ingested alert. CrowdSec IP-only records are not automatically mapped because an IP match can be ambiguous.
+This is alert-observed inventory, not a substitute for the Wazuh Manager agents API. It does not prove current online status, collect OS inventory, or discover agents that have not generated an ingested alert. CrowdSec IP-only records are linked only when one exact existing asset IP match is unambiguous; range and ambiguous matches remain unassigned.
 
 
 ### Frontend appearance
