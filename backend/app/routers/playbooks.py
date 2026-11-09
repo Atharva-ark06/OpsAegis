@@ -76,11 +76,12 @@ def dry_run_playbook(
         .order_by(CorrelatedDetection.created_at.asc())
         .limit(200)
     ).all()
-    finding_ids = sorted({
+    all_finding_ids = sorted({
         finding_id
         for detection in detections
         for finding_id in (detection.finding_ids or [])
     })
+    finding_ids = all_finding_ids[:500]
     findings = db.scalars(
         select(Finding).where(Finding.id.in_(finding_ids)).limit(500)
     ).all() if finding_ids else []
@@ -119,7 +120,7 @@ def dry_run_playbook(
             "affected_asset_ids": asset_ids,
             "window_start": cutoff.isoformat(),
             "window_end": now.isoformat(),
-            "truncated": len(detections) == 200 or len(findings) == 500,
+            "possible_truncation": len(detections) == 200 or len(all_finding_ids) > 500 or len(findings) == 500,
         },
         "proposed_checklist": [
             "Review the incident timeline and analyst notes.",
