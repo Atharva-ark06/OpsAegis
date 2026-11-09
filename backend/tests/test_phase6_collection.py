@@ -88,3 +88,16 @@ def test_duplicate_manual_collection_is_rejected(client, analyst_headers):
     second = client.post("/api/v1/collections/wazuh-manager-agents/run", headers=analyst_headers)
     assert first.status_code == 202
     assert second.status_code == 409
+
+
+def test_manual_collection_obeys_source_minimum_interval(client, analyst_headers, test_session_factory):
+    first = client.post("/api/v1/collections/wazuh-indexer-alerts/run", headers=analyst_headers)
+    assert first.status_code == 202
+    with test_session_factory() as db:
+        run = db.get(IntegrationCollectionRun, first.json()["id"])
+        run.status = "succeeded"
+        schedule = db.get(IntegrationSchedule, run.schedule_id)
+        schedule.last_run_at = datetime.now(timezone.utc)
+        db.commit()
+    too_soon = client.post("/api/v1/collections/wazuh-indexer-alerts/run", headers=analyst_headers)
+    assert too_soon.status_code == 429
