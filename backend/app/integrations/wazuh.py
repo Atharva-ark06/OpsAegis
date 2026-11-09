@@ -10,7 +10,8 @@ import httpx
 from app.config import Settings, settings
 from app.integrations.contracts import NormalizedFinding
 
-_INDEX_PATTERN = re.compile(r"^[A-Za-z0-9_.*,-]+$")
+_INDEX_PATTERN_PREFIX = "wazuh-alerts-"
+_VULNERABILITY_INDEX_PATTERN = "wazuh-states-vulnerabilities-*"
 _LEVEL_SEVERITY = (
     (3, "informational"),
     (6, "low"),
@@ -52,21 +53,35 @@ class WazuhIndexerAdapter:
         if not self.is_configured:
             raise WazuhAdapterError("Wazuh Indexer is not configured")
         url = self.config.wazuh_indexer_url.rstrip("/")
-        parsed_url = urlsplit(url)
+        try:
+            parsed_url = urlsplit(url)
+            # Accessing .port validates malformed and out-of-range port values.
+            _ = parsed_url.port
+        except ValueError:
+            raise WazuhAdapterError("Wazuh Indexer URL is invalid") from None
         if (
             parsed_url.scheme != "https"
             or not parsed_url.hostname
             or parsed_url.username is not None
             or parsed_url.password is not None
+            or parsed_url.path not in ("", "/")
             or parsed_url.query
             or parsed_url.fragment
         ):
             raise WazuhAdapterError(
-                "Wazuh Indexer URL must be a credential-free HTTPS URL without query or fragment"
+                "Wazuh Indexer URL must be an origin-only, credential-free HTTPS URL"
             )
+        if getattr(self.config, "wazuh_indexer_verify_tls", True) is not True:
+            raise WazuhAdapterError("Wazuh Indexer TLS verification cannot be disabled")
         pattern = self.config.wazuh_indexer_index_pattern
-        if not _INDEX_PATTERN.fullmatch(pattern):
-            raise WazuhAdapterError("Wazuh index pattern contains unsupported characters")
+        suffix = pattern[len(_INDEX_PATTERN_PREFIX):] if isinstance(pattern, str) and pattern.startswith(_INDEX_PATTERN_PREFIX) else ""
+        if not suffix or (
+            suffix != "*"
+            and not re.fullmatch(r"[A-Za-z0-9._-]+\\*?", suffix)
+        ):
+            raise WazuhAdapterError(
+                "Wazuh alert index pattern must be scoped to wazuh-alerts-*"
+            )
         return url, self.config.wazuh_indexer_username, self.config.wazuh_indexer_password
 
     def _client(self) -> httpx.AsyncClient:
@@ -94,6 +109,21 @@ class WazuhIndexerAdapter:
             raise WazuhAdapterError(
                 f"Wazuh Indexer health request failed ({type(exc).__name__})"
             ) from None
+
+    @staticmethod
+    def _validate_search_payload(payload: Any, label: str) -> dict[str, Any]:
+        if not isinstance(payload, dict) or not isinstance(payload.get("hits"), dict):
+            raise WazuhAdapterError(f"Wazuh {label} query returned an unexpected response shape")
+        if payload.get("timed_out") is True:
+            raise WazuhAdapterError(f"Wazuh {label} query timed out")
+        shards = payload.get("_shards")
+        if isinstance(shards, dict):
+            failed = shards.get("failed", 0)
+            if type(failed) is not int or failed < 0:
+                raise WazuhAdapterError(f"Wazuh {label} query returned invalid shard metadata")
+            if failed > 0:
+                raise WazuhAdapterError(f"Wazuh {label} query reported failed shards")
+        return payload["hits"]
 
     async def collect_findings(self, since: datetime, until: datetime | None = None) -> list[NormalizedFinding]:
         if since.tzinfo is None:
@@ -131,9 +161,8 @@ class WazuhIndexerAdapter:
                 f"Wazuh Indexer alert query failed ({type(exc).__name__})"
             ) from None
 
-        if not isinstance(payload, dict) or not isinstance(payload.get("hits"), dict):
-            raise WazuhAdapterError("Wazuh Indexer returned an unexpected response shape")
-        hits = payload["hits"].get("hits", [])
+        hits_obj = self._validate_search_payload(payload, "Indexer alert")
+        hits = hits_obj.get("hits", [])
         if not isinstance(hits, list):
             raise WazuhAdapterError("Wazuh Indexer returned an invalid alert collection")
 
@@ -166,26 +195,19 @@ class WazuhIndexerAdapter:
         }
         try:
             async with self._client() as client:
-                response = await client.post("/wazuh-states-vulnerabilities*/_search", json=query)
+                response = await client.post(f"/{_VULNERABILITY_INDEX_PATTERN}/_search", json=query)
                 response.raise_for_status()
                 payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             raise WazuhAdapterError(
                 f"Wazuh vulnerability state query failed ({type(exc).__name__})"
             ) from None
-        if not isinstance(payload, dict) or not isinstance(payload.get("hits"), dict):
-            raise WazuhAdapterError("Wazuh vulnerability index returned an unexpected response shape")
-        if payload.get("timed_out") is True:
-            raise WazuhAdapterError("Wazuh vulnerability index query timed out")
-        shards = payload.get("_shards")
-        if isinstance(shards, dict) and int(shards.get("failed") or 0) > 0:
-            raise WazuhAdapterError("Wazuh vulnerability index reported failed shards")
-        hits_obj = payload["hits"]
+        hits_obj = self._validate_search_payload(payload, "vulnerability index")
         hits = hits_obj.get("hits")
         total_obj = hits_obj.get("total", 0)
         total = total_obj.get("value", 0) if isinstance(total_obj, dict) else total_obj
         relation = total_obj.get("relation", "eq") if isinstance(total_obj, dict) else "eq"
-        if not isinstance(hits, list) or not isinstance(total, int) or total < 0:
+        if not isinstance(hits, list) or type(total) is not int or total < 0 or relation not in {"eq", "gte"}:
             raise WazuhAdapterError("Wazuh vulnerability index returned an invalid collection")
         normalized = []
         for hit in hits[:size]:
