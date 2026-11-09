@@ -212,8 +212,9 @@ async def collect_crowdsec_alerts(db: Session=Depends(get_db),
 def _match_crowdsec_asset(db: Session, item) -> Asset | None:
     """Link only a single-IP CrowdSec decision to one unambiguous existing asset."""
     evidence = item.evidence if isinstance(item.evidence, dict) else {}
-    scope = str(evidence.get("scope") or "").strip().lower()
-    value = str(evidence.get("value") or "").strip()
+    source = evidence.get("source") if isinstance(evidence.get("source"), dict) else {}
+    scope = str(evidence.get("scope") or source.get("scope") or "").strip().lower()
+    value = str(evidence.get("value") or source.get("value") or "").strip()
     if scope != "ip" or not value:
         return None
     try:
