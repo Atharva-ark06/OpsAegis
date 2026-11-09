@@ -18,12 +18,14 @@ class FakeStdout:
 class FakeProcess:
     def __init__(self, chunks):
         self.stdout=FakeStdout(chunks)
-        self.returncode=0
+        self.returncode=None
         self.killed=False
     def kill(self):
         self.killed=True
         self.returncode=-9
     async def wait(self):
+        if self.returncode is None:
+            self.returncode=0
         return self.returncode
 
 def test_execute_uses_explicit_pinned_template_directory(monkeypatch):
