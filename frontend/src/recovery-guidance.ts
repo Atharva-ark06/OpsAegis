@@ -1,4 +1,4 @@
-import type {} from "./api";
+import "./api";
 
 export type RecoveryGuidanceCode =
   | "not_applicable"
