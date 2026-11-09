@@ -109,7 +109,7 @@ The Shannon bridge is not production-ready. Do not enable it until independent e
 ## Production readiness hardening (PR #19 — merged)
 - Production startup rejects the development JWT signing key, short/known placeholder secrets and weak database passwords.
 - Production requires PostgreSQL, a non-loopback Redis service URL and explicit HTTPS CORS origins (no wildcard, loopback or path-bearing origins).
-- Nuclei is blocked in production while it still executes inside the API runtime; keep it disabled until a dedicated isolated scanner worker is deployed.
+- Nuclei is blocked in production unless the dedicated isolated scanner worker is enabled with the required external egress policy; it remains disabled by default.
 - Added automated configuration tests for accepted production settings and unsafe configuration rejection.
 - These checks are configuration guardrails only. They do not prove TLS termination, network isolation, secret-manager integration, backup/restore, live Wazuh/CrowdSec/NVD connectivity, or production deployment.
 
@@ -205,7 +205,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Nuclei remains disabled by default. Docker Compose networking is not an egress allowlist; host/cloud DNS and IP destination restrictions remain mandatory before staging scans.
 - CI/image builds do not prove live scanner behavior, egress isolation or production deployment.
 
-## Nuclei worker lease and template hardening (PR #33 — proposed)
+## Nuclei worker lease and template hardening (PR #33 — merged)
 - Active scans are terminated when the worker loses its Redis lease; uncommitted results are discarded so a new lease owner can recover the durable running job.
 - Worker image pins Nuclei v3.4.10 and nuclei-templates v10.3.1, installs templates at build time and passes the directory explicitly to the scanner. Runtime template downloads/updates are disabled.
 - Adds regression tests for lease-loss process termination and explicit template-directory use.
