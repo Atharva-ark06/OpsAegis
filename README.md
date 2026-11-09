@@ -136,6 +136,33 @@ Analysts and administrators can update finding triage through `PATCH /api/v1/fin
 Incidents support `PATCH /api/v1/incidents/{id}` for assignment, status and resolution notes. Valid transitions are open → investigating → contained → resolved → closed, with controlled returns from investigating/contained/resolved to earlier active states. Closed incidents are terminal. A non-empty resolution note is required before resolving or closing. Assignees must be active admins or analysts. Changes are audit logged. The dashboard exposes these actions only to admin/analyst users.
 
 
+## Phase 6.1 — Read-only collection orchestration
+
+The Integrations workspace includes an administrator-controlled scheduler for two allowlisted read-only sources:
+- Wazuh Manager registered-agent inventory.
+- Wazuh Indexer alert windows.
+
+Schedules are disabled by default. Administrators configure an interval (60–86,400 seconds) and bounded lookback (1–43,200 minutes). Admins and analysts can queue a manual run. Manual and scheduled runs use the same existing Wazuh sync paths; each execution has a durable run record with attempt count, result counts, possible truncation, sanitized error code and timestamps.
+
+A separate `collection-worker` service uses a Redis lease, worker fencing token, bounded retry/backoff and startup recovery. It does not call CrowdSec machine-credential endpoints, Nuclei, Shannon or response-action APIs. Upstream result limits and HTTP timeouts remain enforced by the existing Wazuh adapters. A green worker heartbeat is not proof that a source is configured or that telemetry was collected.
+
+Endpoints:
+- `GET /api/v1/collections/schedules`
+- `PUT /api/v1/collections/schedules/{source}` (admin)
+- `POST /api/v1/collections/{source}/run` (admin/analyst; returns 202)
+- `GET /api/v1/collections/runs`
+
+## Phase 6.2 — Incident investigation timeline
+
+The incident investigation view now combines incident audit changes, analyst-authored notes, correlated detections and linked source findings into a bounded, provenance-labelled timeline. Admins and analysts can add notes (1–5,000 characters). Operators can export a JSON evidence package with secret-like keys and common bearer/API-key patterns redacted. Exports are marked `no-store`.
+
+Endpoints:
+- `GET /api/v1/incidents/{id}/timeline`
+- `POST /api/v1/incidents/{id}/notes` (admin/analyst)
+- `GET /api/v1/incidents/{id}/evidence-export` (admin/analyst)
+
+Timeline and export limits are explicit. This increment does not yet add binary evidence attachments, configurable retention, tenant-level isolation or a cryptographic chain of custody. Phase 6.2 remains in progress until those controls and staging validation are completed.
+
 ## Scheduled detection, lifecycle and notifications
 
 PR #12 adds a dedicated `detection-worker` service to Docker Compose. It uses a Redis queue, a renewable single-worker lease, persisted scheduled-run records, startup recovery for interrupted work and bounded retries (up to three attempts with exponential backoff). Scheduled evaluation is **disabled by default**.
