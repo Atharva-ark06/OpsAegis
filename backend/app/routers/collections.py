@@ -46,6 +46,9 @@ def _run_payload(run: IntegrationCollectionRun) -> dict[str, object]:
         "next_attempt_at": run.next_attempt_at.isoformat(),
         "started_at": run.started_at.isoformat() if run.started_at else None,
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+        "window_start_at": run.window_start_at.isoformat() if run.window_start_at else None,
+        "window_end_at": run.window_end_at.isoformat() if run.window_end_at else None,
+        "duration_ms": run.duration_ms,
         "created_at": run.created_at.isoformat(),
     }
 
