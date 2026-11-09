@@ -95,11 +95,11 @@ See docs/PROJECT_STATUS.md and docs/SECURITY_BASELINE.md for implementation boun
 
 ## Nuclei authorized scanning
 
-Nuclei is disabled by default. Install the Nuclei binary in the backend runtime and set NUCLEI_ENABLED=true only after deployment hardening. Admins register exact HTTPS targets with an authorization reference; admins and analysts can list targets and scan history and start the fixed safe profile. API endpoints: GET /api/v1/integrations/nuclei/health, GET /targets, POST /targets, POST /targets/{id}/scans and GET /scans under the integrations/nuclei prefix.
+Nuclei is disabled by default. The dedicated worker image contains Nuclei v3.4.10 and pinned templates v10.3.1; do not install or run Nuclei in the API container. Keep both NUCLEI_ENABLED and NUCLEI_WORKER_ENABLED false until the worker profile, host/cloud egress policy, DNS-rebinding defenses and written staging authorization have been independently verified. Admins register exact HTTPS targets with an authorization reference; admins and analysts can list targets and scan history and enqueue the fixed safe profile. API endpoints: GET /api/v1/integrations/nuclei/health, GET /targets, POST /targets, POST /targets/{id}/scans and GET /scans under the integrations/nuclei prefix.
 
 The API accepts no arbitrary CLI flags, template paths or free-form scan URLs. The fixed profile disables Interactsh and update checks, bounds rate/concurrency/runtime/output and excludes DoS, fuzzing, intrusive and headless template tags. Findings are deduplicated; analyst triage state is preserved. Only scan systems for which you have written authorization.
 
-Deployment limitation: Nuclei scan requests are queued in PostgreSQL/Redis and executed by the separate non-root `nuclei-worker` image. Start it only with the Compose `scanner` profile. The Compose egress network is not an allowlist: apply DNS/IP destination restrictions at the host/cloud firewall before enabling scans. See [the Nuclei worker deployment guide](docs/NUCLEI_WORKER.md). No live scan or deployed egress policy is claimed.
+Deployment limitation: Nuclei scan requests are queued in PostgreSQL/Redis and executed by the separate non-root `nuclei-worker` image. Start it only with the Compose `scanner` profile. The worker kills an active scan if it loses its Redis lease. The Compose egress network is not an allowlist: apply DNS/IP destination restrictions at the host/cloud firewall before enabling scans. See [the Nuclei worker deployment guide](docs/NUCLEI_WORKER.md). No live scan or deployed egress policy is claimed.
 
 
 ## Shannon authorized application testing

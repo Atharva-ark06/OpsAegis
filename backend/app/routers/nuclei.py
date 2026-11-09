@@ -86,8 +86,13 @@ def start_scan(target_id:int,data:ScanRequest,db:Session=Depends(get_db),actor:U
     except Exception:
         pass
     return {"scan":scan_out(run),"queued":True,"message":"Scan accepted by the isolated worker queue"}
-async def execute(url:str)->list[dict]:
-    args=[settings.nuclei_binary,"-u",url,"-jsonl","-silent","-no-color","-disable-update-check","-no-interactsh","-rl",str(settings.nuclei_rate_limit),"-c","2","-timeout","5","-retries","0","-severity","info,low,medium,high,critical","-pt","http","-exclude-tags","dos,fuzz,intrusive,headless"]
+class WorkerLeaseLost(RuntimeError):
+    """Raised when the worker no longer owns the scanner lease."""
+
+async def execute(url:str,lease_lost=None)->list[dict]:
+    args=[settings.nuclei_binary,"-u",url,"-jsonl","-silent","-no-color","-disable-update-check","-no-interactsh",
+          "-t",settings.nuclei_templates_path,"-rl",str(settings.nuclei_rate_limit),"-c","2","-timeout","5","-retries","0",
+          "-severity","info,low,medium,high,critical","-pt","http","-exclude-tags","dos,fuzz,intrusive,headless"]
     try: proc=await asyncio.create_subprocess_exec(*args,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
     except OSError as exc: raise RuntimeError(type(exc).__name__) from None
     async def read_bounded():
@@ -97,12 +102,49 @@ async def execute(url:str)->list[dict]:
             if not chunk: break
             size+=len(chunk)
             if size>settings.nuclei_max_output_bytes:
-                proc.kill();await proc.wait();raise RuntimeError("scanner_output_limit")
+                if proc.returncode is None:
+                    try: proc.kill()
+                    except ProcessLookupError: pass
+                await proc.wait()
+                raise RuntimeError("scanner_output_limit")
             parts.append(chunk)
         await proc.wait();return b"".join(parts)
-    try: output=await asyncio.wait_for(read_bounded(),timeout=settings.nuclei_timeout_seconds)
-    except asyncio.TimeoutError:
-        proc.kill();await proc.wait();raise TimeoutError from None
+    reader=asyncio.create_task(read_bounded())
+    if lease_lost is None:
+        try: output=await asyncio.wait_for(reader,timeout=settings.nuclei_timeout_seconds)
+        except asyncio.TimeoutError:
+            if proc.returncode is None:
+                try: proc.kill()
+                except ProcessLookupError: pass
+            await proc.wait()
+            reader.cancel()
+            await asyncio.gather(reader,return_exceptions=True)
+            raise TimeoutError from None
+    else:
+        async def watch_lease():
+            while not lease_lost.is_set():
+                await asyncio.sleep(0.1)
+        watcher=asyncio.create_task(watch_lease())
+        done,_=await asyncio.wait({reader,watcher},timeout=settings.nuclei_timeout_seconds,return_when=asyncio.FIRST_COMPLETED)
+        if watcher in done:
+            if proc.returncode is None:
+                try: proc.kill()
+                except ProcessLookupError: pass
+            await proc.wait()
+            reader.cancel()
+            await asyncio.gather(reader,return_exceptions=True)
+            raise WorkerLeaseLost("Scanner stopped because the worker lease was lost")
+        watcher.cancel()
+        await asyncio.gather(watcher,return_exceptions=True)
+        if reader not in done:
+            if proc.returncode is None:
+                try: proc.kill()
+                except ProcessLookupError: pass
+            await proc.wait()
+            reader.cancel()
+            await asyncio.gather(reader,return_exceptions=True)
+            raise TimeoutError from None
+        output=reader.result()
     if proc.returncode!=0: raise RuntimeError("scanner_nonzero_exit")
     parsed=[]
     for line in output.splitlines()[:500]:

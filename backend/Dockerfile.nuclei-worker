@@ -1,13 +1,22 @@
 FROM golang:1.24-alpine AS nuclei-build
 ENV CGO_ENABLED=0 GOTOOLCHAIN=auto
 RUN go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.4.10
+
+FROM alpine:3.21 AS nuclei-templates
+RUN apk add --no-cache git ca-certificates
+ARG NUCLEI_TEMPLATES_VERSION=v10.3.1
+RUN git clone --depth 1 --single-branch --branch "${NUCLEI_TEMPLATES_VERSION}" https://github.com/projectdiscovery/nuclei-templates.git /opt/nuclei-templates \
+    && test -d /opt/nuclei-templates/http \
+    && printf '%s\n' "${NUCLEI_TEMPLATES_VERSION}" > /opt/nuclei-templates/.opsaegis-template-version
+
 FROM python:3.12-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app NUCLEI_TEMPLATES_PATH=/opt/nuclei-templates
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt && groupadd --gid 10002 scanner && useradd --uid 10002 --gid scanner --create-home --shell /usr/sbin/nologin scanner
 COPY --from=nuclei-build /go/bin/nuclei /usr/local/bin/nuclei
+COPY --from=nuclei-templates --chown=scanner:scanner /opt/nuclei-templates /opt/nuclei-templates
 COPY --chown=scanner:scanner app ./app
 USER 10002:10002
 ENTRYPOINT ["python","-m","app.nuclei_worker"]

@@ -22,8 +22,8 @@
 - Only enabled registered targets can be scanned. No arbitrary CLI flags, template paths or user-supplied scan targets.
 - Fixed profile disables Interactsh/update checks, bounds rate, concurrency, runtime and output, and excludes DoS/fuzz/intrusive/headless templates.
 - Findings deduplicate by template ID + matched URL + matcher name and preserve analyst triage.
-- Disabled by default; install Nuclei and explicitly set NUCLEI_ENABLED=true.
-- This executes in the backend runtime, not an isolated worker. Production must use a dedicated unprivileged scanner container with resource and egress limits before enabling.
+- Disabled by default; the dedicated worker image pins Nuclei v3.4.10 and nuclei-templates v10.3.1. Enable both NUCLEI_ENABLED and NUCLEI_WORKER_ENABLED only after staging authorization and network controls are verified.
+- Execution is isolated in the dedicated non-root Nuclei worker container (PR #32). The worker is opt-in, uses resource limits and a renewable Redis lease; external DNS/IP egress enforcement remains an operator responsibility.
 
 ## Incident response workflow (PR #10)
 - Finding status updates are available to admins and analysts and create audit records.
@@ -47,7 +47,8 @@
 - Live Redis worker operation and production scheduling have not been independently validated.
 
 ## Remaining
-- Dedicated scanner worker/queue, scheduled scans, cancellation and durable retries.
+- Independently validate the Nuclei worker in an authorized staging environment with enforceable egress controls, pinned templates and restart/lease-loss tests.
+- Validate Redis scheduler and worker recovery under restart/failure conditions.
 - Deploy and independently validate the Shannon bridge on a dedicated disposable VM. The bridge is a controlled single-job reference implementation; job state is in memory, and durable queueing, cancellation, retries, artifact download and full report parsing remain outstanding. No live scan is claimed.
 - CrowdSec historical-alert ingestion, full pagination and safe asset association remain outstanding; broad response actions are not implemented.
 - Production secrets management, monitoring and operational runbooks.
@@ -182,30 +183,30 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Run the diagnostic from the actual deployment network with operator-provided credentials and review the sanitized report.
 - Validate Wazuh alert and vulnerability ingestion, Manager inventory sync, CrowdSec decisions and threat-intelligence lookups using authorized test data.
 - Move Nuclei execution out of the API process into a separately isolated scanner worker with enforceable egress restrictions before enabling scans.
-- Validate Redis scheduler and worker recovery under restart/failure conditions.
 - Deploy and independently validate the Shannon bridge on a disposable staging VM.
 - Complete production secret management, monitoring, backup/restore and operational runbooks.
 
 
-### Automated secret and dependency scanning (PR #31 — proposed)
-- Adds a separate GitHub Actions security workflow for pull requests and pushes to \`main\`.
-- Scans the complete Git history with Gitleaks to detect committed credentials and tokens.
-- Audits backend and Shannon bridge Python dependency requirements with \`pip-audit --strict\`.
-- Documents secret rotation, false-positive handling and scan limitations.
-- The repository currently has no committed frontend npm lockfile, so the workflow deliberately does not claim to audit a locked frontend dependency graph.
-- A passing scan does not prove prior credential rotation, deployed-host security or absence of unknown vulnerabilities.
+### Automated secret and dependency scanning (PR #31 — merged)
+- Adds a separate GitHub Actions security workflow for pull requests and pushes to `main`.
+- Scans the complete Git history with Gitleaks and audits backend and Shannon bridge Python dependencies with `pip-audit --strict`.
+- The frontend still has no committed npm lockfile, so the workflow does not claim a locked frontend dependency audit.
+- A passing scan does not prove deployed-host security or absence of unknown vulnerabilities.
+
+### Historical secret exposure — remediation status
+- The initial full-history scan identified historical VirusTotal and AbuseIPDB key values in an older `.env.example` commit.
+- The user confirmed both provider keys were rotated and completed a local full-history rewrite followed by a clean local Gitleaks scan; rewritten branch refs were force-pushed.
+- GitHub-side cleanup of unreachable objects, cached content or pull-request refs has not been independently verified.
 
 
-### Secret scan finding — remediation required
-- Initial full-history Gitleaks scan identified two high-entropy values in an older `.env.example` commit under the VirusTotal and AbuseIPDB API-key variables.
-- The current `.env.example` entries are blank, but history retains the prior values. Treat both provider keys as potentially compromised and rotate/revoke them before considering a narrow scan exception or history rewrite.
-- The full-history secret scan is intentionally failing until this exposure is remediated; do not suppress it to obtain a green badge.
-- Initial Python dependency audit identified the pinned/resolved pytest 8.4.2 range as affected by PYSEC-2026-1845. The requirements range is being raised to the reported fixed pytest release and compatible pytest-asyncio major.
+## Isolated Nuclei worker (PR #32 — merged)
+- Scan requests are persisted in PostgreSQL, delivered through Redis and executed by a dedicated non-root worker container; the API no longer starts the Nuclei subprocess.
+- The worker has a renewable Redis lease, heartbeat, interrupted-run recovery and bounded retries. Its Compose service is opt-in and has a read-only root filesystem, dropped capabilities, no-new-privileges and CPU/memory/PID limits.
+- Nuclei remains disabled by default. Docker Compose networking is not an egress allowlist; host/cloud DNS and IP destination restrictions remain mandatory before staging scans.
+- CI/image builds do not prove live scanner behavior, egress isolation or production deployment.
 
-
-## Isolated Nuclei worker (PR #32 — proposed)
-- Nuclei scan requests are persisted as queued jobs and executed by a dedicated worker container; the API no longer starts the Nuclei subprocess.
-- The worker uses durable database queue state with Redis delivery, startup recovery, bounded retries and a Redis heartbeat consumed by the authenticated health endpoint.
-- Scanner image is separate and non-root, uses a read-only root filesystem, drops Linux capabilities, disallows privilege escalation, and applies CPU, memory and PID limits.
-- The worker is disabled by default and attached to a separate outbound network. Docker Compose does not provide a domain/IP egress allowlist; enforce DNS/IP destination restrictions at the host/cloud firewall before enabling it.
-- This PR does not prove production egress filtering, live scans or deployed container isolation. Keep execution disabled until firewall policy and staging authorization are verified.
+## Nuclei worker lease and template hardening (PR #33 — proposed)
+- Active scans are terminated when the worker loses its Redis lease; uncommitted results are discarded so a new lease owner can recover the durable running job.
+- Worker image pins Nuclei v3.4.10 and nuclei-templates v10.3.1, installs templates at build time and passes the directory explicitly to the scanner. Runtime template downloads/updates are disabled.
+- Adds regression tests for lease-loss process termination and explicit template-directory use.
+- This does not validate deployment-level egress policy or authorize any live scan.
