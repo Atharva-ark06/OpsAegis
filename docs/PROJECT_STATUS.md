@@ -339,3 +339,10 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Adds an offline validator comparing a sanitized aggregate report export with independently recorded expected source counts, failure rate, detection-to-incident timing and incident-resolution timing.
 - The validator fails closed on UTC-window mismatch, missing sources/metrics, row caps and missing data-quality limitations. It reports metric mismatches without dumping raw report payloads.
 - Adds an operator runbook and evidence template. The utility does not call staging, generate events, or claim live validation; Phase 6.4 staging evidence remains pending until an authorized operator runs and reviews it.
+
+
+## Phase 6.3 framework completion (PR pending review)
+- Completes the bounded playbook framework scope: catalogue, typed dry-run, independent approval, action safety contract, durable execution/compensation ledger, read-only API and dashboard visibility.
+- Hardens the future adapter-call boundary so request action IDs must match the registered action, approval IDs and target IDs must be canonical and bounded, and the idempotency key must exactly bind approval/action/target/parameters. Non-JSON and non-finite parameter values are rejected.
+- Adds regression tests for action substitution, target/digest substitution, malformed identifiers and canonical JSON requirements.
+- No provider adapter, dispatch endpoint, execution worker, Wazuh request, isolation or compensation operation is introduced. Provider integration remains a separately gated proposal requiring security approval and authorized staging evidence.

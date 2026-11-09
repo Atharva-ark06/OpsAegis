@@ -1,6 +1,6 @@
 # Phase 6.3 — durable playbook execution ledger (foundation only)
 
-**Status:** Implemented as a persistence and state-validation foundation. No execution or compensation endpoint exists.
+**Status:** Persistence, state validation, exact request/action binding and read-only operator visibility are implemented. No execution or compensation endpoint exists.
 
 ## Scope
 
@@ -20,11 +20,12 @@ Compensation is independent:
 
 `not_requested → requested → executing → succeeded | failed | outcome_unknown`
 
-The database enforces allowed state values, unique idempotency keys and one action record per approval/action pair. Pure transition guards reject illegal transitions.
+The database enforces allowed state values, unique idempotency keys and one action record per approval/action pair. Pure transition guards reject illegal transitions. Before a future adapter call, the action request must match the exact registered action; its approval ID and canonical target must be valid; and its SHA-256 idempotency key must be recomputed and constant-time compared against the exact approval/action/target/parameters tuple. Non-JSON and non-finite parameter values are rejected.
 
 ## Deliberate safety boundary
 
 - No API route, worker, queue consumer, provider client, Wazuh request, or dispatch function is added.
+- Adapter-call contract validation does not authorize or enable an adapter; the Wazuh action remains disabled and unregistered.
 - The Wazuh action remains disabled and unregistered.
 - Approval records remain governance records and do not cause execution.
 - This schema does not prove that Wazuh permissions, endpoint behavior, isolation state verification or rollback are safe.
