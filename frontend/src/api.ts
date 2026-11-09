@@ -60,6 +60,7 @@ export interface WazuhManagerSync {integration:string;received:number;created:nu
 export interface WazuhCollection {
   integration: string;
   since: string;
+  until?: string;
   received: number;
   inserted: number;
   updated: number;
