@@ -35,10 +35,34 @@ def _threshold_row(db: Session) -> OperationalThreshold:
     return row
 
 
-def _threshold_payload(row: OperationalThreshold) -> dict:
-    return {key: getattr(row, key) for key in DEFAULTS} | {
+def _threshold_payload(row: OperationalThreshold, db: Session | None = None) -> dict:
+    payload = {key: getattr(row, key) for key in DEFAULTS} | {
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
+    if db is not None:
+        from app.routers.reports import build_operations_report
+        end = utc_now()
+        report = build_operations_report(db, end - timedelta(days=7), end)
+        alerts = []
+        for source in report["collection"]["sources"]:
+            if source["failure_rate"] is not None and source["failure_rate"] * 100 > row.collection_failure_rate_percent:
+                alerts.append({"code": "collection_failure_rate", "source": source["source"],
+                               "message": f'{source["source"]} terminal failure rate exceeds {row.collection_failure_rate_percent}%.'})
+            age = source["freshness_age_seconds"]
+            if age is not None and age > row.source_stale_after_minutes * 60:
+                alerts.append({"code": "source_stale", "source": source["source"],
+                               "message": f'{source["source"]} has not succeeded within {row.source_stale_after_minutes} minutes.'})
+        detection_delay = report["response"]["mean_detection_to_incident_seconds"]
+        if detection_delay is not None and detection_delay > row.detection_to_incident_minutes * 60:
+            alerts.append({"code": "detection_to_incident_sla", "source": None,
+                           "message": f'Mean detection-to-incident time exceeds {row.detection_to_incident_minutes} minutes.'})
+        resolution_delay = report["response"]["mean_incident_to_resolution_seconds"]
+        if resolution_delay is not None and resolution_delay > row.incident_resolution_minutes * 60:
+            alerts.append({"code": "incident_resolution_sla", "source": None,
+                           "message": f'Mean incident resolution time exceeds {row.incident_resolution_minutes} minutes.'})
+        payload["active_alerts"] = alerts
+        payload["evaluation_window"] = report["window"]
+    return payload
 
 
 class ThresholdUpdate(BaseModel):
@@ -54,7 +78,7 @@ def get_operational_thresholds(
 ) -> dict:
     row = _threshold_row(db)
     db.commit()
-    return _threshold_payload(row)
+    return _threshold_payload(row, db)
 
 
 @router.put("/thresholds")

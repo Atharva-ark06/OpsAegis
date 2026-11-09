@@ -106,6 +106,7 @@ export function OperationsPanel({ isAdmin, refreshKey }: { isAdmin: boolean; ref
       {trends.rows_limited && <p className="trend-warning">A query reached the 10,000-row safety cap; these trends may be incomplete.</p>}
       <p className="trend-note">{trends.limitations.join(" ")}</p>
     </>}
+    {thresholds?.active_alerts && <div className="threshold-alerts" aria-live="polite"><strong>{thresholds.active_alerts.length ? `${thresholds.active_alerts.length} threshold alert(s)` : "No threshold breaches in the last 7 days"}</strong>{thresholds.active_alerts.map((alert,index)=><p key={alert.code+String(alert.source)+index}>{alert.message}</p>)}</div>}
     {isAdmin && draft && <form className="threshold-form" onSubmit={save}>
       <div className="threshold-heading"><div><p className="eyebrow">ADMINISTRATION</p><h4>Alert thresholds</h4></div><span>Threshold configuration only · no automated response</span></div>
       <div className="threshold-fields">

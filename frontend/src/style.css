@@ -529,3 +529,7 @@ tbody tr:hover { background: #142236; }
 .threshold-success { color:#82d6b4; font-size:9px; }
 @media(max-width:1050px){.trend-grid{grid-template-columns:1fr 1fr}.threshold-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.trend-grid{grid-template-columns:1fr}.threshold-fields{grid-template-columns:1fr 1fr}.threshold-heading{align-items:flex-start;flex-direction:column}}
+
+.threshold-alerts { margin-top:12px; padding:10px 12px; border:1px solid #33465b; border-radius:8px; color:#a8bdd2; background:#111f2e; font-size:9px; }
+.threshold-alerts strong { display:block; color:#cbd9e8; margin-bottom:5px; }
+.threshold-alerts p { margin:4px 0 0; color:#e5bd82; line-height:1.5; }

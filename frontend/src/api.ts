@@ -331,7 +331,7 @@ export interface OperationsTrends {
 }
 export interface OperationalThresholds {
   collection_failure_rate_percent: number; source_stale_after_minutes: number;
-  detection_to_incident_minutes: number; incident_resolution_minutes: number; updated_at: string | null;
+  detection_to_incident_minutes: number; incident_resolution_minutes: number; updated_at: string | null; active_alerts?: {code:string;source:string|null;message:string}[]; evaluation_window?: {since:string;until:string;timezone:string};
 }
 export const getOperationsTrends = (since: string, until: string, bucket: "day" | "week" = "day"): Promise<OperationsTrends> =>
   request("/reports/operations/trends?" + new URLSearchParams({since, until, bucket}).toString());
