@@ -59,3 +59,66 @@ def test_normalizes_manager_status_os_and_last_seen():
     assert WazuhManagerAdapter.normalize_agent(agent("000")) is None
     bad=agent();bad["lastKeepAlive"]="bad";bad["ip"]="any";normalized=WazuhManagerAdapter.normalize_agent(bad)
     assert normalized["last_seen_at"] is None and normalized["ip_address"] is None
+
+
+@pytest.mark.asyncio
+async def test_rejects_manager_url_with_path_or_invalid_port():
+    for url in (
+        "https://manager.example:55000/api",
+        "https://manager.example:99999",
+    ):
+        adapter = WazuhManagerAdapter(
+            config(wazuh_manager_url=url),
+            transport=httpx.MockTransport(lambda request: httpx.Response(200)),
+        )
+        with pytest.raises(WazuhManagerError, match="URL"):
+            await adapter.collect_agents()
+
+
+@pytest.mark.asyncio
+async def test_rejects_malformed_authentication_token():
+    adapter = WazuhManagerAdapter(
+        config(),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"data": {"token": "bad token"}})
+        ),
+    )
+    with pytest.raises(WazuhManagerError, match="invalid authentication"):
+        await adapter.collect_agents()
+
+
+@pytest.mark.asyncio
+async def test_rejects_page_larger_than_requested_limit():
+    def handler(request):
+        if request.url.path.endswith("authenticate"):
+            return httpx.Response(200, json={"data": {"token": "jwt"}})
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "affected_items": [agent("001"), agent("002")],
+                    "total_affected_items": 2,
+                }
+            },
+        )
+
+    adapter = WazuhManagerAdapter(
+        config(wazuh_manager_max_agents=1),
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(WazuhManagerError, match="page size"):
+        await adapter.collect_agents()
+
+
+@pytest.mark.asyncio
+async def test_rejects_invalid_agent_limit_before_request():
+    adapter = WazuhManagerAdapter(config(wazuh_manager_max_agents=0))
+    with pytest.raises(WazuhManagerError, match="agent limit"):
+        await adapter.collect_agents()
+
+
+def test_rejects_boolean_total_in_manager_response():
+    with pytest.raises(WazuhManagerError, match="invalid agent collection"):
+        WazuhManagerAdapter._items(
+            {"data": {"affected_items": [], "total_affected_items": True}}
+        )
