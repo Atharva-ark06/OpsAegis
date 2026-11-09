@@ -43,7 +43,7 @@ def test_asset_refresh_preserves_environment_and_asset_type(client, db_session, 
     observed = datetime(2026, 11, 8, 12, tzinfo=timezone.utc)
 
     class FakeAdapter:
-        async def collect_findings(self, since):
+        async def collect_findings(self, since, until=None):
             return [NormalizedFinding(source_engine="wazuh", source_native_id="agent-alert-2",
                 title="Alert", description=None, severity="medium", observed_at=observed,
                 asset_reference="web-02", evidence={"agent_id":"008","agent_name":"web-02","agent_ip":"10.0.0.8"})]
