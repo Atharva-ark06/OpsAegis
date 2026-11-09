@@ -41,7 +41,7 @@ Configure the backend .env:
 | CROWDSEC_MACHINE_ID | Optional dedicated CrowdSec machine login; enables alert-history collection |
 | CROWDSEC_MACHINE_PASSWORD | Optional password for that dedicated machine; backend only |
 | CROWDSEC_TIMEOUT_SECONDS | Request timeout, 1–60 seconds |
-| CROWDSEC_MAX_RESULTS | Maximum decisions per collection, 1–1000 |
+| CROWDSEC_MAX_RESULTS | Maximum decisions or alerts per collection, 1–1000 |
 
 Create a dedicated bouncer key on the CrowdSec host with cscli bouncers add opsaegis-readonly. Store it only in the backend environment. For optional alert history, use a separate dedicated machine account—not the CrowdSec agent's production credentials—and store its login/password only in the backend environment. Machine credentials can authenticate to broader LAPI operations, so this optional integration is disabled unless both values are explicitly configured. OpsAegis exchanges them for a short-lived JWT and issues only GET /v1/alerts; it never calls alert/decision mutation endpoints. Do not expose either credential type to frontend variables.
 
@@ -49,6 +49,7 @@ After configuration, restart the backend. Authenticated admin/analyst endpoints:
 
 - GET /api/v1/integrations/crowdsec/health
 - POST /api/v1/integrations/crowdsec/collect
+- POST /api/v1/integrations/crowdsec/alerts/collect (optional machine credentials required)
 
 Active-decision collection imports /v1/decisions and retains decision ID, scope, value, action, scenario, origin and duration as bounded evidence. The current decision response does not provide a reliable event timestamp, so ingestion time is used as observation time. Optional alert-history collection uses /v1/watchers/login and GET /v1/alerts with a bounded limit; it records alert metadata and a bounded decision summary but deliberately excludes raw event payloads. Decision and alert findings use separate source namespaces and deduplicate independently. Both collection paths are manual/pull-based; scheduled polling is not yet implemented.
 
