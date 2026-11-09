@@ -13,7 +13,9 @@ from app.routers.nuclei import router as nuclei_router
 from app.routers.shannon import router as shannon_router
 from app.routers.detections import router as detections_router
 from app.routers.threat_intel import router as threat_intel_router
-from app.routers.vulnerabilities import router as vulnerabilities_router\nfrom app.routers.collections import router as collections_router\nfrom app.routers.incident_timeline import router as incident_timeline_router
+from app.routers.vulnerabilities import router as vulnerabilities_router
+from app.routers.collections import router as collections_router
+from app.routers.incident_timeline import router as incident_timeline_router
 
 app = FastAPI(
     title="OpsAegis API",
