@@ -2,10 +2,7 @@
 
 ## Phase 5 active checkpoint (2026-11-09)
 
-Phase 5 remains **in progress**. PR #64 merged the frontend toolchain upgrades and enforced npm dependency audit. The two planned Phase 5 PRs are intended to close repository-side gaps:
-
-- **PR 1:** committed frontend lockfile, deterministic `npm ci` in both frontend Dockerfiles, committed-lockfile security audit and race-free production image build.
-- **PR 2:** end-to-end Wazuh ingestion/correlation/incident/notification contract test, strict diagnostics exit behavior, and an ephemeral production Compose smoke test covering migrations, service health and frontend-to-API readiness.
+Phase 5 remains **in progress**. Repository-side work merged through PR #67 includes the committed frontend lockfile and deterministic `npm ci`, enforced frontend dependency auditing, end-to-end Wazuh ingestion/correlation/incident/notification contract coverage, strict read-only diagnostics, and an ephemeral production Compose smoke test covering migrations, service health and frontend-to-API readiness. PR #39 also merged operational-diagnostics regression tests (merge commit `f7777f7`).
 
 These automated checks are not live staging evidence. No current live staging evidence has been supplied for Wazuh/CrowdSec ingestion, Redis recovery, Nuclei egress enforcement, Shannon VM isolation, TLS/host security, off-host retention or RPO/RTO. Keep Nuclei and Shannon disabled until their documented safety gates are independently met. Phase 5 must not be marked complete until the evidence register contains the required sanitized operator results or the project owner explicitly accepts disabled/out-of-scope items.
 
@@ -267,7 +264,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - No live services are contacted by this documentation change. No scan, deployment, backup or restore is performed. All unverified live checks remain pending until an operator records evidence from the intended staging/production environment.
 
 
-## Operational diagnostics regression coverage (PR #39 — proposed)
+## Operational diagnostics regression coverage (PR #39 — merged; commit `f7777f7`)
 - Adds focused unit tests for the operator diagnostic's environment-file parser, result classification, heartbeat behavior, production/development detection-worker expectations and Nuclei fail-closed enablement.
 - Verifies disabled Nuclei does not query Redis, mismatched enablement flags fail without probing, and enabled Nuclei requires the dedicated worker heartbeat.
 - Verifies diagnostic exception details expose only exception class names, not potentially sensitive exception messages.
