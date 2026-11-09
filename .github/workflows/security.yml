@@ -68,7 +68,7 @@ jobs:
         run: pip-audit --strict -r runner/shannon-bridge/requirements.txt
 
       - name: Set up Node.js for frontend audit
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
 
