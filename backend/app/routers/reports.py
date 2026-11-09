@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from statistics import mean
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -135,7 +135,7 @@ def build_operations_report(db: Session, start: datetime, end: datetime) -> dict
             AuditLog.action == "incident.update",
             AuditLog.created_at >= start,
             AuditLog.created_at < end,
-            AuditLog.detail.like("%->resolved"),
+            or_(AuditLog.detail.like("%->resolved%"), AuditLog.detail.like("%->closed%")),
         )
         .order_by(AuditLog.created_at.asc())
         .limit(MAX_METRIC_ROWS)
@@ -144,7 +144,7 @@ def build_operations_report(db: Session, start: datetime, end: datetime) -> dict
     # status transitions/resolution metadata, never the resolution text itself.
     first_resolution: dict[int, datetime] = {}
     for event in resolution_events:
-        if not event.detail or not RESOLUTION_TRANSITION.fullmatch(event.detail):
+        if not event.detail or not re.search(r"(?:^|;)status:[a-z_]+->(?:resolved|closed)(?:;|$)", event.detail):
             continue
         match = re.fullmatch(r"incident:(\d+)", event.target or "")
         if not match:

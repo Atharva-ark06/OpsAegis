@@ -1,6 +1,6 @@
 # OpsAegis Phase 6 — SOC Automation & Response Orchestration
 
-**Status:** Phase 6.1, Phase 6.2 initial workspace and Phase 6.3 governance/action-contract foundations are merged or in review  
+**Status:** Phase 6.1–6.3 foundations are merged; Phase 6.4 operational reporting is in progress  
 **Predecessor:** Phase 5 — Production readiness and end-to-end validation  
 **Release posture:** Human-approved automation; no autonomous destructive response.
 
@@ -63,9 +63,15 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - No automatic containment or blocking by default.
 
 ### Phase 6.4 — Reporting and operational metrics
-- Collection freshness, source coverage and failure rates.
-- Detection-to-incident and incident-to-resolution timing.
-- Exportable, privacy-minimized reports with explicit data windows and caveats.
+
+**First bounded increment (PR in review):** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
+
+- [x] Collection freshness, source coverage and terminal failure rates for the two supported collection sources.
+- [x] Detection-to-incident timing from linked correlated detections and incident records.
+- [x] Incident-to-resolution timing from audited transitions to resolved/closed.
+- [x] JSON and CSV aggregate exports with explicit UTC windows and data-quality caveats.
+- [ ] Dashboard visualizations, trend buckets and operator-configurable alert thresholds.
+- [ ] Staging validation against known source data and measured event timelines.
 
 ## Security and reliability invariants
 

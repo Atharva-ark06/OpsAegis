@@ -316,3 +316,12 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Adapter interfaces distinguish execution results from compensation results; compensation is not represented as a successful rollback unless a future provider adapter reports it.
 - Adds tests for disabled-by-default behavior, missing adapter rejection, timeout bounds, independent-approver requirements, compensation metadata and stable idempotency keys.
 - No endpoint isolation, unisolation, external request, command execution or other response action is performed. A concrete provider adapter remains gated on integration-specific threat modelling and authorized staging validation.
+
+
+## Phase 6.4 — operational reporting (PR in review)
+
+- Adds authenticated `GET /api/v1/reports/operations` with explicit UTC `since`/`until` bounds (default seven days, maximum 90 days).
+- Reports collection source coverage, successful/failed run counts, terminal failure rate, received/created/updated/skipped totals, possible truncation and freshness against the last successful run.
+- Reports mean detection-to-incident time from linked correlated detections and mean incident-to-resolution time from the first audited transition to resolved/closed.
+- Adds aggregate JSON and CSV export. The response excludes incident titles, descriptions, raw detection evidence, user identities, credentials and provider payloads.
+- Includes explicit data-quality caveats and bounded metric queries. These are repository-derived operational metrics, not proof of complete upstream telemetry or live staging health.
