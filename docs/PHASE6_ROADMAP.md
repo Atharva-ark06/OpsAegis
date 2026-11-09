@@ -61,6 +61,7 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - [x] Read-only action catalogue endpoint exposes disabled state and reports that execution is unavailable when no provider adapter is registered.
 - [x] Draft integration-specific Wazuh agent-isolation threat model: [review document](PHASE6_WAZUH_ISOLATION_THREAT_MODEL.md). Draft only; not security-approved and does not authorize adapter implementation.
 - [x] Add a durable execution/compensation ledger schema and fail-closed state-transition guards: [ledger foundation](PHASE6_PLAYBOOK_EXECUTION_LEDGER.md). No dispatch endpoint, worker or provider adapter is added.
+- [x] Add a bounded admin/analyst read-only execution-ledger API with status/approval filters and a minimized response: [read API](PHASE6_EXECUTION_LEDGER_API.md). No mutation or dispatch operation is exposed.
 - [ ] Review threat model, verify version-specific Wazuh API permissions, provision least-privilege credentials, and complete authorized staging isolation/unisolation + rollback evidence before considering a concrete adapter.
 - No automatic containment or blocking by default.
 
