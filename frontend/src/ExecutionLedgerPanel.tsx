@@ -4,6 +4,8 @@ import {
   PlaybookExecutionRecord,
   PlaybookExecutionStatus,
 } from "./api";
+import "./recovery-guidance.css";
+import { getRecoveryGuidance } from "./recovery-guidance";
 
 const STATUS_OPTIONS: { value: "all" | PlaybookExecutionStatus; label: string }[] = [
   { value: "all", label: "All statuses" },
@@ -80,8 +82,8 @@ export function ExecutionLedgerPanel({ refreshKey }: { refreshKey: number }) {
   return <section className="panel execution-ledger-panel">
     <div className="panel-heading">
       <div>
-        <p className="eyebrow">PHASE 6.3 · RESPONSE GOVERNANCE</p>
-        <h3>Playbook execution ledger</h3>
+        <p className="eyebrow">PHASE 6 · RESPONSE GOVERNANCE</p>
+        <h3>Execution & recovery ledger</h3>
         <p className="execution-ledger-subtitle">Read-only lifecycle visibility · latest 25 records per page</p>
       </div>
       <div className="execution-ledger-controls">
@@ -95,7 +97,15 @@ export function ExecutionLedgerPanel({ refreshKey }: { refreshKey: number }) {
     </div>
 
     <div className="execution-ledger-safety" role="note">
-      <strong>Execution disabled.</strong> This panel reads persisted ledger records only. It cannot start, retry, cancel, isolate, or compensate an action.
+      <strong>Provider actions disabled.</strong> This panel reads persisted ledger records and conservative recovery guidance only. It cannot start, retry, cancel, isolate, unisolate, or compensate an action.
+    </div>
+
+    <div className="recovery-validation-banner" role="note">
+      <div>
+        <strong>Staging validation: not evidenced here</strong>
+        <p>Live Wazuh isolation/unisolation, provider-state verification and rollback have not been validated by this dashboard. Follow the operator runbook and record independently reviewed, sanitized evidence.</p>
+      </div>
+      <a href="https://github.com/Atharva-ark06/OpsAegis/blob/main/docs/PHASE6_RECOVERY_STAGING.md" target="_blank" rel="noreferrer">Open staging runbook ↗</a>
     </div>
 
     {error && <p className="trend-error" role="alert">{error}</p>}
@@ -103,24 +113,31 @@ export function ExecutionLedgerPanel({ refreshKey }: { refreshKey: number }) {
     {!loading && !error && items.length === 0 && <div className="trend-empty">No execution records match this filter.</div>}
 
     {items.length > 0 && <div className="execution-ledger-list">
-      {items.map((item) => <article className="execution-ledger-row" key={item.id}>
-        <div className="execution-ledger-main">
-          <div className="execution-ledger-title">
-            <strong>{item.action_id}</strong>
-            <span className={"execution-state state-" + item.status}>{statusLabel(item.status)}</span>
+      {items.map((item) => {
+        const guidance = getRecoveryGuidance(item.recovery_guidance);
+        return <article className="execution-ledger-row" key={item.id}>
+          <div className="execution-ledger-main">
+            <div className="execution-ledger-title">
+              <strong>{item.action_id}</strong>
+              <span className={"execution-state state-" + item.status}>{statusLabel(item.status)}</span>
+            </div>
+            <small>Execution #{item.id} · Approval #{item.approval_id} · v{item.action_version}</small>
           </div>
-          <small>Execution #{item.id} · Approval #{item.approval_id} · v{item.action_version}</small>
-        </div>
-        <div className="execution-ledger-compensation">
-          <span>COMPENSATION</span>
-          <strong className={"execution-state state-" + item.compensation_status}>{statusLabel(item.compensation_status)}</strong>
-        </div>
-        <div className="execution-ledger-times">
-          <span>Created {formatTimestamp(item.created_at)}</span>
-          <span>Started {formatTimestamp(item.started_at)}</span>
-          <span>Completed {formatTimestamp(item.completed_at)}</span>
-        </div>
-      </article>)}
+          <div className="execution-ledger-compensation">
+            <span>COMPENSATION</span>
+            <strong className={"execution-state state-" + item.compensation_status}>{statusLabel(item.compensation_status)}</strong>
+          </div>
+          <div className="execution-ledger-times">
+            <span>Created {formatTimestamp(item.created_at)}</span>
+            <span>Started {formatTimestamp(item.started_at)}</span>
+            <span>Completed {formatTimestamp(item.completed_at)}</span>
+          </div>
+          <div className={"execution-recovery-guidance guidance-" + guidance.tone}>
+            <strong>{guidance.title}</strong>
+            <p>{guidance.detail}</p>
+          </div>
+        </article>;
+      })}
     </div>}
 
     {hasMore && !error && <div className="execution-ledger-more">
@@ -128,6 +145,6 @@ export function ExecutionLedgerPanel({ refreshKey }: { refreshKey: number }) {
         {loadingMore ? "Loading…" : "Load more records"}
       </button>
     </div>}
-    <p className="execution-ledger-footnote">Sensitive target identifiers, parameter hashes, idempotency keys and provider references are intentionally not displayed.</p>
+    <p className="execution-ledger-footnote">Sensitive target identifiers, parameter hashes, idempotency keys and provider references are intentionally not displayed. A ledger status is not independent proof of provider state.</p>
   </section>;
 }

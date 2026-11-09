@@ -65,6 +65,8 @@ Initial implementation scope: incident timeline aggregation, provenance labels, 
 - [x] Surface execution and compensation lifecycle states in an admin/analyst-only dashboard panel with status filtering and bounded pagination; the panel remains read-only.
 **Deferred integration gate — not part of the completed framework increment:** a concrete Wazuh adapter must remain out of scope until the threat model receives independent security approval, the deployed Wazuh version/API and least-privilege permissions are verified, credentials are provisioned through the operator's secret manager, and written authorization plus disposable staging isolation/unisolation/rollback evidence is reviewed. These are prerequisites for a separate adapter proposal, not evidence that the framework itself is incomplete.
 
+**Recovery/staging increment (combined PR #86):** Adds conservative recovery guidance to the read-only execution ledger, dashboard visibility for unknown/failed compensation states, and an operator-led disposable-staging runbook with an evidence register. This is not a Wazuh adapter or a staging validation result. No live Wazuh request is performed; isolation and unisolation remain disabled and unregistered. See [recovery and staging runbook](PHASE6_RECOVERY_STAGING.md).
+
 - No automatic containment or blocking by default.
 
 ### Phase 6.4 — Reporting and operational metrics
