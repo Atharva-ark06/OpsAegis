@@ -191,6 +191,22 @@ async def collect_crowdsec_decisions(db: Session=Depends(get_db),
     return {"integration":"crowdsec-lapi","received":len(incoming),"inserted":inserted,"updated":updated,
         "truncated_possible":len(incoming)>=limit,"max_results":limit,"data_scope":"active_decisions_only"}
 
+def _match_crowdsec_asset(db: Session, item) -> Asset | None:
+    """Link only a single-IP CrowdSec decision to one unambiguous existing asset."""
+    evidence = item.evidence if isinstance(item.evidence, dict) else {}
+    scope = str(evidence.get("scope") or "").strip().lower()
+    value = str(evidence.get("value") or "").strip()
+    if scope != "ip" or not value:
+        return None
+    try:
+        import ipaddress
+        normalized_ip = str(ipaddress.ip_address(value))
+    except ValueError:
+        return None
+    matches = db.scalars(select(Asset).where(Asset.ip_address == normalized_ip)).all()
+    return matches[0] if len(matches) == 1 else None
+
+
 def _upsert_wazuh_asset(db: Session, item) -> Asset | None:
     evidence = item.evidence if isinstance(item.evidence, dict) else {}
     agent_id = evidence.get("agent_id")
@@ -229,7 +245,12 @@ def _persist_findings(db: Session,actor: User,incoming: list,engine: str,audit_a
         for item in incoming:
             existing=db.scalar(select(Finding).where(Finding.source_engine==engine,Finding.source_native_id==item.source_native_id))
             severity=FindingSeverity(item.severity) if item.severity in FindingSeverity._value2member_map_ else FindingSeverity.unknown
-            asset = _upsert_wazuh_asset(db, item) if engine == "wazuh" else None
+            if engine == "wazuh":
+                asset = _upsert_wazuh_asset(db, item)
+            elif engine == "crowdsec":
+                asset = _match_crowdsec_asset(db, item)
+            else:
+                asset = None
             if existing is None:
                 db.add(Finding(source_engine=engine,source_native_id=item.source_native_id,title=item.title,
                     description=item.description,severity=severity,asset_id=asset.id if asset else None,
