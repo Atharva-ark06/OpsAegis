@@ -262,3 +262,49 @@ class ThreatIntelIOC(Base):
     enriched_at:Mapped[datetime|None]=mapped_column(DateTime(timezone=True),nullable=True)
     created_by_user_id:Mapped[int|None]=mapped_column(ForeignKey("users.id",ondelete="SET NULL"),nullable=True)
     created_at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=utc_now,nullable=False,index=True)
+
+
+class IntegrationSchedule(Base):
+    __tablename__ = "integration_schedules"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
+    lookback_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class IntegrationCollectionRun(Base):
+    __tablename__ = "integration_collection_runs"
+    __table_args__ = (UniqueConstraint("schedule_slot", name="uq_integration_collection_run_slot"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    schedule_id: Mapped[int] = mapped_column(ForeignKey("integration_schedules.id", ondelete="CASCADE"), nullable=False, index=True)
+    schedule_slot: Mapped[str] = mapped_column(String(128), nullable=False)
+    source: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    lookback_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="queued", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    requested_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    received: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    skipped_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    truncated_possible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    worker_token: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class IncidentNote(Base):
+    __tablename__ = "incident_notes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    incident_id: Mapped[int] = mapped_column(ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
