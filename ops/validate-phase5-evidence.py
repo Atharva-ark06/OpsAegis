@@ -75,8 +75,16 @@ def validate_evidence_register(markdown: str, *, require_exit: bool = False) -> 
     for name, status in rows:
         if not status:
             errors.append(f"Workstream has an empty status: {name}")
-        if require_exit and not any(disposition in status.lower() for disposition in EXIT_DISPOSITIONS):
-            errors.append(f"Workstream has no accepted live/out-of-scope exit evidence: {name} [{status}]")
+        if require_exit:
+            normalized = status.lower()
+            if any(disposition in normalized for disposition in ("staging-validated", "production-validated")):
+                if "evidence:" not in normalized or not normalized.split("evidence:", 1)[1].strip():
+                    errors.append(f"Validated workstream must include an evidence reference: {name} [{status}]")
+            elif any(disposition in normalized for disposition in EXIT_DISPOSITIONS[2:]):
+                if "accepted:" not in normalized or not normalized.split("accepted:", 1)[1].strip():
+                    errors.append(f"Out-of-scope/not-configured workstream must include an acceptance reference: {name} [{status}]")
+            else:
+                errors.append(f"Workstream has no accepted live/out-of-scope exit evidence: {name} [{status}]")
 
     if require_exit and "live environment evidence supplied for this register: none" in markdown.lower():
         errors.append("Register still declares that no live environment evidence has been supplied.")
