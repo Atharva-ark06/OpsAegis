@@ -43,7 +43,7 @@ try {
     if ($agentText -notmatch "opsaegis-disposable-agent") {
         throw "The disposable agent is not present in the manager inventory yet."
     }
-    if ($agentText -notmatch "(?i)Active") {
+    if ($agentText -notmatch "(?im)^.*opsaegis-disposable-agent.*Active.*$") {
         throw "The disposable agent is present but is not reported active."
     }
 
