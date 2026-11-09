@@ -51,6 +51,9 @@ def process(scan_id,lease_lost):
     raise WorkerLeaseLost("Worker lease lost before commit")
    run.status="completed"; run.findings_count=inserted+updated; run.finished_at=utcnow(); run.error_code=None
    db.add(AuditLog(actor_user_id=actor_id,action="integration.nuclei.scan.complete",target=str(scan_id),detail=json.dumps({"received":len(records),"inserted":inserted,"updated":updated,"attempts":run.attempts})))
+   if lease_lost.is_set():
+    db.rollback()
+    raise WorkerLeaseLost("Worker lease lost immediately before commit")
    db.commit()
  except WorkerLeaseLost:
   log.warning("Scan %s stopped after worker lease loss; the next owner will recover its running row",scan_id)
