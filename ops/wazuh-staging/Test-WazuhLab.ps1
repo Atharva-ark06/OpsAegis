@@ -24,15 +24,17 @@ try {
     )
 
     Write-Host "Current Wazuh lab container state:"
-    & docker @($composeArgs + @("ps"))
+    $psArgs = $composeArgs + @("ps")
+    & docker @psArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Unable to read Wazuh lab Compose status."
     }
 
     Write-Host "Checking that the disposable agent enrolled and is active..."
-    $agentOutput = & docker @($composeArgs + @(
+    $agentArgs = $composeArgs + @(
         "exec", "-T", "wazuh.manager", "/var/ossec/bin/agent_control", "-l"
-    ))
+    )
+    $agentOutput = & docker @agentArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Wazuh manager agent inventory command failed. Check container logs and wait for startup."
     }
