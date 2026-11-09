@@ -69,11 +69,15 @@ def schedule_due(db, now: datetime) -> int:
             IntegrationCollectionRun.status.in_(("queued", "running", "retrying")),
         ).order_by(IntegrationCollectionRun.id.desc()))
         if existing is None and active is None:
-            db.add(IntegrationCollectionRun(
+            run = IntegrationCollectionRun(
                 schedule_id=schedule.id, schedule_slot=slot, source=schedule.source,
                 lookback_minutes=schedule.lookback_minutes, status="queued", attempts=0,
                 next_attempt_at=now, created_at=now,
-            ))
+            )
+            db.add(run)
+            db.flush()
+            db.add(AuditLog(actor_user_id=None, action="collection.schedule.enqueue",
+                            target=f"collection-run:{run.id}", detail=f"source:{schedule.source};slot:{slot}"))
             count += 1
         schedule.last_run_at = now
         # Skip missed intervals instead of creating an unbounded catch-up backlog.
