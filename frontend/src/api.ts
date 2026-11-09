@@ -285,7 +285,8 @@ export interface CollectionRun {
   id: number; source: string; status: "queued" | "running" | "retrying" | "succeeded" | "failed";
   attempts: number; lookback_minutes: number; received: number; created: number; updated: number; skipped: number;
   truncated_possible: boolean; error_code: string | null; next_attempt_at: string;
-  started_at: string | null; finished_at: string | null; created_at: string;
+  started_at: string | null; finished_at: string | null; window_start_at: string | null; window_end_at: string | null;
+  duration_ms: number | null; created_at: string;
 }
 export const getCollectionSchedules = (): Promise<CollectionSchedule[]> => request("/collections/schedules");
 export const updateCollectionSchedule = (source: string, payload: Pick<CollectionSchedule, "enabled" | "interval_seconds" | "lookback_minutes">): Promise<CollectionSchedule> =>
