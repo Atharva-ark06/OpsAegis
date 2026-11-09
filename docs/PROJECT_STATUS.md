@@ -294,7 +294,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - These tests validate local decision logic only. They do not contact external services, prove live integration connectivity, validate egress policy or replace staging recovery drills.
 
 
-## Phase 6.3 first increment (next PR)
+## Phase 6.3 first increment (PR #73 merged)
 
 - Adds a versioned, code-defined incident-investigation playbook catalogue.
 - Adds strict typed input validation, admin/analyst-only dry-run previews, bounded read-only context lookup and audit records.
