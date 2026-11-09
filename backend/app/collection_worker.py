@@ -59,7 +59,11 @@ def schedule_due(db, now: datetime) -> int:
         existing = db.scalar(select(IntegrationCollectionRun).where(
             IntegrationCollectionRun.schedule_slot == slot
         ))
-        if existing is None:
+        active = db.scalar(select(IntegrationCollectionRun).where(
+            IntegrationCollectionRun.source == schedule.source,
+            IntegrationCollectionRun.status.in_(("queued", "running", "retrying")),
+        ).order_by(IntegrationCollectionRun.id.desc()))
+        if existing is None and active is None:
             db.add(IntegrationCollectionRun(
                 schedule_id=schedule.id, schedule_slot=slot, source=schedule.source,
                 lookback_minutes=schedule.lookback_minutes, status="queued", attempts=0,
