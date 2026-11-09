@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json
 import os
+import inspect
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -124,7 +125,9 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
             checks.append({"name": name, "status": "skipped", "detail": "Not configured"})
             return
         try:
-            result = await operation()
+            result = operation()
+            if inspect.isawaitable(result):
+                result = await result
             if result is False or result is None:
                 raise RuntimeError("unhealthy_response")
             checks.append({"name": name, "status": "passed", "detail": detail})
@@ -146,11 +149,13 @@ async def run_checks(include_nvd: bool) -> dict[str, Any]:
     )
     redis_available = False
     try:
-        await probe("redis", True, redis_client.ping, detail="Redis PING succeeded")
         try:
             redis_available = bool(redis_client.ping())
-        except Exception:
-            redis_available = False
+            if not redis_available:
+                raise RuntimeError("redis_unhealthy")
+            checks.append({"name": "redis", "status": "passed", "detail": "Redis PING succeeded"})
+        except Exception as exc:
+            checks.append({"name": "redis", "status": "failed", "detail": type(exc).__name__})
         if redis_available:
             checks.append(detection_worker_check(config, redis_client))
             checks.append(nuclei_worker_check(config, redis_client))
