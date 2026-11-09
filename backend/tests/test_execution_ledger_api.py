@@ -26,9 +26,9 @@ def _ledger_record(db_session, *, approval_id, status="pending", created_at=None
     return item
 
 
-def _approved_ledger(db_session):
-    requester = User(email="ledger-api-requester@example.com", password_hash="unused", role=UserRole.analyst, is_active=True)
-    reviewer = User(email="ledger-api-reviewer@example.com", password_hash="unused", role=UserRole.admin, is_active=True)
+def _approved_ledger(db_session, *, suffix=""):
+    requester = User(email=f"ledger-api-requester{suffix}@example.com", password_hash="unused", role=UserRole.analyst, is_active=True)
+    reviewer = User(email=f"ledger-api-reviewer{suffix}@example.com", password_hash="unused", role=UserRole.admin, is_active=True)
     incident = Incident(title="Ledger API test", status="open")
     db_session.add_all([requester, reviewer, incident])
     db_session.commit()
@@ -74,12 +74,13 @@ def test_execution_ledger_read_api_returns_only_safe_status_fields(client, analy
 
 
 def test_execution_ledger_read_api_filters_and_bounds_results(client, analyst_headers, db_session):
-    approval = _approved_ledger(db_session)
-    _ledger_record(db_session, approval_id=approval.id, status="pending", key="a" * 64)
-    _ledger_record(db_session, approval_id=approval.id, status="failed", key="c" * 64)
+    pending_approval = _approved_ledger(db_session)
+    failed_approval = _approved_ledger(db_session, suffix="-second")
+    _ledger_record(db_session, approval_id=pending_approval.id, status="pending", key="a" * 64)
+    _ledger_record(db_session, approval_id=failed_approval.id, status="failed", key="c" * 64)
 
     filtered = client.get(
-        f"/api/v1/playbooks/executions?status=failed&approval_id={approval.id}&limit=1",
+        f"/api/v1/playbooks/executions?status=failed&approval_id={failed_approval.id}&limit=1",
         headers=analyst_headers,
     )
     assert filtered.status_code == 200
