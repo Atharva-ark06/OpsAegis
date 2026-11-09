@@ -1,6 +1,6 @@
 # OpsAegis Phase 6 — SOC Automation & Response Orchestration
 
-**Status:** Kickoff / design baseline  
+**Status:** Implementation in progress — Phase 6.1 foundations and a first Phase 6.2 investigation workflow are under review in PR #72  
 **Predecessor:** Phase 5 — Production readiness and end-to-end validation  
 **Release posture:** Human-approved automation; no autonomous destructive response.
 
@@ -36,12 +36,16 @@ Phase 6 does not retroactively mark Phase 5 staging or production checks as pass
 ## Delivery increments
 
 ### Phase 6.1 — Collection orchestration
+
+Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer alert windows only. CrowdSec remains deferred pending a separate least-privilege decision. Schedules are disabled by default; durable run history, a separate Redis-leased worker, bounded retries and manual-run parity are implemented in the current review branch. Live Redis interruption, lease-loss and real-source staging drills remain required.
 - Durable per-integration schedule and run history.
 - Per-source enable/disable controls, minimum intervals, bounded lookback and result caps.
 - Lease fencing, retry/backoff, overlap prevention and manual run parity.
 - Read-only collection only; no response actions in this increment.
 
 ### Phase 6.2 — Investigation workspace
+
+Initial implementation scope: incident timeline aggregation, provenance labels, analyst notes and redacted JSON export. Binary attachments, retention enforcement and stronger chain-of-custody controls remain outstanding.
 - Unified incident timeline and evidence provenance.
 - Analyst notes and evidence attachments with size/type limits, access control and retention rules.
 - Redacted export and audit coverage.
