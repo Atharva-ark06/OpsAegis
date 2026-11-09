@@ -35,6 +35,8 @@ Never store API keys, passwords, bearer tokens, authorization headers, private k
 
 A diagnostic `passed` result means only that the bounded request/heartbeat passed at that moment. A `skipped`, `not_probed`, missing report or unavailable environment is not a pass.
 
+For a row marked `Staging-validated` or `Production-validated`, include a non-empty reference in the status cell, for example `Staging-validated — evidence: STAGE-2026-001`. For an intentionally excluded/not-configured row, include the project-owner decision reference, for example `Out of scope - accepted; accepted: DEC-2026-001`. Do not use placeholder references.
+
 ## Latest repository-side baseline
 
 - PRs #65 and #67 merged the committed frontend lockfile, deterministic `npm ci` in both frontend Dockerfiles, and lockfile-backed dependency auditing in CI.
