@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     crowdsec_ca_cert: str | None = Field(default=None, validation_alias="CROWDSEC_CA_CERT")
     crowdsec_timeout_seconds: int = Field(default=10, validation_alias="CROWDSEC_TIMEOUT_SECONDS")
     crowdsec_max_results: int = Field(default=500, validation_alias="CROWDSEC_MAX_RESULTS")
+    crowdsec_machine_id: str | None = Field(default=None, validation_alias="CROWDSEC_MACHINE_ID")
+    crowdsec_machine_password: str | None = Field(default=None, validation_alias="CROWDSEC_MACHINE_PASSWORD")
     virustotal_api_key: str | None = Field(default=None, validation_alias="VIRUSTOTAL_API_KEY")
     abuseipdb_api_key: str | None = Field(default=None, validation_alias="ABUSEIPDB_API_KEY")
     threat_intel_timeout_seconds: int = Field(default=10, validation_alias="THREAT_INTEL_TIMEOUT_SECONDS")
