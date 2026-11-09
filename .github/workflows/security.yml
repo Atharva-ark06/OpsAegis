@@ -2,7 +2,7 @@ name: OpsAegis Security Checks
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, "phase5/**"]
   push:
     branches: [main]
 
