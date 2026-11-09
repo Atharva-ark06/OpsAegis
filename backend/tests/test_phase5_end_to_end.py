@@ -37,7 +37,7 @@ def test_wazuh_ingestion_to_detection_incident_and_notification_is_idempotent(
     class FakeWazuhIndexerAdapter:
         is_configured = True
 
-        async def collect_findings(self, since):
+        async def collect_findings(self, since, until=None):
             return incoming
 
     monkeypatch.setattr(
