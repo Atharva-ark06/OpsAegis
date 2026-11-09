@@ -28,7 +28,7 @@ New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 # restrict this newly-created backup directory to the current user and SYSTEM.
 if ($IsWindows) {
     $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    & icacls $OutputDirectory /inheritance:r /grant:r "${identity}:(OI)(CI)F" "SYSTEM:(OI)(CI)F" | Out-Null
+    & icacls $OutputDirectory /inheritance:r /grant:r "${identity}:(OI)(CI)F" "SYSTEM:(OI)(CI)F" /T /C | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "Could not restrict backup-directory permissions."
     }
