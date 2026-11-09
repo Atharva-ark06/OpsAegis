@@ -275,3 +275,45 @@ export const getVulnerabilities=(filters:{severity?:string;status?:Vulnerability
 };
 export const enrichVulnerability=(id:number,force=false):Promise<Vulnerability>=>request("/vulnerabilities/"+id+"/enrich?force="+String(force),{method:"POST"});
 export const updateVulnerability=(id:number,payload:{status?:VulnerabilityStatus;remediation_notes?:string|null}):Promise<Vulnerability>=>request("/vulnerabilities/"+id,{method:"PATCH",body:JSON.stringify(payload)});
+
+
+export interface CollectionSchedule {
+  source: string; description: string; enabled: boolean; interval_seconds: number; lookback_minutes: number;
+  next_run_at: string | null; last_run_at: string | null; updated_at: string | null;
+}
+export interface CollectionRun {
+  id: number; source: string; status: "queued" | "running" | "retrying" | "succeeded" | "failed";
+  attempts: number; lookback_minutes: number; received: number; created: number; updated: number; skipped: number;
+  truncated_possible: boolean; error_code: string | null; next_attempt_at: string;
+  started_at: string | null; finished_at: string | null; created_at: string;
+}
+export const getCollectionSchedules = (): Promise<CollectionSchedule[]> => request("/collections/schedules");
+export const updateCollectionSchedule = (source: string, payload: Pick<CollectionSchedule, "enabled" | "interval_seconds" | "lookback_minutes">): Promise<CollectionSchedule> =>
+  request("/collections/schedules/" + encodeURIComponent(source), { method: "PUT", body: JSON.stringify(payload) });
+export const requestCollectionRun = (source: string): Promise<CollectionRun> =>
+  request("/collections/" + encodeURIComponent(source) + "/run", { method: "POST" });
+export const getCollectionRuns = (): Promise<CollectionRun[]> => request("/collections/runs?limit=50");
+
+export interface IncidentTimelineEvent {
+  id: string; type: string; occurred_at: string; actor_user_id: number | null;
+  summary: string; details: Record<string, unknown>; provenance: string;
+}
+export interface IncidentTimeline {
+  incident_id: number; generated_at: string; events: IncidentTimelineEvent[];
+  limits: Record<string, number>;
+}
+export const getIncidentTimeline = (id: number): Promise<IncidentTimeline> => request("/incidents/" + id + "/timeline");
+export const addIncidentNote = (id: number, note: string): Promise<{id:number;incident_id:number;author_user_id:number;note:string;created_at:string}> =>
+  request("/incidents/" + id + "/notes", { method: "POST", body: JSON.stringify({ note }) });
+export async function downloadIncidentEvidence(id: number): Promise<void> {
+  const payload = await request<Record<string, unknown>>("/incidents/" + id + "/evidence-export");
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "opsaegis-incident-" + id + "-evidence.json";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
