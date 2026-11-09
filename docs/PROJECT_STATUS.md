@@ -307,3 +307,12 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Requires a different active administrator/analyst to approve or reject; requesters cannot approve their own requests.
 - Decisions are single-use, expiry-aware and audit-logged.
 - Approval is a recorded governance decision only: it does not execute the playbook, invoke external integrations, or enable response actions.
+
+
+## Phase 6.3 action-adapter safety contracts (PR in review)
+
+- Adds a read-only action catalogue and a fail-closed adapter contract. The initial Wazuh agent-isolation action is descriptive only: no provider adapter is registered, enabled or callable.
+- Requires independent human approval, deterministic SHA-256 idempotency keys bound to approval/action/target/parameters, a bounded 1–30 second adapter timeout, and a declared compensation action.
+- Adapter interfaces distinguish execution results from compensation results; compensation is not represented as a successful rollback unless a future provider adapter reports it.
+- Adds tests for disabled-by-default behavior, missing adapter rejection, timeout bounds, independent-approver requirements, compensation metadata and stable idempotency keys.
+- No endpoint isolation, unisolation, external request, command execution or other response action is performed. A concrete provider adapter remains gated on integration-specific threat modelling and authorized staging validation.
