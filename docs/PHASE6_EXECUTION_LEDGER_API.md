@@ -10,7 +10,7 @@
 - Supports optional exact execution `status` and `approval_id` filters.
 - Uses bounded pagination (default 50, maximum 100; bounded offset).
 - Orders deterministically by creation time and record ID.
-- Returns only record ID, approval ID, fixed action/version, execution and compensation states, and lifecycle timestamps.
+- Returns only record ID, approval ID, fixed action/version, execution and compensation states, a conservative recovery-guidance code, and lifecycle timestamps.
 
 ## Data minimization
 
@@ -24,3 +24,10 @@ This is a GET-only inspection route. It has no create, update, retry, claim, dis
 ## Dashboard visibility
 
 The overview now includes an admin/analyst-only execution ledger panel backed by this GET endpoint. It supports status filtering and bounded 25-record pagination, displays execution and compensation states with lifecycle timestamps, and provides an explicit read-only/disabled notice. It does not expose sensitive target, digest, idempotency or provider fields and has no action controls.
+
+
+## Recovery guidance and staging evidence
+
+The response includes a non-authorizing `recovery_guidance` code derived from the persisted execution and compensation states. It tells operators when to stop and reconcile an unknown provider outcome, verify provider state after a failed request, require a separate approval before unisolation, or escalate manual recovery. It is informational only and does not change ledger state or contact Wazuh.
+
+The dashboard displays this guidance and links to the [Wazuh recovery and staging runbook](PHASE6_RECOVERY_STAGING.md). The runbook contains the staging entry criteria, bounded disposable-agent drill, recovery decision procedure and blank evidence register. No live staging evidence is claimed or stored by this change.
