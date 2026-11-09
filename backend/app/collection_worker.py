@@ -102,7 +102,7 @@ async def _collect(run: IntegrationCollectionRun, db) -> dict[str, object]:
         return await sync_wazuh_manager_agents(db, None)
     if run.source == "wazuh-indexer-alerts":
         since = run.window_start_at or (utc_now() - timedelta(minutes=run.lookback_minutes))
-        return await collect_wazuh_alerts(since, db, None)
+        return await collect_wazuh_alerts(since, run.window_end_at, db, None)
     raise ValueError("UnsupportedCollectionSource")
 
 
