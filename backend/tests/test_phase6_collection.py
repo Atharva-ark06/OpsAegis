@@ -21,7 +21,10 @@ def test_due_schedule_creates_one_bounded_run_and_advances(db_session):
     assert runs[0].source == "wazuh-indexer-alerts"
     assert runs[0].lookback_minutes == 15
     assert runs[0].status == "queued"
-    assert schedule.next_run_at == now + timedelta(seconds=300)
+    next_run_at = schedule.next_run_at
+    if next_run_at.tzinfo is None:
+        next_run_at = next_run_at.replace(tzinfo=timezone.utc)
+    assert next_run_at == now + timedelta(seconds=300)
 
     # A second scheduler tick cannot create another run for the same due slot.
     assert schedule_due(db_session, now) == 0
