@@ -112,7 +112,7 @@ tables="$(psql --no-psqlrc --tuples-only --no-align \
 test -n "$migration"
 test "$tables" -gt 0
 
-printf 'Alembic revision: %s\\nPublic tables restored: %s\\n' "$migration" "$tables"
+printf 'Alembic revision: %s\\nPublic tables restored: %s\n' "$migration" "$tables"
 '@
 
     $restoreCheckPath = Join-Path $env:TEMP "$containerName-restore-check.sh"
