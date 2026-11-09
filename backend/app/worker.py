@@ -110,6 +110,10 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
         run.started_at = utc_now()
         run.error_code = None
         run.worker_token = worker_token
+        window_minutes = run.window_minutes
+        auth_threshold = run.auth_threshold
+        evaluation_time = as_utc(run.created_at)
+        attempt_number = run.attempts
         if lease_lost.is_set():
             raise WorkerLeaseLost("Worker lease lost before evaluation")
         db.commit()
@@ -117,7 +121,7 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
         # Correlation writes are idempotent. If ownership is lost mid-evaluation,
         # the next worker can safely re-evaluate after recovering this run.
         result = evaluate_detections(
-            run.window_minutes, run.auth_threshold, db, None, as_utc(run.created_at)
+            window_minutes, auth_threshold, db, None, evaluation_time
         )
         if lease_lost.is_set():
             raise WorkerLeaseLost("Worker lease lost during evaluation")
@@ -146,7 +150,7 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
             action="detection.schedule.complete",
             target=f"scheduled-run:{run_id}",
             detail=json.dumps({
-                "attempts": run.attempts,
+                "attempts": attempt_number,
                 "created": result["created"],
                 "refreshed": result["refreshed"],
             }),
