@@ -34,6 +34,8 @@ jobs:
         run: cp .env.production.example .env.production
       - name: Validate production Compose YAML and service configuration
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+      - name: Validate Phase 5 evidence register structure
+        run: python ops/validate-phase5-evidence.py
 
   backend:
     needs: preflight

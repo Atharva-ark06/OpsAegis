@@ -5,7 +5,7 @@
 Use this register to distinguish implementation and automated test coverage from evidence obtained against real staging or production services. Do not mark a check complete because a feature exists, a mocked test passes, a container builds, or a health endpoint responds.
 
 **Current review baseline:** 2026-11-09  
-**Repository baseline:** `main` at `e3ebd66ed52cbc43afca0376b47208f91e9fba26` (2026-11-09). Refresh this SHA after subsequent merges.  
+**Repository baseline:** `main` at PR #70 merge commit `61c78e66c2980b9ea435a461060d2e8483ea7b69` (2026-11-09). Refresh this SHA after subsequent merges.  
 **Live environment evidence supplied for this register:** none. All live validation items below remain pending or blocked until an operator records evidence.
 
 ## Status vocabulary
@@ -35,11 +35,15 @@ Never store API keys, passwords, bearer tokens, authorization headers, private k
 
 A diagnostic `passed` result means only that the bounded request/heartbeat passed at that moment. A `skipped`, `not_probed`, missing report or unavailable environment is not a pass.
 
+For a row marked `Staging-validated` or `Production-validated`, include a non-empty reference in the status cell, for example `Staging-validated — evidence: STAGE-2026-001`. For an intentionally excluded/not-configured row, include the project-owner decision reference, for example `Out of scope - accepted; accepted: DEC-2026-001`. Do not use placeholder references.
+
 ## Latest repository-side baseline
 
 - PRs #65 and #67 merged the committed frontend lockfile, deterministic `npm ci` in both frontend Dockerfiles, and lockfile-backed dependency auditing in CI.
 - PR #66's operational smoke-test and end-to-end contract changes reached `main` through PR #67.
 - PR #39's operational-diagnostics regression tests are merged (commit `f7777f7`).
+- PR #70 merged optional bounded CrowdSec alert-history reads, separate from active decisions, with dedicated machine credentials, bounded evidence and conservative asset association.
+- `ops/validate-phase5-evidence.py` checks matrix structure in CI and provides an opt-in strict exit gate; it does not create or infer staging evidence.
 - The frontend build and tests passing in CI are not staging evidence. Docker image builds validate image construction, not live deployment, TLS, persistent storage or integration reachability.
 - The live evidence supplied for this register remains **none** until the operator records sanitized staging results below.
 
@@ -50,7 +54,7 @@ A diagnostic `passed` result means only that the bounded request/heartbeat passe
 | Wazuh Manager agent inventory | Read-only paginated Manager adapter, manual sync and mocked API contract tests | Sync registered lab agents including one with no alert; compare agent ID, OS, IP, status and last keep-alive; verify analyst-managed asset fields remain unchanged | Pending |
 | Wazuh Indexer alerts | Read-only alert collection, source identity/deduplication and adapter tests | Ingest bounded known lab authentication events; verify source IDs, timestamps, deduplication, finding counts and analyst triage preservation | Pending |
 | Wazuh Vulnerability Detector | Read-only `wazuh-states-vulnerabilities*` ingestion and mocked contract tests | Sync known CVE/package records; verify exact agent mapping, package provenance, truncation reporting and remediation-state preservation | Pending |
-| CrowdSec LAPI | Separate bouncer-key active-decision reads and optional machine-JWT alert-history reads; bounded evidence, separate source namespaces, exact unique-IP mapping and mocked contract tests | Use an authorized short-lived test decision and alert; collect each twice; verify deduplication, audit events, bounded event evidence, exact asset mapping and no decision/alert mutation. If alert history is enabled, review and approve the broader machine-credential permission risk first | Pending |
+| CrowdSec LAPI | Separate bouncer-key active-decision reads and optional machine-JWT alert-history reads; bounded evidence, separate source namespaces, exact unique-IP mapping and mocked contract tests. LAPI alert search exposes a result limit and time filters, not an offset/page cursor; collection is therefore bounded, not a complete-history guarantee | Use an authorized short-lived test decision and alert; collect each twice; verify deduplication, audit events, bounded event evidence, exact asset mapping and no decision/alert mutation. If alert history is enabled, review and approve the broader machine-credential permission risk first | Pending |
 | Nuclei isolated worker | Dedicated non-root worker, pinned Nuclei/templates, Redis lease and worker health checks | Before any scan: prove host/cloud DNS/IP egress restrictions, metadata/private-range blocking, DNS-rebinding defenses, exact target allowlist and written authorization; then run only a bounded disposable staging target and test lease-loss/restart | **Blocked — external egress enforcement and written staging authorization not evidenced** |
 | Shannon bridge | External bridge adapter, health check and proof-gated finding ingestion; bridge has separate deployment boundary | Deploy on disposable VM; independently verify VM isolation, DNS/IP allowlists, provider budgets, source mount restrictions and written authorization; health check then one authorized disposable target assessment | Blocked pending external runner and isolation evidence |
 | Redis detection scheduler | Durable runs, retries, lease fencing, startup recovery and heartbeat tests | On staging Redis: enable controlled schedule, verify run lifecycle, induce worker restart/temporary Redis interruption, confirm recovery/no stale-owner completion/no duplicate incident | Pending |
@@ -64,11 +68,11 @@ A diagnostic `passed` result means only that the bounded request/heartbeat passe
 | Production Compose smoke test | Phase 5 PR 2 adds an ephemeral Compose startup check with temporary CI-only credentials and disposable volumes | Run deployment/readiness and persistence checks in the intended staging environment | Pending final CI and live staging |
 | End-to-end API contract | Phase 5 PR 2 adds a deterministic Wazuh-ingestion → correlation → incident → notification idempotency test | Repeat the flow with authorized lab Wazuh events and record event, finding, detection, incident and notification IDs | Pending live staging evidence |
 | Operational diagnostic decision logic | PR #39 covers parsing, status aggregation, heartbeat behavior, Nuclei fail-closed flags and exception redaction; Phase 5 PR 2 adds strict incomplete-check exit behavior | Local helper tests only; real service checks remain in the live-validation rows above | Pending final CI |
-## Additional automated coverage planned in Phase 5 PR 2
+## Automated coverage already merged in Phase 5
 
-- A deterministic API-level test will collect three synthetic Wazuh authentication findings, evaluate correlation, verify one linked incident and analyst notification, mark the notification read, and re-evaluate to prove idempotency.
-- The production-container CI job will start the built Compose stack with temporary CI-only credentials, wait for PostgreSQL, Redis, API, detection worker and frontend health, verify the migration exit code, and call API readiness through Nginx. CI volumes are removed after the test.
-- The diagnostic CLI gains a strict mode that returns a non-zero status when a configured integration remains unprobed. These tests do not change the live-validation statuses in the matrix.
+- A deterministic API-level test collects three synthetic Wazuh authentication findings, evaluates correlation, verifies one linked incident and analyst notification, marks the notification read, and re-evaluates to prove idempotency.
+- The production-container CI job starts the built Compose stack with temporary CI-only credentials, waits for PostgreSQL, Redis, API, detection worker and frontend health, verifies the migration exit code, and calls API readiness through Nginx. CI volumes are removed after the test.
+- The diagnostic CLI has a strict mode that returns a non-zero status when a configured integration remains unprobed. These tests do not change the live-validation statuses in the matrix.
 
 ## Safe operator sequence
 
@@ -100,3 +104,17 @@ A green CI run is necessary evidence for code quality, not a substitute for thes
 ## PR #39 — operational diagnostic regression tests
 
 The proposed tests exercise only deterministic local helper behavior. They do not load a deployment environment, instantiate service adapters, contact Wazuh/CrowdSec/Shannon, access Redis/PostgreSQL, launch scans or write operational evidence. A passing CI run must not change any live-validation status in the matrix.
+
+
+## Phase 5 repository closeout and release gate
+
+The repository contains an evidence-register validator:
+
+```bash
+python ops/validate-phase5-evidence.py
+python ops/validate-phase5-evidence.py --require-exit
+```
+
+The default mode verifies the validation matrix and required workstreams. The strict mode fails while any row remains pending/blocked or lacks an explicit accepted exclusion. CI runs only the structural mode because restricted staging evidence must be supplied by an operator. The validator never changes statuses or creates evidence.
+
+**Current decision:** Phase 5 repository implementation is in closeout; Phase 5 operational exit remains **not achieved** until the live evidence above is recorded and accepted.
