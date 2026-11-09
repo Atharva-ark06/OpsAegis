@@ -88,12 +88,12 @@ def enqueue_pending(db, client, now: datetime) -> int:
     return count
 
 
-def _collect(run: IntegrationCollectionRun, db) -> dict[str, object]:
+async def _collect(run: IntegrationCollectionRun, db) -> dict[str, object]:
     if run.source == "wazuh-manager-agents":
-        return sync_wazuh_manager_agents(db, None)
+        return await sync_wazuh_manager_agents(db, None)
     if run.source == "wazuh-indexer-alerts":
         since = utc_now() - timedelta(minutes=run.lookback_minutes)
-        return asyncio.run(collect_wazuh_alerts(since, db, None))
+        return await collect_wazuh_alerts(since, db, None)
     raise ValueError("UnsupportedCollectionSource")
 
 
@@ -112,7 +112,7 @@ def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> 
         run.error_code = None
         run.worker_token = worker_token
         db.commit()
-        result = _collect(run, db)
+        result = asyncio.run(_collect(run, db))
         if lease_lost.is_set():
             db.rollback()
             return
