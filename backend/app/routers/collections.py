@@ -85,6 +85,12 @@ def request_collection(source: str, db: Session = Depends(get_db),
                        actor: User = Depends(require_roles(*OPERATORS))):
     if source not in SUPPORTED_SOURCES:
         raise HTTPException(404, "Collection source is not in the read-only allowlist")
+    active_run = db.scalar(select(IntegrationCollectionRun).where(
+        IntegrationCollectionRun.source == source,
+        IntegrationCollectionRun.status.in_(("queued", "running", "retrying")),
+    ).order_by(IntegrationCollectionRun.id.desc()))
+    if active_run is not None:
+        raise HTTPException(409, f"A collection run for this source is already pending or running (run {active_run.id})")
     schedule = db.scalar(select(IntegrationSchedule).where(IntegrationSchedule.source == source))
     if schedule is None:
         schedule = IntegrationSchedule(source=source, enabled=False, interval_seconds=300,
