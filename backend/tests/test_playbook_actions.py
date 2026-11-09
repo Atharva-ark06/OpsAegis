@@ -87,3 +87,30 @@ def test_enabled_action_requires_registered_adapter():
 def test_idempotency_key_rejects_arbitrary_values():
     with pytest.raises(ValueError, match="SHA-256"):
         validate_idempotency_key("user-controlled-key")
+
+
+def test_action_catalogue_is_visible_but_never_executable(client, analyst_headers):
+    response = client.get(
+        "/api/v1/playbooks/incident-investigation/actions",
+        headers=analyst_headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["external_actions_enabled"] is False
+    assert body["count"] == 1
+    action = body["items"][0]
+    assert action["action_id"] == "wazuh.agent_isolate"
+    assert action["enabled"] is False
+    assert action["adapter_registered"] is False
+    assert action["execution_available"] is False
+    assert action["requires_approval"] is True
+    assert action["requires_independent_approver"] is True
+    assert action["compensation_action_id"] == "wazuh.agent_unisolate"
+
+
+def test_action_catalogue_rejects_unknown_playbook(client, analyst_headers):
+    response = client.get(
+        "/api/v1/playbooks/not-registered/actions",
+        headers=analyst_headers,
+    )
+    assert response.status_code == 404
