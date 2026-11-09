@@ -21,7 +21,7 @@ SUPPORTED_SOURCES = {
 class ScheduleUpdate(BaseModel):
     enabled: bool
     interval_seconds: int = Field(ge=60, le=86400)
-    lookback_minutes: int = Field(ge=1, le=43200)
+    lookback_minutes: int = Field(ge=1, le=43199)
 
 
 def _schedule_payload(item: IntegrationSchedule | None, source: str) -> dict[str, object]:
