@@ -205,7 +205,7 @@ Only CVE-enumerated records with a valid CVE ID, agent ID and package name/versi
 
 ## Production Docker deployment (PR #20)
 
-A separate production Compose stack is available in `compose.production.yaml`; the original `docker-compose.yml` remains the local development stack. The production stack uses non-root API/worker containers, a compiled React frontend served by unprivileged Nginx, password-protected Redis, private PostgreSQL/Redis networking, a one-shot Alembic migration service, persistent volumes, health checks and container resource limits. The browser uses same-origin `/api/v1` requests through the Nginx reverse proxy.
+A separate production Compose stack is available in `compose.production.yaml`; the original `docker-compose.yml` remains the local development stack. The production stack uses non-root API/worker containers, a compiled React frontend served by unprivileged Nginx, password-protected Redis, private PostgreSQL/Redis networking, a one-shot Alembic migration service, persistent volumes, Redis-heartbeat worker health checks and container resource limits. Scheduled detection runs use persisted worker fencing tokens so stale workers cannot finalize work after ownership changes. The browser uses same-origin `/api/v1` requests through the Nginx reverse proxy.
 
 Start with `.env.production.example`, copy it to the untracked `.env.production`, replace every placeholder, and set the same URL-safe database/Redis passwords in their respective service and connection-string variables. Set the exact public HTTPS `CORS_ORIGINS` value and a newly generated `OPS_AEGIS_SECRET_KEY`.
 
@@ -217,7 +217,7 @@ docker compose --env-file .env.production -f compose.production.yaml up -d --bui
 docker compose --env-file .env.production -f compose.production.yaml ps
 ```
 
-The frontend is bound to `127.0.0.1:8080`; place a maintained TLS reverse proxy/load balancer in front of it. PostgreSQL, Redis and the API are not published on host ports. Do not expose internal service ports to the public internet. See [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) for secrets, TLS, operations and limitations.
+The frontend is bound to `127.0.0.1:8080`; place a maintained TLS reverse proxy/load balancer in front of it. PostgreSQL, Redis and the API are not published on host ports. Do not expose internal service ports to the public internet. See [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) for secrets, TLS, worker health/recovery operations and limitations.
 
 This is a production-oriented container baseline, not proof of a live production deployment. Host hardening, TLS termination, DNS/firewall policy, secret-manager integration, off-host backups, monitoring, restore drills and runbooks remain operator responsibilities. Nuclei stays blocked in production until isolated scanner execution is deployed.
 

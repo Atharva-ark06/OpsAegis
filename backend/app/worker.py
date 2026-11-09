@@ -10,7 +10,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 
 import redis
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.config import settings
 from app.database import SessionLocal
@@ -93,43 +93,109 @@ def enqueue_pending(db, client, now: datetime) -> int:
     return count
 
 
-def process_run(run_id: int) -> None:
+class WorkerLeaseLost(RuntimeError):
+    """Raised when a worker must leave a run for the next lease owner."""
+
+
+def process_run(run_id: int, lease_lost: threading.Event, worker_token: str) -> None:
+    if lease_lost.is_set():
+        return
     db = SessionLocal()
     try:
         run = db.get(ScheduledDetectionRun, run_id)
         if run is None or run.status in {"succeeded", "failed"}:
             return
-        now = utc_now()
         run.status = "running"
         run.attempts += 1
-        run.started_at = now
+        run.started_at = utc_now()
         run.error_code = None
+        run.worker_token = worker_token
+        window_minutes = run.window_minutes
+        auth_threshold = run.auth_threshold
+        evaluation_time = as_utc(run.created_at)
+        attempt_number = run.attempts
+        if lease_lost.is_set():
+            raise WorkerLeaseLost("Worker lease lost before evaluation")
         db.commit()
-        result = evaluate_detections(run.window_minutes, run.auth_threshold, db, None, as_utc(run.created_at))
+
+        # Correlation writes are idempotent. If ownership is lost mid-evaluation,
+        # the next worker can safely re-evaluate after recovering this run.
+        result = evaluate_detections(
+            window_minutes, auth_threshold, db, None, evaluation_time
+        )
+        if lease_lost.is_set():
+            raise WorkerLeaseLost("Worker lease lost during evaluation")
+
+        finished_at = utc_now()
+        completed = db.execute(
+            update(ScheduledDetectionRun)
+            .where(
+                ScheduledDetectionRun.id == run_id,
+                ScheduledDetectionRun.status == "running",
+                ScheduledDetectionRun.worker_token == worker_token,
+            )
+            .values(
+                status="succeeded",
+                finished_at=finished_at,
+                error_code=None,
+                worker_token=None,
+            )
+        )
+        if completed.rowcount != 1:
+            db.rollback()
+            logger.warning("Scheduled detection run %s is no longer owned by this worker; completion discarded", run_id)
+            return
+        db.add(AuditLog(
+            actor_user_id=None,
+            action="detection.schedule.complete",
+            target=f"scheduled-run:{run_id}",
+            detail=json.dumps({
+                "attempts": attempt_number,
+                "created": result["created"],
+                "refreshed": result["refreshed"],
+            }),
+        ))
+        db.commit()
+    except WorkerLeaseLost as exc:
+        db.rollback()
+        logger.warning("Scheduled detection run %s left for recovery after lease loss: %s", run_id, exc)
+    except Exception as exc:
+        db.rollback()
+        if lease_lost.is_set():
+            logger.warning("Scheduled detection run %s left for recovery after lease loss during error handling", run_id)
+            return
         run = db.get(ScheduledDetectionRun, run_id)
         if run is None:
             return
-        run.status = "succeeded"
-        run.finished_at = utc_now()
-        run.error_code = None
-        db.add(AuditLog(actor_user_id=None, action="detection.schedule.complete",
-                        target=f"scheduled-run:{run.id}",
-                        detail=json.dumps({"attempts": run.attempts, "created": result["created"],
-                                           "refreshed": result["refreshed"]})))
+        now = utc_now()
+        status = "retrying" if run.attempts < MAX_ATTEMPTS else "failed"
+        next_attempt = now + timedelta(seconds=min(300, 15 * (2 ** max(0, run.attempts - 1))))
+        failed = db.execute(
+            update(ScheduledDetectionRun)
+            .where(
+                ScheduledDetectionRun.id == run_id,
+                ScheduledDetectionRun.status == "running",
+                ScheduledDetectionRun.worker_token == worker_token,
+            )
+            .values(
+                status=status,
+                error_code=type(exc).__name__[:80],
+                finished_at=now if status == "failed" else None,
+                next_attempt_at=next_attempt,
+                worker_token=None,
+            )
+        )
+        if failed.rowcount != 1:
+            db.rollback()
+            logger.warning("Scheduled detection run %s failure state discarded because worker ownership changed", run_id)
+            return
+        db.add(AuditLog(
+            actor_user_id=None,
+            action="detection.schedule.retry" if status == "retrying" else "detection.schedule.failed",
+            target=f"scheduled-run:{run_id}",
+            detail=json.dumps({"attempt": run.attempts, "error_code": type(exc).__name__[:80]}),
+        ))
         db.commit()
-    except Exception as exc:
-        db.rollback()
-        run = db.get(ScheduledDetectionRun, run_id)
-        if run is not None:
-            now = utc_now()
-            run.status = "retrying" if run.attempts < MAX_ATTEMPTS else "failed"
-            run.error_code = type(exc).__name__[:80]
-            run.finished_at = now if run.status == "failed" else None
-            run.next_attempt_at = now + timedelta(seconds=min(300, 15 * (2 ** max(0, run.attempts - 1))))
-            db.add(AuditLog(actor_user_id=None, action="detection.schedule.retry" if run.status == "retrying" else "detection.schedule.failed",
-                            target=f"scheduled-run:{run.id}",
-                            detail=json.dumps({"attempt": run.attempts, "error_code": run.error_code})))
-            db.commit()
         logger.exception("Scheduled detection run %s failed", run_id)
     finally:
         db.close()
@@ -149,6 +215,7 @@ def recover_interrupted_runs(db) -> int:
             run.status = "queued"
             run.next_attempt_at = now
             run.error_code = "WorkerRestartRecovery"
+        run.worker_token = None
     db.commit()
     return len(interrupted)
 
@@ -198,7 +265,7 @@ def run_worker() -> None:
             if item:
                 run_id = int(item[1])
                 client.delete(f"opsaegis:detection:enqueue:{run_id}")
-                process_run(run_id)
+                process_run(run_id, lease_lost, token)
     finally:
         stop_heartbeat.set()
         heartbeat.join(timeout=2)
