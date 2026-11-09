@@ -346,3 +346,13 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Hardens the future adapter-call boundary so request action IDs must match the registered action, approval IDs and target IDs must be canonical and bounded, and the idempotency key must exactly bind approval/action/target/parameters. Non-JSON and non-finite parameter values are rejected.
 - Adds regression tests for action substitution, target/digest substitution, malformed identifiers and canonical JSON requirements.
 - No provider adapter, dispatch endpoint, execution worker, Wazuh request, isolation or compensation operation is introduced. Provider integration remains a separately gated proposal requiring security approval and authorized staging evidence.
+
+
+## Wazuh staging lab preparation (PR #88)
+
+- Added a local-only bootstrap for the official Wazuh Docker `v4.14.10` single-node release, with loopback-only published ports and a private-network disposable agent.
+- Added a local agent readiness check, safe stop command, explicit confirmation before deleting lab volumes, and CI checks for scaffold safety / nested PowerShell syntax.
+- Generated certificates, cloned vendor configuration and lab state remain under the ignored `ops/wazuh-staging/runtime/` directory; no secrets or generated artifacts are committed.
+- This is lab setup only. No live OpsAegis-to-Wazuh ingestion/report validation has been performed; Phase 6.4 staging evidence remains pending.
+- No Wazuh isolation/unisolation adapter, mutation endpoint, dispatcher, queue consumer or provider call has been added. The action remains disabled and unregistered pending independently reviewed staging evidence and a separate implementation PR.
+- Operator guide: [Phase 6 Wazuh staging lab](PHASE6_WAZUH_STAGING_LAB.md).
