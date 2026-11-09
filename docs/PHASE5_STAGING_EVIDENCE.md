@@ -5,7 +5,7 @@
 Use this register to distinguish implementation and automated test coverage from evidence obtained against real staging or production services. Do not mark a check complete because a feature exists, a mocked test passes, a container builds, or a health endpoint responds.
 
 **Current review baseline:** 2026-11-09  
-**Repository baseline:** `main`, merge commit for PR #38: `a2e24d868061bd0d149d908dba5f5a7ab30cc271`  
+**Repository baseline:** `main`; update this SHA after the final Phase 5 PR is merged.  
 **Live environment evidence supplied for this register:** none. All live validation items below remain pending or blocked until an operator records evidence.
 
 ## Status vocabulary
@@ -35,6 +35,12 @@ Never store API keys, passwords, bearer tokens, authorization headers, private k
 
 A diagnostic `passed` result means only that the bounded request/heartbeat passed at that moment. A `skipped`, `not_probed`, missing report or unavailable environment is not a pass.
 
+## Latest repository-side baseline
+
+- PR #64 merged the frontend dependency upgrade and enforced the npm audit. Its generated lockfile was initially an artifact only; Phase 5 PR 1 makes it a committed input to CI and both frontend Docker builds.
+- The frontend build and tests passing in CI are not staging evidence. Docker image builds validate image construction, not live deployment, TLS, persistent storage or integration reachability.
+- The live evidence supplied for this register remains **none** until the operator records sanitized staging results below.
+
 ## Validation matrix
 
 | Workstream | Repository implementation / CI evidence | Required live evidence | Current status |
@@ -52,7 +58,7 @@ A diagnostic `passed` result means only that the bounded request/heartbeat passe
 | Docker deployment / migrations / storage | Production Compose validation and container builds; Alembic preflight; persistent volumes defined | Deploy in staging from clean state; apply migrations; verify service health, persistent data across restart, permissions, reverse proxy/TLS and rollback procedure | Pending |
 | PostgreSQL backup and restore | PowerShell backup, manifest/hash verification and isolated no-network restore drill scripts; syntax check in CI | Execute real backup, verify archive/hash, restore isolated copy, validate Alembic revision/table counts and application-level read-only smoke test; retain sanitized evidence | Pending |
 | Off-host retention / RPO / RTO | Runbook documents that encryption, off-host transfer and retention are external operator responsibilities | Configure encrypted off-host copy and retention; perform recovery timing exercise; record measured RPO/RTO and Redis recovery/backup decision | Pending |
-| Frontend dependency audit | Security workflow audits backend and Shannon Python requirements | Add/verify committed frontend lockfile and run reproducible npm dependency audit in CI | Pending |\n| Operational diagnostic decision logic | PR #39 adds unit coverage for environment parsing, status aggregation, heartbeat behavior, Nuclei fail-closed flags and exception redaction | These are local logic tests only; real service checks remain in the live-validation rows above | CI pending |
+| Frontend dependency audit | PR #64 introduced an enforced npm audit; Phase 5 PR 1 commits `frontend/package-lock.json`, uses `npm ci` in CI and both frontend Dockerfiles, and audits the committed lockfile | Confirm the final PR head passes frontend tests/build, npm audit and production image build | CI-tested after final PR 1 checks pass |\n| Operational diagnostic decision logic | PR #39 adds unit coverage for environment parsing, status aggregation, heartbeat behavior, Nuclei fail-closed flags and exception redaction | These are local logic tests only; real service checks remain in the live-validation rows above | CI pending |
 
 ## Safe operator sequence
 
