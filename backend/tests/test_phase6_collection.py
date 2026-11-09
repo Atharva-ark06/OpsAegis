@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from app.collection_worker import recover_interrupted_runs, schedule_due
+from app.collection_worker import enqueue_pending, heartbeat_loop, process_run, recover_interrupted_runs, schedule_due
 from app.models.entities import IntegrationCollectionRun, IntegrationSchedule
 
 
@@ -119,3 +119,86 @@ def test_schedule_due_respects_minimum_interval_after_manual_run(db_session):
     assert db_session.query(IntegrationCollectionRun).count() == 0
     db_session.refresh(schedule)
     assert schedule.next_run_at == schedule.last_run_at + timedelta(seconds=300)
+
+
+def test_pending_run_queue_marker_prevents_duplicate_delivery(db_session):
+    now = datetime.now(timezone.utc)
+    schedule = IntegrationSchedule(source="wazuh-manager-agents", enabled=False,
+        interval_seconds=300, lookback_minutes=10, updated_at=now)
+    db_session.add(schedule)
+    db_session.flush()
+    db_session.add(IntegrationCollectionRun(
+        schedule_id=schedule.id, schedule_slot="queue:dedupe", source=schedule.source,
+        lookback_minutes=10, status="queued", attempts=0, next_attempt_at=now, created_at=now,
+    ))
+    db_session.commit()
+
+    class FakeRedis:
+        markers = set()
+        queue = []
+        def set(self, key, value, nx=False, ex=None):
+            if nx and key in self.markers:
+                return False
+            self.markers.add(key)
+            return True
+        def lpush(self, key, value):
+            self.queue.insert(0, value)
+
+    client = FakeRedis()
+    assert enqueue_pending(db_session, client, now) == 1
+    assert enqueue_pending(db_session, client, now) == 0
+    assert len(client.queue) == 1
+
+
+def test_heartbeat_lease_loss_stops_worker_loop():
+    class StopAfterOneWait:
+        waits = 0
+        def wait(self, _seconds):
+            self.waits += 1
+            return self.waits > 1
+
+    class LostLeaseRedis:
+        def eval(self, *_args):
+            return 0
+
+    lost = __import__("threading").Event()
+    heartbeat_loop(LostLeaseRedis(), "worker-token", StopAfterOneWait(), lost)
+    assert lost.is_set()
+
+
+def test_redis_interruption_marks_worker_lease_lost():
+    class StopAfterOneWait:
+        waits = 0
+        def wait(self, _seconds):
+            self.waits += 1
+            return self.waits > 1
+
+    class BrokenRedis:
+        def eval(self, *_args):
+            raise ConnectionError("simulated redis outage")
+
+    lost = __import__("threading").Event()
+    heartbeat_loop(BrokenRedis(), "worker-token", StopAfterOneWait(), lost)
+    assert lost.is_set()
+
+
+def test_worker_does_not_start_run_after_lease_is_lost(db_session, monkeypatch):
+    import threading
+    now = datetime.now(timezone.utc)
+    schedule = IntegrationSchedule(source="wazuh-manager-agents", enabled=False,
+        interval_seconds=300, lookback_minutes=10, updated_at=now)
+    db_session.add(schedule)
+    db_session.flush()
+    run = IntegrationCollectionRun(
+        schedule_id=schedule.id, schedule_slot="lease:lost", source=schedule.source,
+        lookback_minutes=10, status="queued", attempts=0, next_attempt_at=now, created_at=now,
+    )
+    db_session.add(run)
+    db_session.commit()
+    monkeypatch.setattr("app.collection_worker.SessionLocal", lambda: db_session)
+    lost = threading.Event()
+    lost.set()
+    process_run(run.id, lost, "stale-worker")
+    db_session.refresh(run)
+    assert run.status == "queued"
+    assert run.attempts == 0
