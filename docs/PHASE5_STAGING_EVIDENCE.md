@@ -60,6 +60,12 @@ A diagnostic `passed` result means only that the bounded request/heartbeat passe
 | Off-host retention / RPO / RTO | Runbook documents that encryption, off-host transfer and retention are external operator responsibilities | Configure encrypted off-host copy and retention; perform recovery timing exercise; record measured RPO/RTO and Redis recovery/backup decision | Pending |
 | Frontend dependency audit | PR #64 introduced an enforced npm audit; Phase 5 PR 1 commits `frontend/package-lock.json`, uses `npm ci` in CI and both frontend Dockerfiles, and audits the committed lockfile | Confirm the final PR head passes frontend tests/build, npm audit and production image build | CI-tested after final PR 1 checks pass |\n| Operational diagnostic decision logic | PR #39 adds unit coverage for environment parsing, status aggregation, heartbeat behavior, Nuclei fail-closed flags and exception redaction | These are local logic tests only; real service checks remain in the live-validation rows above | CI pending |
 
+## Additional automated coverage planned in Phase 5 PR 2
+
+- A deterministic API-level test will collect three synthetic Wazuh authentication findings, evaluate correlation, verify one linked incident and analyst notification, mark the notification read, and re-evaluate to prove idempotency.
+- The production-container CI job will start the built Compose stack with temporary CI-only credentials, wait for PostgreSQL, Redis, API, detection worker and frontend health, verify the migration exit code, and call API readiness through Nginx. CI volumes are removed after the test.
+- The diagnostic CLI gains a strict mode that returns a non-zero status when a configured integration remains unprobed. These tests do not change the live-validation statuses in the matrix.
+
 ## Safe operator sequence
 
 1. Run the read-only diagnostic from the deployment host/network:
