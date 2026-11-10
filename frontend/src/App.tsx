@@ -13,6 +13,8 @@ import { ExecutionLedgerPanel } from "./ExecutionLedgerPanel";
 import { PlaybooksPanel } from "./PlaybooksPanel";
 import { AppDashboardShell } from "./components/ui/app-dashboard-shell";
 import { PrismFluxLoader } from "./components/ui/prism-flux-loader";
+import { ThemeToggle, type ThemeMode } from "./components/ui/theme-toggle";
+import "./components/ui/theme-toggle.css";
 import "./components/ui/prism-flux-loader.css";
 import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan, ShannonHealth, getShannonHealth } from "./api";
 import { describeEngineHealth } from "./engineHealth";
@@ -56,14 +58,7 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 }
 
 type ThemePreference = "dark" | "light" | "system";
-function ThemeToggle({ theme, onChange }: { theme: ThemePreference; onChange: (value: ThemePreference) => void }) {
-  return <label className="theme-control" aria-label="Color theme">
-    <span className="theme-control-label">THEME</span>
-    <select aria-label="Color theme" value={theme} onChange={(event) => onChange(event.target.value as ThemePreference)}>
-      <option value="dark">Dark</option><option value="light">Light</option><option value="system">System</option>
-    </select>
-  </label>;
-}
+
 
 function StatCard({ label, value, detail, accent }: { label: string; value: number; detail: string; accent: string }) {
   return <article className="stat-card">
@@ -212,12 +207,19 @@ function App() {
       return "dark";
     }
   });
+  const [systemTheme, setSystemTheme] = useState<ThemeMode>(() => {
+    try { return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"; }
+    catch { return "dark"; }
+  });
+  const resolvedTheme: ThemeMode = theme === "system" ? systemTheme : theme;
+
   useEffect(() => {
     const applyTheme = () => {
-      const resolved = theme === "system"
+      const resolved: ThemeMode = theme === "system"
         ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
         : theme;
       document.documentElement.dataset.theme = resolved;
+      setSystemTheme((current) => current === resolved ? current : resolved);
     };
     applyTheme();
     try { window.localStorage.setItem("opsaegis-theme", theme); } catch { /* storage may be unavailable */ }
@@ -226,6 +228,41 @@ function App() {
     preference.addEventListener("change", applyTheme);
     return () => preference.removeEventListener("change", applyTheme);
   }, [theme]);
+
+  function handleThemeChange(next: ThemeMode, trigger: HTMLButtonElement) {
+    setTheme(next);
+    const root = document.documentElement;
+    const doc = document as Document & {
+      startViewTransition?: (update: () => void) => { finished: Promise<void> };
+    };
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion || !doc.startViewTransition) {
+      root.dataset.theme = next;
+      return;
+    }
+    const rect = trigger.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const radius = Math.max(
+      Math.hypot(x, y),
+      Math.hypot(window.innerWidth - x, y),
+      Math.hypot(x, window.innerHeight - y),
+      Math.hypot(window.innerWidth - x, window.innerHeight - y),
+    );
+    root.style.setProperty("--aegis-theme-origin", `${x}px ${y}px`);
+    root.style.setProperty("--aegis-theme-radius", `${radius}px`);
+    const cleanup = () => {
+      root.style.removeProperty("--aegis-theme-origin");
+      root.style.removeProperty("--aegis-theme-radius");
+    };
+    try {
+      const transition = doc.startViewTransition(() => { root.dataset.theme = next; });
+      void transition.finished.then(cleanup, cleanup);
+    } catch {
+      root.dataset.theme = next;
+      cleanup();
+    }
+  }
   const [token, setToken] = useState<string | null>(() => getAccessToken());
   const [user, setUser] = useState<User | null>(null);
   const [authState, setAuthState] = useState<LoadState>("idle");
@@ -392,7 +429,7 @@ function App() {
     searchValue={query}
     onSearchChange={setQuery}
     headerActions={<>
-      <ThemeToggle theme={theme} onChange={setTheme} />
+      <ThemeToggle mode={resolvedTheme} onModeChange={handleThemeChange} responsive />
       <span className="aegis-role-chip">{titleCase(user.role)}</span>
       <button className="aegis-refresh" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button>
     </>}
