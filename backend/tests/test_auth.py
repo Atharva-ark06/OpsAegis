@@ -165,3 +165,32 @@ def test_admin_can_read_audit_events(client, db_session):
     events = client.get("/api/v1/auth/audit", headers={"Authorization": f"Bearer {token}"})
     assert events.status_code == 200
     assert any(event["action"] == "auth.login" for event in events.json())
+
+def test_first_admin_setup_requires_token_and_only_runs_once(client, monkeypatch):
+    monkeypatch.setenv("OPS_AEGIS_BOOTSTRAP_TOKEN", "one-time-bootstrap-token-with-adequate-entropy")
+    assert client.get("/api/v1/auth/setup-status").json()["setup_required"] is True
+    payload = {"email": "first-admin@example.com", "password": "Strong-First-Admin-Password-42!"}
+    assert client.post("/api/v1/auth/bootstrap", json=payload).status_code == 403
+    created = client.post("/api/v1/auth/bootstrap", headers={"X-Setup-Token": "one-time-bootstrap-token-with-adequate-entropy"}, json=payload)
+    assert created.status_code == 201
+    assert created.json()["role"] == "admin"
+    assert "password_hash" not in created.json()
+    assert client.get("/api/v1/auth/setup-status").json()["setup_required"] is False
+    again = client.post("/api/v1/auth/bootstrap", headers={"X-Setup-Token": "one-time-bootstrap-token-with-adequate-entropy"}, json={"email":"second-admin@example.com","password":"Strong-Second-Admin-Password-42!"})
+    assert again.status_code == 409
+
+
+def test_admin_can_list_and_update_users_but_cannot_remove_last_admin(client, db_session):
+    admin = create_admin(db_session)
+    token = client.post("/api/v1/auth/login", json={"email":admin.email,"password":"Correct-Horse-Battery-9!"}).json()["access_token"]
+    headers = {"Authorization": "Bearer " + token}
+    created = client.post("/api/v1/auth/users", headers=headers, json={"email":"analyst2@example.com","password":"Another-Strong-Password-42!","role":"analyst"})
+    assert created.status_code == 201
+    listed = client.get("/api/v1/auth/users", headers=headers)
+    assert listed.status_code == 200 and len(listed.json()) == 2
+    changed = client.patch("/api/v1/auth/users/" + str(created.json()["id"]), headers=headers, json={"role":"viewer","is_active":False})
+    assert changed.status_code == 200
+    assert changed.json()["role"] == "viewer" and changed.json()["is_active"] is False
+    last_admin = client.patch("/api/v1/auth/users/" + str(admin.id), headers=headers, json={"is_active":False})
+    assert last_admin.status_code == 400
+    assert client.get("/api/v1/auth/users").status_code == 401
