@@ -601,3 +601,12 @@ tbody tr:hover { background: #142236; }
 .playbook-approval-card > p { margin: 10px 0; }
 .playbook-approval-card > small { color: var(--muted, #94a3b8); }
 @media (max-width: 640px) { .playbook-form-grid { grid-template-columns: 1fr; } .playbook-action-row, .playbook-approval-heading { align-items: flex-start; flex-direction: column; } }
+
+
+/* Phase 6.4 operational report summary and exports */
+.operations-report { display: grid; gap: 14px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border, #26384c); }
+.operations-report-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.operations-report-stats article { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--border, #26384c); border-radius: 9px; }
+.operations-report-stats small { color: var(--muted, #94a3b8); }
+.operations-report-stats strong { font-size: 21px; }
+@media (max-width: 760px) { .operations-report-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
