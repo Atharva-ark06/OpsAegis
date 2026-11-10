@@ -370,6 +370,42 @@ export interface OperationalThresholds {
   collection_failure_rate_percent: number; source_stale_after_minutes: number;
   detection_to_incident_minutes: number; incident_resolution_minutes: number; updated_at: string | null; active_alerts?: {code:string;source:string|null;message:string}[]; evaluation_window?: {since:string;until:string;timezone:string};
 }
+export interface OperationsReport {
+  generated_at:string; window:{since:string;until:string;timezone:"UTC"};
+  collection:{sources_configured:number;sources_with_successful_runs:number;sources:Array<{
+    source:string;description:string;enabled:boolean;runs:number;successful_runs:number;failed_runs:number;
+    failure_rate:number|null;received:number;created:number;updated:number;skipped:number;
+    truncated_possible_runs:number;latest_success_at:string|null;freshness_age_seconds:number|null;
+    freshness:"fresh"|"stale"|"never_succeeded";
+  }>;rows_limited:boolean};
+  response:{detections_linked_to_incidents:number;mean_detection_to_incident_seconds:number|null;
+    incidents_resolved:number;mean_incident_to_resolution_seconds:number|null;resolution_metric_source:string;
+    rows_limited:boolean};
+  data_quality:{stale_sources:string[];never_succeeded_sources:string[];truncated_collection_runs:number;limitations:string[]};
+}
+export const getOperationsReport = (since:string,until:string):Promise<OperationsReport> =>
+  request("/reports/operations?"+new URLSearchParams({since,until}).toString());
+export async function downloadOperationsReport(format:"json"|"csv",since:string,until:string):Promise<void> {
+  const headers=new Headers();
+  const token=getAccessToken();
+  if(token) headers.set("Authorization","Bearer "+token);
+  const path="/reports/operations/export?"+new URLSearchParams({format,since,until}).toString();
+  let response:Response;
+  try { response=await fetch(API_BASE_URL+path,{headers}); }
+  catch { throw new ApiError("Cannot reach the OpsAegis API.",0); }
+  if(response.status===401) clearAccessToken();
+  if(!response.ok) {
+    let message="Report export failed ("+response.status+").";
+    try {const payload=await response.json() as {detail?:string};if(payload.detail)message=payload.detail;} catch {/* status fallback */}
+    throw new ApiError(message,response.status);
+  }
+  const blob=await response.blob();
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement("a");
+  anchor.href=url;
+  anchor.download="opsaegis-operations-report-"+since.slice(0,10)+"-to-"+until.slice(0,10)+"."+format;
+  document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+}
 export const getOperationsTrends = (since: string, until: string, bucket: "day" | "week" = "day"): Promise<OperationsTrends> =>
   request("/reports/operations/trends?" + new URLSearchParams({since, until, bucket}).toString());
 export const getOperationalThresholds = (): Promise<OperationalThresholds> => request("/reports/operations/thresholds");
