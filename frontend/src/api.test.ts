@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, getPlaybooks, getPlaybookActions, previewPlaybook, createPlaybookApproval, getPlaybookApprovals, decidePlaybookApproval, login, saveAccessToken } from "./api";
+import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, getPlaybooks, getPlaybookActions, previewPlaybook, createPlaybookApproval, getPlaybookApprovals, decidePlaybookApproval, getOperationsReport, downloadOperationsReport, login, saveAccessToken } from "./api";
 
 function mockResponse(status: number, payload: unknown) {
   return {
@@ -208,4 +208,33 @@ describe("OpsAegis API client", () => {
     expect(fetch).toHaveBeenNthCalledWith(2,"http://localhost:8000/api/v1/playbooks/incident-investigation/approval-requests",expect.objectContaining({method:"POST"}));
     expect(fetch).toHaveBeenNthCalledWith(3,"http://localhost:8000/api/v1/playbooks/approvals?status_filter=pending",expect.objectContaining({headers:expect.any(Headers)}));
     expect(fetch).toHaveBeenNthCalledWith(4,"http://localhost:8000/api/v1/playbooks/approvals/4/decision",expect.objectContaining({method:"POST"}));
+  });
+
+
+  it("loads an authenticated bounded-window operations report", async () => {
+    saveAccessToken("report-session");
+    const report = {window:{since:"2026-11-01T00:00:00Z",until:"2026-11-10T00:00:00Z",timezone:"UTC"},collection:{sources:[]},response:{},data_quality:{}};
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200,report));
+    await expect(getOperationsReport("2026-11-01T00:00:00Z","2026-11-10T00:00:00Z")).resolves.toEqual(report);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/reports/operations?since=2026-11-01T00%3A00%3A00Z&until=2026-11-10T00%3A00%3A00Z",
+      expect.objectContaining({headers:expect.any(Headers)}),
+    );
+  });
+
+  it("requests the authenticated CSV export endpoint", async () => {
+    saveAccessToken("report-session");
+    const createObjectURL=vi.spyOn(URL,"createObjectURL").mockReturnValue("blob:test");
+    const revokeObjectURL=vi.spyOn(URL,"revokeObjectURL").mockImplementation(()=>{});
+    const click=vi.spyOn(HTMLAnchorElement.prototype,"click").mockImplementation(()=>{});
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok:true,status:200,blob:async()=>new Blob(["metric,source,value,unit"]),
+    } as Response);
+    await downloadOperationsReport("csv","2026-11-01T00:00:00Z","2026-11-10T00:00:00Z");
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/reports/operations/export?format=csv&since=2026-11-01T00%3A00%3A00Z&until=2026-11-10T00%3A00%3A00Z",
+      expect.objectContaining({headers:expect.any(Headers)}),
+    );
+    expect(click).toHaveBeenCalledOnce();
+    createObjectURL.mockRestore();revokeObjectURL.mockRestore();click.mockRestore();
   });
