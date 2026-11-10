@@ -224,8 +224,12 @@ describe("OpsAegis API client", () => {
 
   it("requests the authenticated CSV export endpoint", async () => {
     saveAccessToken("report-session");
-    const createObjectURL=vi.spyOn(URL,"createObjectURL").mockReturnValue("blob:test");
-    const revokeObjectURL=vi.spyOn(URL,"revokeObjectURL").mockImplementation(()=>{});
+    const originalCreate=Object.getOwnPropertyDescriptor(URL,"createObjectURL");
+    const originalRevoke=Object.getOwnPropertyDescriptor(URL,"revokeObjectURL");
+    const createObjectURL=vi.fn(()=> "blob:test");
+    const revokeObjectURL=vi.fn(()=>{});
+    Object.defineProperty(URL,"createObjectURL",{configurable:true,value:createObjectURL});
+    Object.defineProperty(URL,"revokeObjectURL",{configurable:true,value:revokeObjectURL});
     const click=vi.spyOn(HTMLAnchorElement.prototype,"click").mockImplementation(()=>{});
     vi.mocked(fetch).mockResolvedValueOnce({
       ok:true,status:200,blob:async()=>new Blob(["metric,source,value,unit"]),
@@ -236,5 +240,7 @@ describe("OpsAegis API client", () => {
       expect.objectContaining({headers:expect.any(Headers)}),
     );
     expect(click).toHaveBeenCalledOnce();
-    createObjectURL.mockRestore();revokeObjectURL.mockRestore();click.mockRestore();
+    if(originalCreate) Object.defineProperty(URL,"createObjectURL",originalCreate); else Reflect.deleteProperty(URL,"createObjectURL");
+    if(originalRevoke) Object.defineProperty(URL,"revokeObjectURL",originalRevoke); else Reflect.deleteProperty(URL,"revokeObjectURL");
+    click.mockRestore();
   });
