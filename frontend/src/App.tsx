@@ -31,7 +31,8 @@ const navigation: { id: View; label: string; short: string }[] = [
   { id: "incidents", label: "Incidents", short: "IN" },
   { id: "integrations", label: "Integrations", short: "IG" },
   { id: "threat-intel", label: "Threat Intel", short: "TI" },
-  { id: "playbooks", label: "Playbooks", short: "PB" },\n  { id: "users", label: "Users & roles", short: "UR" },
+  { id: "playbooks", label: "Playbooks", short: "PB" },
+  { id: "users", label: "Users & roles", short: "UR" },
 ];
 
 function formatDate(value: string): string {
