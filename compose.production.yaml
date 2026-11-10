@@ -85,6 +85,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       REDIS_URL: ${REDIS_URL:?Set REDIS_URL in .env.production}
       CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
+      EVIDENCE_STORAGE_PATH: /var/lib/opsaegis/evidence
+    volumes:
+      - evidence_data:/var/lib/opsaegis/evidence
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -238,3 +241,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  evidence_data:
