@@ -46,7 +46,7 @@ jobs:
           from pathlib import Path
 
           forbidden = {
-              "CROWDSEC_API_KEY", "CROWDSEC_MACHINE_ID", "CROWDSEC_MACHINE_PASSWORD",
+              "OPS_AEGIS_SECRET_KEY", "CROWDSEC_API_KEY", "CROWDSEC_MACHINE_ID", "CROWDSEC_MACHINE_PASSWORD",
               "VIRUSTOTAL_API_KEY", "ABUSEIPDB_API_KEY", "NVD_API_KEY",
               "SHANNON_RUNNER_TOKEN",
           }
@@ -57,11 +57,19 @@ jobs:
           for label, path in zip(("development", "production"), sys.argv[1:]):
               config = json.loads(Path(path).read_text(encoding="utf-8"))
               services = config["services"]
+              backend_env = services["backend"].get("environment", {})
+              api_secret = backend_env.get("OPS_AEGIS_SECRET_KEY")
+              assert api_secret, f"{label}: API signing key is not explicitly configured"
+              for worker_name in ("detection-worker", "collection-worker"):
+                  worker = services[worker_name]
+                  assert "env_file" not in worker, f"{label}: {worker_name} must not load a broad env file"
+                  env = worker.get("environment", {})
+                  assert env.get("OPS_AEGIS_SECRET_KEY"), f"{label}: {worker_name} lacks its runtime validation key"
+                  assert env["OPS_AEGIS_SECRET_KEY"] != api_secret, f"{label}: {worker_name} reuses the API signing key"
+                  assert not (forbidden & env.keys()), f"{label}: unrelated credentials reached {worker_name}"
               worker = services["collection-worker"]
-              assert "env_file" not in worker, f"{label}: collection worker must not load a broad env file"
               env = worker.get("environment", {})
               assert required.issubset(env), f"{label}: missing required Wazuh environment keys"
-              assert not (forbidden & env.keys()), f"{label}: unrelated provider credentials reached collection worker"
               mounts = worker.get("volumes", [])
               assert any(m.get("target") == "/run/opsaegis/certs" and m.get("read_only") for m in mounts), f"{label}: read-only CA mount missing"
               backend_mounts = services["backend"].get("volumes", [])
@@ -160,9 +168,11 @@ jobs:
           db_password="$(openssl rand -hex 24)"
           redis_password="$(openssl rand -hex 24)"
           app_secret="$(openssl rand -hex 48)"
+          worker_secret="$(openssl rand -hex 48)"
           cat > .env.production <<EOF
           OPS_AEGIS_ENV=production
           OPS_AEGIS_SECRET_KEY=${app_secret}
+          OPS_AEGIS_WORKER_SECRET_KEY=${worker_secret}
           OPS_AEGIS_ACCESS_TOKEN_MINUTES=15
           OPS_AEGIS_ALLOWED_HOSTS=127.0.0.1,localhost
           POSTGRES_DB=opsaegis
