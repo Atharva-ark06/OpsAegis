@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { OpsAegisSignIn } from "./OpsAegisSignIn";
+import { AdminUsers } from "./AdminUsers";
 import { ShannonPanel } from "./ShannonPanel";
 import { DetectionsPanel } from "./DetectionsPanel";
 import { ThreatIntelPanel } from "./ThreatIntelPanel";
@@ -18,7 +19,7 @@ import {
   getFindings, getIncidents, getWazuhHealth, getDetections, Detection, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
 } from "./api";
 
-type View = "overview" | "assets" | "findings" | "vulnerabilities" | "detections" | "incidents" | "integrations" | "threat-intel" | "playbooks";
+type View = "overview" | "assets" | "findings" | "vulnerabilities" | "detections" | "incidents" | "integrations" | "threat-intel" | "playbooks" | "users";
 type LoadState = "idle" | "loading" | "ready" | "error";
 
 const navigation: { id: View; label: string; short: string }[] = [
@@ -30,7 +31,7 @@ const navigation: { id: View; label: string; short: string }[] = [
   { id: "incidents", label: "Incidents", short: "IN" },
   { id: "integrations", label: "Integrations", short: "IG" },
   { id: "threat-intel", label: "Threat Intel", short: "TI" },
-  { id: "playbooks", label: "Playbooks", short: "PB" },
+  { id: "playbooks", label: "Playbooks", short: "PB" },\n  { id: "users", label: "Users & roles", short: "UR" },
 ];
 
 function formatDate(value: string): string {
@@ -371,7 +372,7 @@ function App() {
       <div className="brand sidebar-brand"><span className="brand-mark">OA</span><span><strong>OpsAegis</strong><small>SECURITY OPERATIONS</small></span></div>
       <div className="workspace-label">WORKSPACE</div>
       <nav className="side-nav" aria-label="Main navigation">
-        {navigation.filter((item) => item.id !== "playbooks" || canOperate).map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setQuery(""); }}><span className="nav-short">{item.short}</span><span>{item.label}</span>{item.id === "findings" && filteredFindingCount > 0 && <span className="nav-count">{filteredFindingCount}</span>}</button>)}
+        {navigation.filter((item) => (item.id !== "playbooks" || canOperate) && (item.id !== "users" || user.role === "admin")).map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setQuery(""); }}><span className="nav-short">{item.short}</span><span>{item.label}</span>{item.id === "findings" && filteredFindingCount > 0 && <span className="nav-count">{filteredFindingCount}</span>}</button>)}
       </nav>
       <div className="sidebar-bottom">
         <div className="connection-indicator"><span className="live-dot" /><span>API session active</span></div>
@@ -414,7 +415,7 @@ function App() {
 
       {view !== "overview" && <div className="page-content">
         {view !== "detections" && view !== "threat-intel" && view !== "vulnerabilities" && view !== "playbooks" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
-        {view === "playbooks" ? <PlaybooksPanel incidents={incidents} user={user} /> : view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /><CollectionPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
+        {view === "users" ? <AdminUsers currentUser={user} /> : view === "playbooks" ? <PlaybooksPanel incidents={incidents} user={user} /> : view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /><CollectionPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
           <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label={"Search " + view} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={"Search " + view + "…"} /></label></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
