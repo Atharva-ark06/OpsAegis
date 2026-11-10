@@ -60,7 +60,7 @@ export function CollectionPanel({ canOperate, isAdmin }: { canOperate: boolean; 
 
   return <section className="panel collection-panel">
     <div className="panel-heading"><div><p className="eyebrow">PHASE 6 · READ-ONLY AUTOMATION</p><h3>Collection orchestration</h3></div>
-      <button className="text-button" onClick={() => void refresh().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Refresh failed."))}>Refresh runs ↻</button>
+      <button className="secondary-button compact" onClick={() => void refresh().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Refresh failed."))}>Refresh runs ↻</button>
     </div>
     <p className="integration-note">Only the Wazuh Manager inventory and Wazuh Indexer alert readers are allowlisted. Schedules are disabled until an administrator enables them. No scanner or response action is invoked.</p>
     {error && <div className="inline-error" role="alert">{error}</div>}
