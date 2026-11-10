@@ -16,7 +16,6 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,7 +41,7 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
             <span className="oa-auth-mark">OA</span>
             <span><strong>OpsAegis</strong><small>SECURITY OPERATIONS</small></span>
           </a>
-          <a className="oa-help" href="mailto:support@opsaegis.local">Need help?</a>
+          <span className="oa-help">Need help?</span>
         </header>
 
         <div className="oa-auth-content">
@@ -66,7 +65,6 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
                     <input id="oa-password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required maxLength={256} />
                     <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? "Hide" : "Show"}</button>
                   </div>
-                  <label className="oa-remember"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /> Keep this session active</label>
                   {error && <div className="oa-auth-error" role="alert">{error}</div>}
                   <button className="oa-submit" type="submit" disabled={busy}>{busy ? "Authenticating…" : "Sign in"} <span aria-hidden="true">→</span></button>
                 </form>
