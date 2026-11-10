@@ -313,6 +313,26 @@ class IncidentNote(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 
+class IncidentEvidenceAttachment(Base):
+    __tablename__ = "incident_evidence_attachments"
+    __table_args__ = (
+        UniqueConstraint("storage_key", name="uq_incident_evidence_storage_key"),
+        CheckConstraint("size_bytes > 0", name="ck_incident_evidence_size_positive"),
+        Index("ix_incident_evidence_incident_created", "incident_id", "created_at"),
+        Index("ix_incident_evidence_expires_at", "expires_at"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    incident_id: Mapped[int] = mapped_column(ForeignKey("incidents.id", ondelete="RESTRICT"), nullable=False)
+    uploaded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    storage_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(160), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class PlaybookApproval(Base):
     __tablename__ = "playbook_approvals"
     __table_args__ = (

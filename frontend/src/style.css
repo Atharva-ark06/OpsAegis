@@ -561,3 +561,15 @@ tbody tr:hover { background: #142236; }
   .execution-ledger-controls { align-items: stretch; flex-direction: column; }
   .execution-ledger-row { grid-template-columns: 1fr; gap: .7rem; }
 }
+
+
+/* Phase 6.2 bounded incident evidence attachments */
+.evidence-upload-form { margin-top: 12px; }
+.evidence-upload-form input[type="file"] { display: block; max-width: 100%; margin: 8px 0; color: var(--muted, #94a3b8); }
+.timeline-attachments { margin: 16px 0; padding: 14px; border: 1px solid var(--border, #26384c); border-radius: 10px; }
+.timeline-attachments ul { list-style: none; padding: 0; margin: 8px 0 0; }
+.timeline-attachments li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border, #26384c); }
+.timeline-attachments li:last-child { border-bottom: 0; }
+.timeline-attachments li > div { min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.timeline-attachments li small { color: var(--muted, #94a3b8); font-size: 11px; }
+@media (max-width: 640px) { .timeline-attachments li { align-items: flex-start; flex-direction: column; } }

@@ -14,7 +14,7 @@ def _admin_headers(db_session):
 
 
 def test_trends_return_daily_buckets_with_persisted_counts(client, analyst_headers, db_session):
-    now = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     schedule = IntegrationSchedule(source="wazuh-manager-agents", enabled=True, interval_seconds=300,
                                    lookback_minutes=15, updated_at=now)
     db_session.add(schedule)

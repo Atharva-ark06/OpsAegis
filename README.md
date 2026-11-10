@@ -161,7 +161,19 @@ Endpoints:
 - `POST /api/v1/incidents/{id}/notes` (admin/analyst)
 - `GET /api/v1/incidents/{id}/evidence-export` (admin/analyst)
 
-Timeline and export limits are explicit. This increment does not yet add binary evidence attachments, configurable retention, tenant-level isolation or a cryptographic chain of custody. Phase 6.2 remains in progress until those controls and staging validation are completed.
+Evidence attachments are now supported through admin/analyst-only upload, list and download endpoints:
+- `POST /api/v1/incidents/{id}/attachments` (multipart field `file`)
+- `GET /api/v1/incidents/{id}/attachments`
+- `GET /api/v1/incidents/{id}/attachments/{attachment_id}`
+
+Uploads are content-sniffed (PDF, PNG, JPEG or UTF-8 text), capped at 10 MiB per file by default (25 MiB hard configuration ceiling), 100 active files and 100 MiB per incident by default (500 MiB hard configuration ceiling), stored in a persistent volume outside the web root, and never embedded in JSON exports. Downloads verify SHA-256 before serving and force attachment disposition with `no-store` and `nosniff`. Metadata includes uploader, size, digest and expiry; the default retention is 365 days. For standalone deployments configure `EVIDENCE_STORAGE_PATH`, `EVIDENCE_MAX_ATTACHMENT_BYTES` and `EVIDENCE_RETENTION_DAYS` on the backend; Compose pins the storage path to its mounted evidence volume. Production Compose mounts the `evidence_data` volume and the proxy caps request bodies at 11 MiB.
+
+Expired-file pruning is explicit and dry-run by default:
+```powershell
+docker compose -f compose.production.yaml exec backend python -m scripts.purge_expired_evidence
+docker compose -f compose.production.yaml exec backend python -m scripts.purge_expired_evidence --apply
+```
+Run the first command to inspect the count; use `--apply` only under an approved retention procedure. Back up the evidence volume with the database, protect it with encrypted off-host storage, and restrict volume access. This implementation does not provide automatic scheduled deletion, malware scanning, tenant isolation, immutable/WORM storage or a cryptographic chain of custody. Phase 6.2 still requires staging validation and an independently reviewed retention/backup drill. See [the evidence attachment runbook](docs/PHASE6_EVIDENCE_ATTACHMENTS.md).
 
 ## Scheduled detection, lifecycle and notifications
 

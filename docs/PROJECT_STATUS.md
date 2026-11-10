@@ -76,7 +76,7 @@ The repository-side validator checks evidence-register structure in CI. Run `pyt
 ## Phase 6 implementation (PR #72 merged)
 
 - Adds disabled-by-default schedules for Wazuh Manager registered-agent inventory and Wazuh Indexer alert windows, durable collection run history, a dedicated Redis-leased worker, bounded retries, restart recovery and run fencing. Manual runs use the same Wazuh sync functions as scheduled runs. CrowdSec, scanners and response actions are not part of this worker.
-- Adds an incident investigation timeline combining audit changes, analyst notes, correlated detections and linked findings with provenance labels, plus a redacted JSON export. Binary attachments, retention enforcement and stronger chain-of-custody controls remain future work.
+- Adds an incident investigation timeline combining audit changes, analyst notes, correlated detections and linked findings with provenance labels, plus a redacted JSON export. Binary evidence uploads are bounded and content-sniffed, operator-only, stored in a persistent volume outside the web root, and verified by SHA-256 on download. Configurable expiry and an explicit dry-run-first pruning command are included; automatic pruning, malware scanning, immutable storage and cryptographic chain-of-custody remain out of scope pending separate design and staging review.
 - Automated tests were added for schedule enqueue/recovery, role/allowlist enforcement, analyst notes and redaction. They have not been run in this environment; CI must validate the branch. No live integration or staging result is claimed.
 
 ## Phase 6 kickoff

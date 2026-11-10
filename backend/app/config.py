@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     shannon_timeout_seconds: int = Field(default=15, validation_alias="SHANNON_TIMEOUT_SECONDS")
     shannon_max_response_bytes: int = Field(default=5242880, validation_alias="SHANNON_MAX_RESPONSE_BYTES")
     shannon_max_findings: int = Field(default=200, validation_alias="SHANNON_MAX_FINDINGS")
+    evidence_storage_path: str = Field(default="./.data/evidence", validation_alias="EVIDENCE_STORAGE_PATH")
+    evidence_max_attachment_bytes: int = Field(default=10485760, validation_alias="EVIDENCE_MAX_ATTACHMENT_BYTES")
+    evidence_max_incident_bytes: int = Field(default=104857600, validation_alias="EVIDENCE_MAX_INCIDENT_BYTES")
+    evidence_retention_days: int = Field(default=365, validation_alias="EVIDENCE_RETENTION_DAYS")
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @model_validator(mode="after")
@@ -114,6 +118,12 @@ class Settings(BaseSettings):
                     raise ValueError("Production CORS_ORIGINS cannot use loopback hosts")
             if self.nuclei_enabled and not self.nuclei_worker_enabled:
                 raise ValueError("Production Nuclei execution requires NUCLEI_WORKER_ENABLED=true and the isolated worker service")
+        if not 1 <= self.evidence_max_attachment_bytes <= 26214400:
+            raise ValueError("EVIDENCE_MAX_ATTACHMENT_BYTES must be between 1 and 26214400")
+        if not 1048576 <= self.evidence_max_incident_bytes <= 524288000:
+            raise ValueError("EVIDENCE_MAX_INCIDENT_BYTES must be between 1048576 and 524288000")
+        if not 1 <= self.evidence_retention_days <= 3650:
+            raise ValueError("EVIDENCE_RETENTION_DAYS must be between 1 and 3650")
         if bool(self.crowdsec_machine_id) != bool(self.crowdsec_machine_password):
             raise ValueError("CROWDSEC_MACHINE_ID and CROWDSEC_MACHINE_PASSWORD must be configured together")
         for name, value in (("WAZUH_MANAGER_TIMEOUT_SECONDS", self.wazuh_manager_timeout_seconds),
