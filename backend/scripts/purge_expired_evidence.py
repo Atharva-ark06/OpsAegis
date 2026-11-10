@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import select
@@ -23,7 +24,7 @@ def main() -> int:
 
     root = Path(settings.evidence_storage_path).expanduser().resolve()
     now_query = select(IncidentEvidenceAttachment).where(
-        IncidentEvidenceAttachment.expires_at <= __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+        IncidentEvidenceAttachment.expires_at <= datetime.now(timezone.utc)
     ).order_by(IncidentEvidenceAttachment.expires_at.asc()).limit(args.limit)
 
     session = SessionLocal()
