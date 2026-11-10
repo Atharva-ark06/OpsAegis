@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { BookOpen, Boxes, Bug, Eye, Globe, LayoutDashboard, Plug, ShieldAlert, Siren, Users, type LucideIcon } from "lucide-react";
 
 export interface DashboardNavItem {
   id: string;
@@ -21,21 +22,22 @@ export interface AppDashboardShellProps {
   children: ReactNode;
 }
 
+const NAV_ICONS: Record<string, LucideIcon> = {
+  overview: LayoutDashboard,
+  assets: Boxes,
+  findings: ShieldAlert,
+  vulnerabilities: Bug,
+  detections: Eye,
+  incidents: Siren,
+  integrations: Plug,
+  "threat-intel": Globe,
+  playbooks: BookOpen,
+  users: Users,
+};
+
 function NavGlyph({ id }: { id: string }) {
-  const common = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
-  const paths: Record<string, ReactNode> = {
-    overview: <><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></>,
-    assets: <><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.7 7.5 4.4 7.5-4.4M12 12v9"/></>,
-    findings: <><path d="M12 3 21 19H3L12 3Z"/><path d="M12 9v4m0 3h.01"/></>,
-    vulnerabilities: <><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7m0-7-7 7"/></>,
-    detections: <><path d="M3 12s3.2-7 9-7 9 7 9 7-3.2 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="2.7"/></>,
-    incidents: <><path d="M12 3 4 6v5c0 5 3.4 8.2 8 10 4.6-1.8 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></>,
-    integrations: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7m-3.5-3.5h7"/></>,
-    "threat-intel": <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2m-9-2h2m8 0h2"/></>,
-    playbooks: <><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21.5v-17Z"/><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H20M9 6h7m-7 4h7"/></>,
-    users: <><path d="M16 20v-1.5a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4V20"/><circle cx="10" cy="7.5" r="3.5"/><path d="M20 20v-1.5a4 4 0 0 0-3-3.87M16 4.2a3.5 3.5 0 0 1 0 6.6"/></>,
-  };
-  return <svg {...common}>{paths[id] ?? <circle cx="12" cy="12" r="8"/>}</svg>;
+  const Icon = NAV_ICONS[id] ?? ShieldAlert;
+  return <Icon size={18} strokeWidth={1.7} aria-hidden="true" />;
 }
 
 export function AppDashboardShell({
