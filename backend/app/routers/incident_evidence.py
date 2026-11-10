@@ -69,7 +69,10 @@ def _read_attachment(db: Session, incident_id: int, attachment_id: int) -> Incid
         IncidentEvidenceAttachment.id == attachment_id,
         IncidentEvidenceAttachment.incident_id == incident_id,
     ))
-    if item is None or item.expires_at <= datetime.now(timezone.utc):
+    expiry = item.expires_at if item is not None else None
+    if expiry is not None and expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    if item is None or expiry <= datetime.now(timezone.utc):
         raise HTTPException(404, "Evidence attachment not found")
     return item
 
@@ -98,6 +101,17 @@ async def upload_incident_attachment(incident_id: int, file: UploadFile = File(.
                                      actor: User = Depends(require_roles(*OPERATORS))):
     if db.get(Incident, incident_id) is None:
         raise HTTPException(404, "Incident not found")
+    active_count = db.scalar(select(IncidentEvidenceAttachment.id).where(
+        IncidentEvidenceAttachment.incident_id == incident_id,
+        IncidentEvidenceAttachment.expires_at > datetime.now(timezone.utc),
+    ).limit(100))
+    if active_count is not None:
+        total_active = len(db.scalars(select(IncidentEvidenceAttachment.id).where(
+            IncidentEvidenceAttachment.incident_id == incident_id,
+            IncidentEvidenceAttachment.expires_at > datetime.now(timezone.utc),
+        ).limit(100)).all())
+        if total_active >= 100:
+            raise HTTPException(409, "Incident evidence attachment limit (100) reached")
     root = _storage_root()
     temp_path: Path | None = None
     final_path: Path | None = None
