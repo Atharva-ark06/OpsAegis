@@ -12,6 +12,8 @@ import { OperationsPanel } from "./OperationsPanel";
 import { ExecutionLedgerPanel } from "./ExecutionLedgerPanel";
 import { PlaybooksPanel } from "./PlaybooksPanel";
 import { AppDashboardShell } from "./components/ui/app-dashboard-shell";
+import { PrismFluxLoader } from "./components/ui/prism-flux-loader";
+import "./components/ui/prism-flux-loader.css";
 import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan, ShannonHealth, getShannonHealth } from "./api";
 import { describeEngineHealth } from "./engineHealth";
 import {
@@ -227,6 +229,7 @@ function App() {
   const [token, setToken] = useState<string | null>(() => getAccessToken());
   const [user, setUser] = useState<User | null>(null);
   const [authState, setAuthState] = useState<LoadState>("idle");
+  const [postLoginTransition, setPostLoginTransition] = useState(false);
   const [view, setView] = useState<View>("overview");
   const [assets, setAssets] = useState<Asset[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -271,6 +274,12 @@ function App() {
   }, [token]);
 
   useEffect(() => {
+    if (!postLoginTransition || !user) return;
+    const transitionTimer = window.setTimeout(() => setPostLoginTransition(false), 1000);
+    return () => window.clearTimeout(transitionTimer);
+  }, [postLoginTransition, user]);
+
+  useEffect(() => {
     if (!user) return;
     let active = true;
     setLoadState("loading");
@@ -309,6 +318,7 @@ function App() {
   async function handleLogin(email: string, password: string) {
     const result = await loginRequest(email, password);
     saveAccessToken(result.access_token);
+    setPostLoginTransition(true);
     setToken(result.access_token);
     setView("overview");
     setQuery("");
@@ -316,6 +326,7 @@ function App() {
   }
   function handleLogout() {
     clearAccessToken();
+    setPostLoginTransition(false);
     setToken(null);
     setUser(null);
     setAssets([]);
@@ -364,6 +375,7 @@ function App() {
   const pageTitle = navigation.find((item) => item.id === view)?.label || "Overview";
   const filteredFindingCount = useMemo(() => findings.filter((item) => item.status === "new").length, [findings]);
 
+  if (postLoginTransition && user) return <PrismFluxLoader size={64} speed={5} textSize={28} />;
   if (authState === "loading" || (token && !user && authState !== "idle")) {
     return <main className="auth-loading"><div className="loading-mark">OA</div><span>Verifying your session…</span></main>;
   }
