@@ -377,7 +377,7 @@ function App() {
 
   if (postLoginTransition && user) return <PrismFluxLoader size={64} speed={5} textSize={28} />;
   if (authState === "loading" || (token && !user && authState !== "idle")) {
-    return <main className="auth-loading"><div className="loading-mark">OA</div><span>Verifying your session…</span></main>;
+    return <PrismFluxLoader size={64} speed={5} textSize={28} />;
   }
   if (!token || !user) return <OpsAegisSignIn onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
 
