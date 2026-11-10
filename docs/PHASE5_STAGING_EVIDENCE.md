@@ -5,7 +5,7 @@
 Use this register to distinguish implementation and automated test coverage from evidence obtained against real staging or production services. Do not mark a check complete because a feature exists, a mocked test passes, a container builds, or a health endpoint responds.
 
 **Current review baseline:** 2026-11-10  
-**Repository baseline:** `main` at PR #96 merge commit `87c6d97104e8e31c515b2b0b4414e149e177cf9a`. Refresh this SHA after subsequent merges.  
+**Repository baseline:** `main` at PR #97 merge commit `64e72127e97ae1eeb2155d9d5661805610c99a27`. Refresh this SHA after subsequent merges.  
 **Live environment evidence supplied for this register:** none. All live validation items below remain pending or blocked until an operator records evidence.
 
 ## Status vocabulary
@@ -43,6 +43,7 @@ For a row marked `Staging-validated` or `Production-validated`, include a non-em
 - PR #66's operational smoke-test and end-to-end contract changes reached `main` through PR #67.
 - PR #39's operational-diagnostics regression tests are merged (commit `f7777f7`).
 - PR #70 merged optional bounded CrowdSec alert-history reads, separate from active decisions, with dedicated machine credentials, bounded evidence and conservative asset association.
+- PR #97 merged the Phase 6 repository closeout and investor-readiness documentation. Main-branch CI and security workflows passed on `64e72127e97ae1eeb2155d9d5661805610c99a27`; this remains repository/CI evidence, not live staging acceptance.
 - `ops/validate-phase5-evidence.py` checks matrix structure in CI and provides an opt-in strict exit gate; it does not create or infer staging evidence.
 - The frontend build and tests passing in CI are not staging evidence. Docker image builds validate image construction, not live deployment, TLS, persistent storage or integration reachability.
 - The live evidence supplied for this register remains **none** until the operator records sanitized staging results below.
