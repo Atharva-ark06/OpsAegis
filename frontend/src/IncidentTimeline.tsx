@@ -1,9 +1,11 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import {
   addIncidentNote, downloadIncidentAttachment, downloadIncidentEvidence,
-  getIncidentAttachments, getIncidentTimeline, IncidentEvidenceAttachment, IncidentTimelineEvent,
-  uploadIncidentAttachment,
+  getIncidentAttachments, getIncidentTimeline, uploadIncidentAttachment,
 } from "./api";
+import type { IncidentEvidenceAttachment, IncidentTimelineEvent } from "./api";
+
 
 function dateLabel(value: string): string {
   const date = new Date(value);
