@@ -1,0 +1,1 @@
+# Place public internal CA certificates here for read-only Docker mounts. Never store private keys.

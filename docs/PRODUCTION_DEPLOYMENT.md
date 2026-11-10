@@ -28,6 +28,12 @@ Use unique, URL-safe passwords of at least 16 characters for PostgreSQL and Redi
 
 Set `CORS_ORIGINS` to the exact public HTTPS origin, for example `https://soc.example.com`. Set `OPS_AEGIS_ALLOWED_HOSTS` to the exact lowercase public hostname plus `127.0.0.1` for the API container health check (example: `soc.example.com,127.0.0.1`). Do not include schemes, ports, wildcard entries or arbitrary internal hosts. Never commit `.env.production`; it is covered by the repository's environment-file ignore rules. The checked-in example contains placeholders only.
 
+## 1a. Optional Wazuh private CA certificates and worker credentials
+
+If Wazuh uses an internal certificate authority, place only the public CA certificate(s) in `deployment/certs/` on the deployment host. Do not place private keys there. The directory is mounted read-only at `/run/opsaegis/certs` in the API and collection-worker containers. Set `WAZUH_MANAGER_CA_CERT` and/or `WAZUH_INDEXER_CA_CERT` in `.env.production` to the matching container path, for example `/run/opsaegis/certs/wazuh-indexer-ca.pem`. Leave the variables blank when the service certificate chains to a CA already trusted by the container.
+
+The collection worker receives only the database/Redis runtime settings and the Wazuh Manager/Indexer settings it needs. It does **not** load the complete `.env.production` file, so CrowdSec, threat-intelligence and Shannon credentials remain confined to the API container. Keep Wazuh credentials read-only and dedicated; this Compose change does not create an Indexer account or grant permissions.
+
 ## 2. Validate and start
 
 ```powershell

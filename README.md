@@ -51,11 +51,11 @@ After configuration, restart the backend. Authenticated admin/analyst endpoints:
 - POST /api/v1/integrations/crowdsec/collect
 - POST /api/v1/integrations/crowdsec/alerts/collect (optional machine credentials required)
 
-Active-decision collection imports /v1/decisions and retains decision ID, scope, value, action, scenario, origin and duration as bounded evidence. The current decision response does not provide a reliable event timestamp, so ingestion time is used as observation time. Optional alert-history collection uses /v1/watchers/login and GET /v1/alerts with a bounded limit; it records alert metadata and a bounded decision summary but deliberately excludes raw event payloads. Decision and alert findings use separate source namespaces and deduplicate independently. Both collection paths are manual/pull-based; scheduled polling is not yet implemented.
+Active-decision collection imports /v1/decisions and retains decision ID, scope, value, action, scenario, origin and duration as bounded evidence. The current decision response does not provide a reliable event timestamp, so ingestion time is used as observation time. Optional alert-history collection uses /v1/watchers/login and GET /v1/alerts with a bounded limit; it records alert metadata and a bounded decision summary but deliberately excludes raw event payloads. Decision and alert findings use separate source namespaces and deduplicate independently. CrowdSec collection remains manual/pull-based; the Phase 6 scheduler currently supports only the two explicitly allowlisted Wazuh sources.
 
 ## Wazuh Indexer integration
 
-Configure backend-only WAZUH_INDEXER_URL, WAZUH_INDEXER_USERNAME, WAZUH_INDEXER_PASSWORD, optional WAZUH_INDEXER_CA_CERT, WAZUH_INDEXER_TIMEOUT_SECONDS and WAZUH_INDEXER_MAX_RESULTS. Use a dedicated read-only Indexer account, HTTPS and certificate verification. Endpoints: GET /api/v1/integrations/wazuh/health and POST /api/v1/integrations/wazuh/collect.
+Configure backend-only WAZUH_INDEXER_URL, WAZUH_INDEXER_USERNAME, WAZUH_INDEXER_PASSWORD, optional WAZUH_INDEXER_CA_CERT, WAZUH_INDEXER_TIMEOUT_SECONDS and WAZUH_INDEXER_MAX_RESULTS. Use a dedicated read-only Indexer account, HTTPS and certificate verification. For Docker Compose deployments, place an internal CA certificate in the ignored `deployment/certs/` directory and set the CA variable to its container path under `/run/opsaegis/certs/`; the directory is mounted read-only into the API and Wazuh collection worker. The collection worker receives only Wazuh integration credentials, not unrelated provider secrets. Endpoints: GET /api/v1/integrations/wazuh/health and POST /api/v1/integrations/wazuh/collect.
 
 ## Production configuration guardrails (PR #19)
 

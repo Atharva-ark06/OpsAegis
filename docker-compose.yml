@@ -34,6 +34,7 @@ services:
       EVIDENCE_STORAGE_PATH: /var/lib/opsaegis/evidence
     volumes:
       - evidence_data:/var/lib/opsaegis/evidence
+      - ./deployment/certs:/run/opsaegis/certs:ro
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -61,10 +62,27 @@ services:
     restart: unless-stopped
   collection-worker:
     build: ./backend
-    env_file: .env
     environment:
+      OPS_AEGIS_ENV: ${OPS_AEGIS_ENV:-development}
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:-development-only-change-this-secret-key-not-for-production}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://opsaegis:change-me@postgres:5432/opsaegis}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WAZUH_MANAGER_URL: ${WAZUH_MANAGER_URL:-}
+      WAZUH_MANAGER_USERNAME: ${WAZUH_MANAGER_USERNAME:-}
+      WAZUH_MANAGER_PASSWORD: ${WAZUH_MANAGER_PASSWORD:-}
+      WAZUH_MANAGER_CA_CERT: ${WAZUH_MANAGER_CA_CERT:-}
+      WAZUH_MANAGER_TIMEOUT_SECONDS: ${WAZUH_MANAGER_TIMEOUT_SECONDS:-10}
+      WAZUH_MANAGER_MAX_AGENTS: ${WAZUH_MANAGER_MAX_AGENTS:-500}
+      WAZUH_INDEXER_URL: ${WAZUH_INDEXER_URL:-}
+      WAZUH_INDEXER_USERNAME: ${WAZUH_INDEXER_USERNAME:-}
+      WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-}
+      WAZUH_INDEXER_INDEX_PATTERN: ${WAZUH_INDEXER_INDEX_PATTERN:-wazuh-alerts-*}
+      WAZUH_INDEXER_VERIFY_TLS: "${WAZUH_INDEXER_VERIFY_TLS:-true}"
+      WAZUH_INDEXER_CA_CERT: ${WAZUH_INDEXER_CA_CERT:-}
+      WAZUH_INDEXER_TIMEOUT_SECONDS: ${WAZUH_INDEXER_TIMEOUT_SECONDS:-10}
+      WAZUH_INDEXER_MAX_RESULTS: ${WAZUH_INDEXER_MAX_RESULTS:-500}
+    volumes:
+      - ./deployment/certs:/run/opsaegis/certs:ro
     command: ["python", "-m", "app.collection_worker"]
     depends_on:
       backend:

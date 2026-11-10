@@ -88,6 +88,7 @@ services:
       EVIDENCE_STORAGE_PATH: /var/lib/opsaegis/evidence
     volumes:
       - evidence_data:/var/lib/opsaegis/evidence
+      - ./deployment/certs:/run/opsaegis/certs:ro
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -136,7 +137,6 @@ services:
     cpus: 0.5
 
   collection-worker:
-    env_file: .env.production
     init: true
     read_only: true
     tmpfs:
@@ -154,6 +154,22 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
       REDIS_URL: ${REDIS_URL:?Set REDIS_URL in .env.production}
       CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env.production}
+      WAZUH_MANAGER_URL: ${WAZUH_MANAGER_URL:-}
+      WAZUH_MANAGER_USERNAME: ${WAZUH_MANAGER_USERNAME:-}
+      WAZUH_MANAGER_PASSWORD: ${WAZUH_MANAGER_PASSWORD:-}
+      WAZUH_MANAGER_CA_CERT: ${WAZUH_MANAGER_CA_CERT:-}
+      WAZUH_MANAGER_TIMEOUT_SECONDS: ${WAZUH_MANAGER_TIMEOUT_SECONDS:-10}
+      WAZUH_MANAGER_MAX_AGENTS: ${WAZUH_MANAGER_MAX_AGENTS:-500}
+      WAZUH_INDEXER_URL: ${WAZUH_INDEXER_URL:-}
+      WAZUH_INDEXER_USERNAME: ${WAZUH_INDEXER_USERNAME:-}
+      WAZUH_INDEXER_PASSWORD: ${WAZUH_INDEXER_PASSWORD:-}
+      WAZUH_INDEXER_INDEX_PATTERN: ${WAZUH_INDEXER_INDEX_PATTERN:-wazuh-alerts-*}
+      WAZUH_INDEXER_VERIFY_TLS: "${WAZUH_INDEXER_VERIFY_TLS:-true}"
+      WAZUH_INDEXER_CA_CERT: ${WAZUH_INDEXER_CA_CERT:-}
+      WAZUH_INDEXER_TIMEOUT_SECONDS: ${WAZUH_INDEXER_TIMEOUT_SECONDS:-10}
+      WAZUH_INDEXER_MAX_RESULTS: ${WAZUH_INDEXER_MAX_RESULTS:-500}
+    volumes:
+      - ./deployment/certs:/run/opsaegis/certs:ro
     command: ["python", "-m", "app.collection_worker"]
     depends_on:
       migrate:
