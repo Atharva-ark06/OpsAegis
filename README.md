@@ -18,6 +18,12 @@ A built adapter is not proof of a live connection. Configure and verify each aut
 
 Login throttling, strict JWT claim validation and failed-login audit controls are documented in [Authentication Security](docs/AUTHENTICATION_SECURITY.md).
 
+### First administrator and account management
+
+For web-based first-admin onboarding, set a unique `OPS_AEGIS_BOOTSTRAP_TOKEN` secret on the API service before opening the application. Generate it with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. The unauthenticated setup-status endpoint reveals only whether setup is pending and enabled; the bootstrap endpoint requires the matching `X-Setup-Token` header and refuses setup once an account exists. The setup token is not a user password and must never be committed or exposed in frontend build variables. Remove or rotate the bootstrap token after the first administrator is created.
+
+Administrators can then use **Users & roles** in the authenticated workspace to create viewer, analyst and administrator accounts, change roles, and deactivate/reactivate accounts. User listing and changes require an administrator session. The last active administrator cannot be demoted or deactivated, and an administrator cannot deactivate their own account. Passwords must be at least 12 characters and are hashed server-side. There is no unrestricted public self-registration.
+
 ## Security engines
 
 | Engine | Role | Integration status |

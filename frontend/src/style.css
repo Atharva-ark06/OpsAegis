@@ -610,3 +610,49 @@ tbody tr:hover { background: #142236; }
 .operations-report-stats small { color: var(--muted, #94a3b8); }
 .operations-report-stats strong { font-size: 21px; }
 @media (max-width: 760px) { .operations-report-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+
+/* OpsAegis split-panel authentication styles. */
+/* Component-specific styles are scoped with oa-auth classes. */
+
+
+/* Wazuh-inspired security operations workspace: compact navigation, dense telemetry tables and operational chrome. */
+:root{--wz-bg:#f4f6f8;--wz-panel:#fff;--wz-ink:#202a35;--wz-muted:#697887;--wz-line:#dce2e8;--wz-blue:#006bb4}
+body{background:var(--wz-bg);color:var(--wz-ink)}
+.app-shell{background:var(--wz-bg)!important;color:var(--wz-ink)!important}
+.sidebar{width:252px;background:#17212b;border-right:1px solid #263541;padding:18px 12px}
+.brand strong{color:#f4f7fa}.brand small{color:#a5b3c0}
+.workspace-label{margin:28px 0 9px 12px;color:#92a1af}
+.side-nav{gap:2px}.nav-item{padding:9px 11px;border-radius:4px;color:#c4ced7;font-size:12px}
+.nav-item:hover{background:#253541;color:#fff}.nav-item.active{border-color:#344d60;background:#263d50;color:#fff;box-shadow:inset 3px 0 #00a9e0}
+.nav-short{width:22px;height:22px;border-radius:3px;color:#d7e0e7;background:#344452}
+.nav-item.active .nav-short{background:#0876ad;color:white}
+.connection-indicator{border-color:#34424e;color:#b1bdc7}
+.user-meta strong{color:#f0f4f7}.user-meta small{color:#a4b2bd}
+.main-area{margin-left:252px;padding:0 28px 18px}
+.main-header{min-height:72px;border-bottom:1px solid var(--wz-line);background:var(--wz-bg)}
+.breadcrumb{color:#657483;font-size:9px}.main-header h1{color:#202a35;font-size:20px}
+.role-chip,.tag{border-color:#d3dce4;border-radius:3px;color:#435363;background:#edf1f4}
+.secondary-button,.primary-button{border-radius:3px;min-height:31px;font-size:10px}
+.secondary-button{border-color:#c8d1da;color:#344454;background:#fff}
+.primary-button{border-color:#006bb4;color:white;background:#0077b9}
+.page-content{max-width:1600px}
+.welcome-row{padding:22px 0 18px}.welcome-row h2{color:#202a35;font-size:22px}
+.welcome-row p:not(.eyebrow){color:#657483}
+.stats-grid{gap:10px}.stat-card,.panel{border:1px solid var(--wz-line);border-radius:3px;background:var(--wz-panel);box-shadow:0 1px 2px #17212b0a}
+.stat-card{min-height:96px;padding:13px 15px}.stat-heading{color:#536373}.stat-value{font-size:24px;color:#202a35}.stat-detail{color:#6d7b88}
+.overview-grid .panel,.engine-panel{padding:15px}.panel-heading{border-color:#e5e9ed}.panel-heading h3{color:#273541}
+.eyebrow{color:#0077b9}.activity-row{border-color:#edf0f3}.activity-copy strong{color:#263541}.activity-copy small{color:#73818d}
+.table-wrap{border:1px solid #e0e5e9;border-radius:3px;background:#fff}
+th{background:#f2f5f7;color:#566675;border-bottom:1px solid #dce2e8}
+td{border-top:1px solid #edf0f2;color:#3d4b58}td strong{color:#202a35}
+tbody tr:hover{background:#f4f9fc}
+.data-panel,.integration-page{padding:15px;background:#fff}
+.search-box{border-color:#cbd5dd;border-radius:3px;background:#fff}.search-box input{color:#273541}
+.list-intro{padding:23px 0 15px}.list-intro h2{color:#263541}
+.asset-summary article,.incident-summary article{border-radius:3px;background:#fff;border:1px solid #dce2e8}
+.engine-card{border-radius:3px;background:#f8fafb;border-color:#e0e5e9}
+.engine-card h4{color:#293845}.engine-card p{color:#536474}.engine-card small{color:#71808d}
+.severity{border-radius:3px}
+@media(max-width:760px){.sidebar{width:100%}.main-area{margin-left:0;padding:0 14px 16px}.main-header{background:transparent}}
+.admin-users .nuclei-target-form{grid-template-columns:repeat(4,minmax(0,1fr))}

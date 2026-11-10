@@ -32,3 +32,14 @@ class AuditRead(BaseModel):
     detail: str | None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class BootstrapRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=12, max_length=128)
+
+
+class UserUpdate(BaseModel):
+    role: UserRole | None = None
+    is_active: bool | None = None
+    model_config = ConfigDict(extra='forbid')
