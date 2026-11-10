@@ -120,3 +120,27 @@
   .aegis-shell .secondary-button,
   .aegis-shell .aegis-refresh { transition: none; }
 }
+
+/* Full-width auth CTA keeps native submit/disabled semantics with the metallic shell. */
+.oa-auth .metallic-button.oa-submit {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  height: 50px;
+  margin-top: 8px;
+  border-radius: 999px;
+}
+.oa-auth .metallic-button.oa-submit .metallic-button-face {
+  min-height: 47px;
+  padding: 0 20px;
+}
+.oa-auth .metallic-button.oa-submit .metallic-button-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.oa-auth .metallic-button.oa-submit .metallic-button-content span {
+  font-size: 18px;
+}
