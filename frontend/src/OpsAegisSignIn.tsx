@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { bootstrapFirstAdmin, getAuthSetupStatus } from "./api";
+import { MetallicButton } from "./components/ui/metallic-button";
 import "./OpsAegisSignIn.css";
 
 type ThemePreference = "dark" | "light" | "system";
@@ -71,7 +72,7 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
                   <label htmlFor="oa-password">Password (minimum 12 characters)</label><input id="oa-password" type="password" required minLength={12} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password"/>
                   <label htmlFor="oa-setup-token">One-time setup token</label><input id="oa-setup-token" type="password" required value={setupToken} onChange={e=>setSetupToken(e.target.value)} autoComplete="off"/>
                   {error && <div className="oa-auth-error" role="alert">{error}</div>}
-                  <button className="oa-submit" type="submit" disabled={busy}>{busy ? "Creating administrator…" : "Initialize secure workspace"} <span aria-hidden="true">→</span></button>
+                  <MetallicButton className="oa-submit" type="submit" disabled={busy}>{busy ? "Creating administrator…" : "Initialize secure workspace"} <span aria-hidden="true">→</span></MetallicButton>
                 </form>
               </>
             ) : mode === "sign-in" ? (
@@ -89,7 +90,7 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
                     <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? "Hide" : "Show"}</button>
                   </div>
                   {error && <div className="oa-auth-error" role="alert">{error}</div>}
-                  <button className="oa-submit" type="submit" disabled={busy}>{busy ? "Authenticating…" : "Sign in"} <span aria-hidden="true">→</span></button>
+                  <MetallicButton className="oa-submit" type="submit" disabled={busy}>{busy ? "Authenticating…" : "Sign in"} <span aria-hidden="true">→</span></MetallicButton>
                 </form>
                 <p className="oa-auth-note"><span aria-hidden="true">▣</span> Protected by OpsAegis API authentication · Session-scoped access</p>
               </>
