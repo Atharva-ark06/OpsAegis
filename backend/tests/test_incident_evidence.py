@@ -149,3 +149,16 @@ def test_viewer_cannot_download_operator_evidence(client, analyst_headers, db_se
         headers=viewer,
     )
     assert response.status_code == 403
+
+
+def test_attachment_respects_per_incident_storage_quota(client, analyst_headers, monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "evidence_storage_path", str(tmp_path))
+    monkeypatch.setattr(settings, "evidence_max_incident_bytes", 10)
+    incident_id = _create_incident(client, analyst_headers)
+    response = client.post(
+        f"/api/v1/incidents/{incident_id}/attachments",
+        headers=analyst_headers,
+        files={"file": ("quota.txt", b"more than ten bytes", "text/plain")},
+    )
+    assert response.status_code == 413
+    assert list(tmp_path.iterdir()) == []
