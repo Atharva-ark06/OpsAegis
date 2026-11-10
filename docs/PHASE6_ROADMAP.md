@@ -1,6 +1,6 @@
 # OpsAegis Phase 6 — SOC Automation & Response Orchestration
 
-**Status:** Phase 6.1–6.3 foundations are merged; Phase 6.4 operational reporting is implemented pending operator-led staging validation.  
+**Status:** Phase 6.1–6.4 repository implementation and dashboard workflows are merged. Operational acceptance remains pending operator-led local/staging validation.  
 **Predecessor:** Phase 5 — Production readiness and end-to-end validation  
 **Release posture:** Human-approved automation; no autonomous destructive response.
 
@@ -37,7 +37,7 @@ Phase 6 does not retroactively mark Phase 5 staging or production checks as pass
 
 ### Phase 6.1 — Collection orchestration
 
-Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer alert windows only. CrowdSec remains deferred pending a separate least-privilege decision. Schedules are disabled by default; durable run history, a separate Redis-leased worker, bounded retries and manual-run parity are implemented in the current review branch. Automated tests exercise Redis interruption, lease loss, queue deduplication and restart recovery; live staging drills with real Redis and source systems remain required.
+Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer alert windows only. CrowdSec remains deferred pending a separate least-privilege decision. Schedules are disabled by default; durable run history, a separate Redis-leased worker, bounded retries and manual-run parity are implemented on main. Automated tests exercise Redis interruption, lease loss, queue deduplication and restart recovery; live staging drills with real Redis and source systems remain required.
 - Durable per-integration schedule and run history.
 - Per-source enable/disable controls, minimum intervals, bounded lookback and result caps.
 - Lease fencing, retry/backoff, overlap prevention and manual run parity.
@@ -54,7 +54,7 @@ Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer al
 
 ### Phase 6.3 — Playbook framework
 
-**Status: bounded framework complete; provider-specific response integration deferred.** The delivered framework includes a code-defined, versioned incident-investigation catalogue, strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records, a durable execution/compensation ledger, read-only operator visibility and fail-closed adapter contracts. The dashboard UI for catalogue inspection, dry-run preview, approval requests and independent decisions is being added in a focused frontend increment; no execution UI is exposed. No provider adapter is registered or enabled, and no execution endpoint or worker exists.
+**Status: bounded framework complete; provider-specific response integration deferred.** The delivered framework includes a code-defined, versioned incident-investigation catalogue, strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records, a durable execution/compensation ledger, read-only operator visibility and fail-closed adapter contracts. PR #96 adds the dashboard catalogue, dry-run preview, approval request queue and independent decision workflows. No provider execution UI, dispatch endpoint or execution worker exists. No provider adapter is registered or enabled, and no execution endpoint or worker exists.
 
 - [x] Versioned playbook definition and strict input validation.
 - [x] Operator-only dry-run preview with bounded lookback and audit record.
@@ -73,7 +73,7 @@ Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer al
 
 ### Phase 6.4 — Reporting and operational metrics
 
-**Delivered increments:** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. The dashboard report summary and export controls are being added in a focused frontend increment. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
+**Delivered increments:** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. PR #96 adds the dashboard report summary and authenticated JSON/CSV export controls. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
 
 - [x] Collection freshness, source coverage and terminal failure rates for the two supported collection sources.
 - [x] Detection-to-incident timing from linked correlated detections and incident records.
