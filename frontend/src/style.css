@@ -850,3 +850,123 @@ html[data-theme="dark"] .aegis-shell .loading-banner { color:#d5b98c; background
 html[data-theme="dark"] .aegis-shell .error-banner { color:#ffb1ad; background:#301d25; }
 html[data-theme="dark"] .aegis-shell .success-banner { color:#9de0c4; background:#142a25; }
 @media (max-width:700px) { .aegis-collapse { display:none; } }
+
+
+/* Dashboard-wide layout normalization: prevent intrinsic-width overflow and
+   align section grids/forms consistently across every workspace. */
+.aegis-shell, .aegis-shell * { min-width: 0; }
+.aegis-shell .aegis-main { width: 0; }
+.aegis-shell .aegis-content,
+.aegis-shell .aegis-content > *,
+.aegis-shell .page-content,
+.aegis-shell .page-content > *,
+.aegis-shell .panel,
+.aegis-shell section,
+.aegis-shell article { min-width: 0; max-width: 100%; }
+.aegis-shell .aegis-content { overflow-x: clip; }
+.aegis-shell .panel { padding: 18px; }
+.aegis-shell .panel + .panel { margin-top: 16px; }
+.aegis-shell .panel-heading { flex-wrap: wrap; align-items: center; row-gap: 9px; }
+.aegis-shell .panel-heading > :first-child { min-width: 0; }
+.aegis-shell .panel-heading h3,
+.aegis-shell .panel-heading h4 { overflow-wrap: anywhere; }
+.aegis-shell .list-intro { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+.aegis-shell .list-intro > div { min-width:0; flex:1 1 420px; }
+.aegis-shell .provider-strip { align-items:stretch; }
+.aegis-shell .provider-chip { min-height:38px; max-width:100%; }
+.aegis-shell .threat-intel-workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; width:100%; }
+.aegis-shell .threat-intel-form {
+  display:grid;
+  grid-template-columns:minmax(145px, .75fr) minmax(0, 2fr) auto;
+  align-items:end;
+  gap:12px;
+  width:100%;
+}
+.aegis-shell .threat-intel-form > * { min-width:0; }
+.aegis-shell .threat-intel-form input,
+.aegis-shell .threat-intel-form select { width:100%; max-width:100%; }
+.aegis-shell .threat-intel-form .integration-note { grid-column:1 / -1; margin:0; }
+.aegis-shell .ioc-provider-results { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.aegis-shell .ioc-provider-result { min-width:0; overflow:hidden; }
+.aegis-shell .ioc-provider-result pre { max-width:100%; overflow:auto; }
+.aegis-shell .nuclei-target-form {
+  display:grid;
+  grid-template-columns:minmax(220px,1.3fr) repeat(2,minmax(150px,1fr)) minmax(150px,1fr) auto;
+  align-items:end;
+  gap:12px;
+  width:100%;
+}
+.aegis-shell .nuclei-target-form > label { min-width:0; }
+.aegis-shell .nuclei-target-form input,
+.aegis-shell .nuclei-target-form select { width:100%; max-width:100%; min-width:0; }
+.aegis-shell .nuclei-target-form .inline-check { display:flex; align-items:center; gap:9px; min-height:38px; white-space:normal; }
+.aegis-shell .nuclei-target-form .inline-check input { flex:0 0 auto; width:16px; height:16px; margin:0; }
+.aegis-shell .collection-panel { display:grid; gap:14px; width:100%; }
+.aegis-shell .collection-panel > .integration-note { margin:0; }
+.aegis-shell .collection-schedules { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:14px; }
+.aegis-shell .collection-schedule { display:flex; flex-direction:column; gap:14px; min-width:0; padding:16px; border-color:var(--aegis-border); background:var(--aegis-panel-muted); }
+.aegis-shell .collection-schedule-title { align-items:flex-start; }
+.aegis-shell .collection-schedule-title > div { min-width:0; }
+.aegis-shell .collection-schedule-title strong,
+.aegis-shell .collection-schedule-title small { overflow-wrap:anywhere; }
+.aegis-shell .collection-fields { display:grid; grid-template-columns:minmax(0,1.15fr) repeat(2,minmax(0,1fr)); align-items:end; gap:12px; margin:0; }
+.aegis-shell .collection-fields label { min-width:0; }
+.aegis-shell .collection-fields input:not([type="checkbox"]) { width:100%; min-width:0; min-height:36px; }
+.aegis-shell .collection-fields .collection-toggle { display:flex !important; align-items:center; gap:9px; min-height:36px; }
+.aegis-shell .collection-fields .collection-toggle input { flex:0 0 auto; width:16px; height:16px; margin:0; }
+.aegis-shell .collection-schedule-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:auto; padding-top:12px; border-top:1px solid var(--aegis-border); }
+.aegis-shell .collection-schedule-foot > small { min-width:0; overflow-wrap:anywhere; }
+.aegis-shell .collection-schedule-foot > div { display:flex; flex-wrap:wrap; gap:8px; }
+.aegis-shell .detection-workspace { display:grid; gap:16px; }
+.aegis-shell .detection-workspace > .panel { margin:0; }
+.aegis-shell .detection-rule-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding-top:14px; }
+.aegis-shell .detection-rule-grid > * { min-width:0; }
+.aegis-shell .trend-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.aegis-shell .threshold-fields { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.aegis-shell .vulnerability-summary,
+.aegis-shell .asset-summary,
+.aegis-shell .incident-summary,
+.aegis-shell .operations-report-stats { grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.aegis-shell .vulnerability-filters,
+.aegis-shell .asset-filters { align-items:flex-end; }
+.aegis-shell .vulnerability-detail-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.aegis-shell .vulnerability-editor { grid-template-columns:minmax(180px,1fr) minmax(0,2fr) auto; }
+.aegis-shell .table-wrap,
+.aegis-shell .vulnerability-table-wrap { width:100%; max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
+.aegis-shell table { min-width:680px; }
+.aegis-shell .empty-state { width:100%; }
+@media (max-width:1100px) {
+  .aegis-shell .nuclei-target-form { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .aegis-shell .collection-schedules { grid-template-columns:1fr; }
+  .aegis-shell .detection-rule-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .aegis-shell .vulnerability-summary,
+  .aegis-shell .asset-summary,
+  .aegis-shell .incident-summary,
+  .aegis-shell .operations-report-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  .aegis-shell .aegis-content { padding-right:14px; padding-left:14px; }
+  .aegis-shell .threat-intel-form { grid-template-columns:1fr 1fr; }
+  .aegis-shell .threat-intel-form > button { width:100%; }
+  .aegis-shell .nuclei-target-form { grid-template-columns:1fr 1fr; }
+  .aegis-shell .detection-rule-grid,
+  .aegis-shell .trend-grid,
+  .aegis-shell .ioc-provider-results { grid-template-columns:1fr; }
+  .aegis-shell .collection-fields { grid-template-columns:1fr 1fr; }
+  .aegis-shell .collection-fields .collection-toggle { grid-column:1 / -1; }
+  .aegis-shell .vulnerability-detail-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .aegis-shell .vulnerability-editor { grid-template-columns:1fr; }
+}
+@media (max-width:480px) {
+  .aegis-shell .panel { padding:13px; }
+  .aegis-shell .threat-intel-form,
+  .aegis-shell .nuclei-target-form,
+  .aegis-shell .collection-fields { grid-template-columns:1fr; }
+  .aegis-shell .collection-fields .collection-toggle { grid-column:auto; }
+  .aegis-shell .vulnerability-summary,
+  .aegis-shell .asset-summary,
+  .aegis-shell .incident-summary,
+  .aegis-shell .operations-report-stats,
+  .aegis-shell .vulnerability-detail-grid { grid-template-columns:1fr; }
+  .aegis-shell .aegis-page-heading h1 { font-size:22px; }
+}
