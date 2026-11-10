@@ -11,6 +11,7 @@ import { IncidentTimeline } from "./IncidentTimeline";
 import { OperationsPanel } from "./OperationsPanel";
 import { ExecutionLedgerPanel } from "./ExecutionLedgerPanel";
 import { PlaybooksPanel } from "./PlaybooksPanel";
+import { AppDashboardShell } from "./components/ui/app-dashboard-shell";
 import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTargets, getNucleiScans, registerNucleiTarget, startNucleiScan, ShannonHealth, getShannonHealth } from "./api";
 import { describeEngineHealth } from "./engineHealth";
 import {
@@ -368,25 +369,22 @@ function App() {
   }
   if (!token || !user) return <OpsAegisSignIn onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
 
-  return <div className="app-shell min-h-screen bg-ops-canvas text-slate-100">
-    <aside className="sidebar">
-      <div className="brand sidebar-brand"><span className="brand-mark">OA</span><span><strong>OpsAegis</strong><small>SECURITY OPERATIONS</small></span></div>
-      <div className="workspace-label">WORKSPACE</div>
-      <nav className="side-nav" aria-label="Main navigation">
-        {navigation.filter((item) => (item.id !== "playbooks" || canOperate) && (item.id !== "users" || user.role === "admin")).map((item) => <button key={item.id} className={view === item.id ? "nav-item active" : "nav-item"} aria-current={view === item.id ? "page" : undefined} onClick={() => { setView(item.id); setQuery(""); }}><span className="nav-short">{item.short}</span><span>{item.label}</span>{item.id === "findings" && filteredFindingCount > 0 && <span className="nav-count">{filteredFindingCount}</span>}</button>)}
-      </nav>
-      <div className="sidebar-bottom">
-        <div className="connection-indicator"><span className="live-dot" /><span>API session active</span></div>
-        <div className="user-card"><div className="avatar">{user.email.slice(0, 1).toUpperCase()}</div><div className="user-meta"><strong>{user.email}</strong><small>{titleCase(user.role)}</small></div><button className="logout-button" onClick={handleLogout} aria-label="Sign out" title="Sign out">↗</button></div>
-      </div>
-    </aside>
-
-    <main className="main-area min-w-0">
-      <header className="main-header">
-        <div><p className="breadcrumb">OPSAEGIS <span>/</span> {pageTitle.toUpperCase()}</p><h1>{pageTitle}</h1></div>
-        <div className="header-actions"><ThemeToggle theme={theme} onChange={setTheme} /><span className="role-chip">{titleCase(user.role)}</span><button className="secondary-button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button></div>
-      </header>
-
+  return <AppDashboardShell
+    workspace={{ name: "OpsAegis", plan: "Security Operations" }}
+    user={{ name: user.email, email: user.email, role: user.role }}
+    nav={navigation.filter((item) => (item.id !== "playbooks" || canOperate) && (item.id !== "users" || user.role === "admin")).map((item) => ({ ...item, badge: item.id === "findings" && filteredFindingCount > 0 ? String(filteredFindingCount) : undefined }))}
+    activeId={view}
+    onNavigate={(id) => { setView(id as View); setQuery(""); }}
+    onLogout={handleLogout}
+    showSearch={view === "assets" || view === "findings" || view === "incidents"}
+    searchValue={query}
+    onSearchChange={setQuery}
+    headerActions={<>
+      <ThemeToggle theme={theme} onChange={setTheme} />
+      <span className="aegis-role-chip">{titleCase(user.role)}</span>
+      <button className="aegis-refresh" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button>
+    </>}
+  >
       {loadState === "loading" && <div className="loading-banner"><span className="spinner" /> Syncing records from OpsAegis API…</div>}
       {loadErrors.length > 0 && <div className="error-banner" role="alert"><strong>Some data could not be loaded.</strong>{loadErrors.map((error) => <span key={error}>{error}</span>)}</div>}
       {collectionMessage && <div className="success-banner" role="status">{collectionMessage}</div>}
@@ -417,11 +415,10 @@ function App() {
       {view !== "overview" && <div className="page-content">
         {view !== "detections" && view !== "threat-intel" && view !== "vulnerabilities" && view !== "playbooks" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
         {view === "users" ? <AdminUsers currentUser={user} /> : view === "playbooks" ? <PlaybooksPanel incidents={incidents} user={user} /> : view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /><CollectionPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
-          <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label={"Search " + view} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={"Search " + view + "…"} /></label></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} /></section>}
+          <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
-    </main>
-  </div>;
+  </AppDashboardShell>;
 }
 
 function EngineCards({ wazuh, wazuhManager, crowdsec, canOperate, refreshKey }: {
