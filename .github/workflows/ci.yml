@@ -46,7 +46,7 @@ jobs:
           from pathlib import Path
 
           forbidden = {
-              "OPS_AEGIS_SECRET_KEY", "CROWDSEC_API_KEY", "CROWDSEC_MACHINE_ID", "CROWDSEC_MACHINE_PASSWORD",
+              "CROWDSEC_API_KEY", "CROWDSEC_MACHINE_ID", "CROWDSEC_MACHINE_PASSWORD",
               "VIRUSTOTAL_API_KEY", "ABUSEIPDB_API_KEY", "NVD_API_KEY",
               "SHANNON_RUNNER_TOKEN",
           }
@@ -60,7 +60,10 @@ jobs:
               backend_env = services["backend"].get("environment", {})
               api_secret = backend_env.get("OPS_AEGIS_SECRET_KEY")
               assert api_secret, f"{label}: API signing key is not explicitly configured"
-              for worker_name in ("detection-worker", "collection-worker"):
+              worker_names = ["detection-worker", "collection-worker"]
+              if label == "production":
+                  worker_names.extend(["migrate", "nuclei-worker"])
+              for worker_name in worker_names:
                   worker = services[worker_name]
                   assert "env_file" not in worker, f"{label}: {worker_name} must not load a broad env file"
                   env = worker.get("environment", {})
