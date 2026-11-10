@@ -66,6 +66,14 @@ The PR #96 CI jobs completed successfully for preflight, backend, frontend, runn
 
 These checks validate the tested commit and ephemeral CI environment only. They do not validate the user's local Wazuh lab, a persistent staging deployment, external credentials, network egress controls or production operations.
 
+## Latest main-branch checkpoint — PR #97
+
+- Main commit: `64e72127e97ae1eeb2155d9d5661805610c99a27` (10 November 2026).
+- CI run `42786504972`: completed successfully, including preflight, backend, frontend, runner, PowerShell syntax and production-container smoke jobs.
+- Security run `42786504955`: completed successfully, including full-history secret scanning and backend/frontend dependency audits.
+- No open pull requests were present at this checkpoint.
+- These results validate the committed repository and ephemeral CI environment only. They do not close the live Wazuh, Redis recovery, evidence-volume restore, operator-account, report reconciliation, TLS/host hardening or production deployment gates.
+
 ## Required local / staging sequence
 
 1. Verify the local Compose stack and API/worker health without deleting volumes.
