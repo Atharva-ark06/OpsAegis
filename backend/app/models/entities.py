@@ -322,7 +322,7 @@ class IncidentEvidenceAttachment(Base):
         Index("ix_incident_evidence_expires_at", "expires_at"),
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    incident_id: Mapped[int] = mapped_column(ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False)
+    incident_id: Mapped[int] = mapped_column(ForeignKey("incidents.id", ondelete="RESTRICT"), nullable=False)
     uploaded_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     storage_key: Mapped[str] = mapped_column(String(64), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(160), nullable=False)
