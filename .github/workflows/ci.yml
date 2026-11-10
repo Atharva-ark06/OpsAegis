@@ -34,6 +34,40 @@ jobs:
         run: cp .env.production.example .env.production
       - name: Validate production Compose YAML and service configuration
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+      - name: Verify collection worker least-privilege environment and CA mounts
+        shell: bash
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml config --format json > "$RUNNER_TEMP/opsaegis-dev-compose.json"
+          docker compose --env-file .env.production.example -f compose.production.yaml config --format json > "$RUNNER_TEMP/opsaegis-prod-compose.json"
+          python - "$RUNNER_TEMP/opsaegis-dev-compose.json" "$RUNNER_TEMP/opsaegis-prod-compose.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          forbidden = {
+              "CROWDSEC_API_KEY", "CROWDSEC_MACHINE_ID", "CROWDSEC_MACHINE_PASSWORD",
+              "VIRUSTOTAL_API_KEY", "ABUSEIPDB_API_KEY", "NVD_API_KEY",
+              "SHANNON_RUNNER_TOKEN",
+          }
+          required = {
+              "WAZUH_MANAGER_URL", "WAZUH_MANAGER_USERNAME", "WAZUH_MANAGER_PASSWORD",
+              "WAZUH_INDEXER_URL", "WAZUH_INDEXER_USERNAME", "WAZUH_INDEXER_PASSWORD",
+          }
+          for label, path in zip(("development", "production"), sys.argv[1:]):
+              config = json.loads(Path(path).read_text(encoding="utf-8"))
+              services = config["services"]
+              worker = services["collection-worker"]
+              assert "env_file" not in worker, f"{label}: collection worker must not load a broad env file"
+              env = worker.get("environment", {})
+              assert required.issubset(env), f"{label}: missing required Wazuh environment keys"
+              assert not (forbidden & env.keys()), f"{label}: unrelated provider credentials reached collection worker"
+              mounts = worker.get("volumes", [])
+              assert any(m.get("target") == "/run/opsaegis/certs" and m.get("read_only") for m in mounts), f"{label}: read-only CA mount missing"
+              backend_mounts = services["backend"].get("volumes", [])
+              assert any(m.get("target") == "/run/opsaegis/certs" and m.get("read_only") for m in backend_mounts), f"{label}: API CA mount missing"
+              print(f"{label}: collection-worker credential scope and read-only CA mounts verified")
+          PY
       - name: Validate Phase 5 evidence register structure
         run: python ops/validate-phase5-evidence.py
       - name: Validate Phase 6.4 evidence register structure (no live evidence claim)
