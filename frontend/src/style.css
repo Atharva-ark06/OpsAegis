@@ -573,3 +573,31 @@ tbody tr:hover { background: #142236; }
 .timeline-attachments li > div { min-width: 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
 .timeline-attachments li small { color: var(--muted, #94a3b8); font-size: 11px; }
 @media (max-width: 640px) { .timeline-attachments li { align-items: flex-start; flex-direction: column; } }
+
+
+/* Phase 6.3 playbook governance workspace */
+.playbooks-workspace { display: grid; gap: 18px; }
+.playbook-definition { display: grid; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--border, #26384c); }
+.playbook-definition h4, .playbook-action-catalogue h4, .playbook-preview-result h4 { margin: 0; }
+.playbook-definition h4 small { color: var(--muted, #94a3b8); font-weight: 500; }
+.playbook-definition p { margin: 6px 0; color: var(--muted, #94a3b8); }
+.playbook-definition ul, .playbook-preview-result ol { margin: 4px 0; padding-left: 22px; color: var(--muted, #94a3b8); }
+.playbook-action-catalogue { margin-top: 16px; }
+.playbook-action-row, .playbook-approval-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border, #26384c); }
+.playbook-action-row > div, .playbook-approval-heading > div { display: grid; gap: 4px; min-width: 0; }
+.playbook-action-row small, .playbook-approval-heading small { color: var(--muted, #94a3b8); overflow-wrap: anywhere; }
+.playbook-form-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(160px, 1fr); gap: 14px; margin: 12px 0; }
+.playbook-form-grid label, .playbook-approval-request label, .playbook-decision label { display: grid; gap: 6px; color: var(--muted, #94a3b8); font-size: 12px; }
+.playbook-form-grid select, .playbook-form-grid input, .playbook-approval-request textarea, .playbook-decision textarea { width: 100%; border: 1px solid var(--border, #26384c); border-radius: 8px; padding: 10px; background: var(--panel, #111c2b); color: inherit; }
+.playbook-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.playbook-preview-result, .playbook-approval-request, .playbook-decision { margin-top: 16px; padding: 14px; border: 1px solid var(--border, #26384c); border-radius: 10px; }
+.playbook-preview-result > p { color: var(--muted, #94a3b8); }
+.playbook-preview-stats { display: flex; flex-wrap: wrap; gap: 18px; margin: 14px 0; }
+.playbook-preview-stats span { display: grid; gap: 3px; color: var(--muted, #94a3b8); }
+.playbook-preview-stats strong { color: var(--text, #e2e8f0); font-size: 20px; }
+.playbook-approval-request textarea, .playbook-decision textarea { resize: vertical; margin: 8px 0; }
+.playbook-approval-list { display: grid; gap: 12px; }
+.playbook-approval-card { padding: 14px; border: 1px solid var(--border, #26384c); border-radius: 10px; }
+.playbook-approval-card > p { margin: 10px 0; }
+.playbook-approval-card > small { color: var(--muted, #94a3b8); }
+@media (max-width: 640px) { .playbook-form-grid { grid-template-columns: 1fr; } .playbook-action-row, .playbook-approval-heading { align-items: flex-start; flex-direction: column; } }
