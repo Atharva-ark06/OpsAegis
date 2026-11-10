@@ -182,7 +182,7 @@ OpsAegis is intended for systems and targets you own or are explicitly authorize
 - Treat incident evidence and backups as sensitive data.
 - Review and approve any future response-action adapter independently; the current playbook approval workflow does not execute actions.
 
-To report a security issue, avoid publishing exploit details or secrets in a public issue. Follow the private reporting guidance in [SECURITY.md](SECURITY.md) if present, or contact the repository maintainer privately.
+To report a security issue, contact the repository maintainer through a private disclosure channel. Do not publish exploit details, credentials or sensitive infrastructure information in a public issue.
 
 ## Documentation map
 
@@ -197,6 +197,12 @@ To report a security issue, avoid publishing exploit details or secrets in a pub
 | [Integration matrix](docs/INTEGRATION_MATRIX.md) | Provider capabilities, prerequisites and limitations |
 | [Security model](docs/SECURITY_MODEL.md) | Authentication, authorization and safe-operation principles |
 | [Frontend guide](docs/FRONTEND_GUIDE.md) | Dashboard structure and UI conventions |
+| [Frontend deployment](docs/FRONTEND_DEPLOYMENT.md) | Production assets and same-origin API proxy |
+| [Role permissions](docs/ROLE_PERMISSIONS.md) | Operator roles and protected workflows |
+| [Database migrations](docs/DB_MIGRATIONS.md) | Alembic workflow and schema-change checks |
+| [Worker operations](docs/WORKER_OPERATIONS.md) | Queues, leases, heartbeats and recovery |
+| [Threat intelligence](docs/THREAT_INTELLIGENCE.md) | IOC enrichment scope and limitations |
+| [Vulnerability management](docs/VULNERABILITY_MANAGEMENT.md) | CVE provenance, asset mapping and remediation scope |
 | [Incident workflow](docs/INCIDENT_WORKFLOW.md) | Triage, investigation, evidence and lifecycle |
 | [Operations runbook](docs/OPERATIONS_RUNBOOK.md) | Routine health checks and recovery |
 | [Testing and CI](docs/TESTING_AND_CI.md) | Local checks and automated validation |
