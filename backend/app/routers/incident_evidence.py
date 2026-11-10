@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -27,6 +27,7 @@ _SAFE_NAME = re.compile(r"[^\w.() -]", re.UNICODE)
 def _storage_root() -> Path:
     root = Path(settings.evidence_storage_path).expanduser().resolve()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    root.chmod(0o700)
     return root
 
 
@@ -124,6 +125,12 @@ async def upload_incident_attachment(incident_id: int, file: UploadFile = File(.
                 temp.write(chunk)
         if total == 0:
             raise HTTPException(422, "Evidence attachment cannot be empty")
+        current_bytes = db.scalar(select(func.coalesce(func.sum(IncidentEvidenceAttachment.size_bytes), 0)).where(
+            IncidentEvidenceAttachment.incident_id == incident_id,
+            IncidentEvidenceAttachment.expires_at > datetime.now(timezone.utc),
+        )) or 0
+        if current_bytes + total > settings.evidence_max_incident_bytes:
+            raise HTTPException(413, "Incident evidence storage quota exceeded")
         media_type = _detect_media_type(temp_path)
         storage_key = uuid.uuid4().hex
         final_path = _attachment_path(root, storage_key)
