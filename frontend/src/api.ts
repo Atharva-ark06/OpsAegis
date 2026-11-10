@@ -147,6 +147,9 @@ export function getFindings(): Promise<Finding[]> {
 export function getIncidents(): Promise<Incident[]> {
   return request("/incidents?skip=0&limit=200");
 }
+export function createIncident(payload: {title:string;severity:Severity;description?:string}): Promise<Incident> {
+  return request("/incidents", {method:"POST", body:JSON.stringify(payload)});
+}
 export function getWazuhHealth(): Promise<WazuhHealth> {
   return request("/integrations/wazuh/health");
 }
