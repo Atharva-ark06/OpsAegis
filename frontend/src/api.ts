@@ -92,7 +92,7 @@ export function clearAccessToken(): void {
 
 async function request<T>(path: string, options: RequestInit = {}, authenticated = true): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (options.body && !(typeof FormData !== "undefined" && options.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (authenticated) {
     const token = getAccessToken();
     if (token) headers.set("Authorization", "Bearer " + token);
@@ -314,6 +314,43 @@ export async function downloadIncidentEvidence(id: number): Promise<void> {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = "opsaegis-incident-" + id + "-evidence.json";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export interface IncidentEvidenceAttachment {
+  id: number; filename: string; media_type: string; size_bytes: number; sha256: string;
+  uploaded_by_user_id: number | null; created_at: string; expires_at: string;
+}
+export const getIncidentAttachments = (id: number): Promise<{incident_id:number;items:IncidentEvidenceAttachment[];limit:number}> =>
+  request("/incidents/" + id + "/attachments");
+export const uploadIncidentAttachment = (id: number, file: File): Promise<IncidentEvidenceAttachment> => {
+  const form = new FormData();
+  form.append("file", file);
+  return request("/incidents/" + id + "/attachments", { method: "POST", body: form });
+};
+export async function downloadIncidentAttachment(id: number, attachment: IncidentEvidenceAttachment): Promise<void> {
+  const headers = new Headers();
+  const token = getAccessToken();
+  if (token) headers.set("Authorization", "Bearer " + token);
+  let response: Response;
+  try {
+    response = await fetch(API_BASE_URL + "/incidents/" + id + "/attachments/" + attachment.id, { headers });
+  } catch {
+    throw new ApiError("Cannot reach the OpsAegis API.", 0);
+  }
+  if (!response.ok) {
+    let message = "Attachment download failed (" + response.status + ").";
+    try { const payload = await response.json() as {detail?: string}; if (payload.detail) message = payload.detail; } catch { /* status fallback */ }
+    throw new ApiError(message, response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = attachment.filename;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
