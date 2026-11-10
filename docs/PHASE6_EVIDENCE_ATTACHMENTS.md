@@ -46,10 +46,10 @@ From the repository root:
 
 ```powershell
 # Inspect the number of expired records; no changes are made.
-docker compose -f compose.production.yaml exec backend python scripts/purge_expired_evidence.py
+docker compose -f compose.production.yaml exec backend python -m scripts.purge_expired_evidence
 
 # Permanently delete expired files and their metadata after approval.
-docker compose -f compose.production.yaml exec backend python scripts/purge_expired_evidence.py --apply
+docker compose -f compose.production.yaml exec backend python -m scripts.purge_expired_evidence --apply
 ```
 
 The command processes at most 500 records by default (maximum 5,000 per invocation), validates generated storage keys, and records a minimized audit summary. Run the dry-run first and retain the command output with the approved retention record. A skipped file is reported and causes a non-zero result; investigate it rather than weakening the path checks.
