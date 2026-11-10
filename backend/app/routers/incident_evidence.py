@@ -145,7 +145,7 @@ async def upload_incident_attachment(incident_id: int, file: UploadFile = File(.
         return {
             "id": item.id, "incident_id": incident_id, "filename": item.original_filename,
             "media_type": item.media_type, "size_bytes": item.size_bytes,
-            "sha256": item.sha256, "created_at": item.created_at.isoformat(),
+            "sha256": item.sha256, "uploaded_by_user_id": item.uploaded_by_user_id, "created_at": item.created_at.isoformat(),
             "expires_at": item.expires_at.isoformat(),
         }
     except HTTPException:
