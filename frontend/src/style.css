@@ -610,3 +610,4 @@ tbody tr:hover { background: #142236; }
 .operations-report-stats small { color: var(--muted, #94a3b8); }
 .operations-report-stats strong { font-size: 21px; }
 @media (max-width: 760px) { .operations-report-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+\n/* OpsAegis split-panel authentication styles */\n@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');\n/* Component-specific styles are scoped with oa-auth classes. */\n
