@@ -1,3 +1,4 @@
+import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { OpsAegisSignIn } from "./OpsAegisSignIn";
 import { ShannonPanel } from "./ShannonPanel";
