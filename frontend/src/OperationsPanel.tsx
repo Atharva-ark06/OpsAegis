@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
-  getOperationsTrends, getOperationalThresholds, updateOperationalThresholds,
-  OperationalThresholds, OperationsTrends,
+  downloadOperationsReport, getOperationsReport, getOperationsTrends, getOperationalThresholds, updateOperationalThresholds,
+  OperationalThresholds, OperationsReport, OperationsTrends,
 } from "./api";
 
 function dateInput(value: Date): string {
@@ -16,6 +16,8 @@ function labelDate(value: string, bucket: "day" | "week"): string {
 
 export function OperationsPanel({ isAdmin, refreshKey }: { isAdmin: boolean; refreshKey: number }) {
   const [trends, setTrends] = useState<OperationsTrends | null>(null);
+  const [report, setReport] = useState<OperationsReport | null>(null);
+  const [exporting, setExporting] = useState<"json"|"csv"|null>(null);
   const [thresholds, setThresholds] = useState<OperationalThresholds | null>(null);
   const [draft, setDraft] = useState<OperationalThresholds | null>(null);
   const [bucket, setBucket] = useState<"day" | "week">("day");
@@ -29,10 +31,11 @@ export function OperationsPanel({ isAdmin, refreshKey }: { isAdmin: boolean; ref
     setLoading(true);
     const until = new Date();
     const since = new Date(until.getTime() - 30 * 86400000);
-    Promise.all([getOperationsTrends(dateInput(since), dateInput(until), bucket), getOperationalThresholds()])
-      .then(([trendData, thresholdData]) => {
+    Promise.all([getOperationsTrends(dateInput(since), dateInput(until), bucket), getOperationalThresholds(), getOperationsReport(dateInput(since), dateInput(until))])
+      .then(([trendData, thresholdData, reportData]) => {
         if (!active) return;
         setTrends(trendData);
+        setReport(reportData);
         setThresholds(thresholdData);
         setDraft(thresholdData);
         setError("");
@@ -43,6 +46,14 @@ export function OperationsPanel({ isAdmin, refreshKey }: { isAdmin: boolean; ref
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [bucket, refreshKey]);
+
+  async function exportReport(format:"json"|"csv") {
+    if(!trends) return;
+    setExporting(format);setError("");
+    try { await downloadOperationsReport(format,trends.window.since,trends.window.until); }
+    catch(reason) { setError(reason instanceof Error?reason.message:"Report export failed."); }
+    finally { setExporting(null); }
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,6 +115,20 @@ export function OperationsPanel({ isAdmin, refreshKey }: { isAdmin: boolean; ref
         </article>
       </div>
       {trends.rows_limited && <p className="trend-warning">A query reached the 10,000-row safety cap; these trends may be incomplete.</p>}
+      {report && <div className="operations-report">
+        <div className="panel-heading"><div><p className="eyebrow">PHASE 6.4 · EXPORTABLE REPORT</p><h4>Operational report</h4><small>Exact UTC window: {new Date(report.window.since).toLocaleString()} – {new Date(report.window.until).toLocaleString()}</small></div>
+          <div className="playbook-controls"><button className="secondary-button compact" disabled={exporting!==null} onClick={()=>void exportReport("json")}>{exporting==="json"?"Exporting…":"Export JSON"}</button><button className="secondary-button compact" disabled={exporting!==null} onClick={()=>void exportReport("csv")}>{exporting==="csv"?"Exporting…":"Export CSV"}</button></div>
+        </div>
+        <div className="operations-report-stats">
+          <article><small>Sources with successful runs</small><strong>{report.collection.sources_with_successful_runs}/{report.collection.sources_configured}</strong></article>
+          <article><small>Detections linked to incidents</small><strong>{report.response.detections_linked_to_incidents}</strong></article>
+          <article><small>Mean detection → incident</small><strong>{report.response.mean_detection_to_incident_seconds===null?"—":Math.round(report.response.mean_detection_to_incident_seconds/60)+" min"}</strong></article>
+          <article><small>Mean incident → resolution</small><strong>{report.response.mean_incident_to_resolution_seconds===null?"—":Math.round(report.response.mean_incident_to_resolution_seconds/60)+" min"}</strong></article>
+        </div>
+        <div className="table-wrap"><table><thead><tr><th>Source</th><th>Runs</th><th>Succeeded</th><th>Failed</th><th>Freshness</th><th>Received</th><th>Created</th></tr></thead><tbody>{report.collection.sources.map(source=><tr key={source.source}><td>{source.source}</td><td>{source.runs}</td><td>{source.successful_runs}</td><td>{source.failed_runs}</td><td><span className="tag">{source.freshness.replace("_"," ")}</span></td><td>{source.received}</td><td>{source.created}</td></tr>)}</tbody></table></div>
+        {(report.data_quality.stale_sources.length>0||report.data_quality.never_succeeded_sources.length>0||report.data_quality.truncated_collection_runs>0||report.collection.rows_limited||report.response.rows_limited)&&<p className="trend-warning">Data-quality limitations: {report.data_quality.stale_sources.length?("stale sources: "+report.data_quality.stale_sources.join(", ")+". "):""}{report.data_quality.never_succeeded_sources.length?("never succeeded: "+report.data_quality.never_succeeded_sources.join(", ")+". "):""}{report.data_quality.truncated_collection_runs} potentially truncated collection run(s). Query row cap: {report.collection.rows_limited||report.response.rows_limited?"reached":"not reached"}.</p>}
+        <p className="trend-note">{report.data_quality.limitations.join(" ")}</p>
+      </div>}
       <p className="trend-note">{trends.limitations.join(" ")}</p>
     </>}
     {thresholds?.active_alerts && <div className="threshold-alerts" aria-live="polite"><strong>{thresholds.active_alerts.length ? `${thresholds.active_alerts.length} threshold alert(s)` : "No threshold breaches in the last 7 days"}</strong>{thresholds.active_alerts.map((alert,index)=><p key={alert.code+String(alert.source)+index}>{alert.message}</p>)}</div>}

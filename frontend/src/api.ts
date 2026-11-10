@@ -370,6 +370,42 @@ export interface OperationalThresholds {
   collection_failure_rate_percent: number; source_stale_after_minutes: number;
   detection_to_incident_minutes: number; incident_resolution_minutes: number; updated_at: string | null; active_alerts?: {code:string;source:string|null;message:string}[]; evaluation_window?: {since:string;until:string;timezone:string};
 }
+export interface OperationsReport {
+  generated_at:string; window:{since:string;until:string;timezone:"UTC"};
+  collection:{sources_configured:number;sources_with_successful_runs:number;sources:Array<{
+    source:string;description:string;enabled:boolean;runs:number;successful_runs:number;failed_runs:number;
+    failure_rate:number|null;received:number;created:number;updated:number;skipped:number;
+    truncated_possible_runs:number;latest_success_at:string|null;freshness_age_seconds:number|null;
+    freshness:"fresh"|"stale"|"never_succeeded";
+  }>;rows_limited:boolean};
+  response:{detections_linked_to_incidents:number;mean_detection_to_incident_seconds:number|null;
+    incidents_resolved:number;mean_incident_to_resolution_seconds:number|null;resolution_metric_source:string;
+    rows_limited:boolean};
+  data_quality:{stale_sources:string[];never_succeeded_sources:string[];truncated_collection_runs:number;limitations:string[]};
+}
+export const getOperationsReport = (since:string,until:string):Promise<OperationsReport> =>
+  request("/reports/operations?"+new URLSearchParams({since,until}).toString());
+export async function downloadOperationsReport(format:"json"|"csv",since:string,until:string):Promise<void> {
+  const headers=new Headers();
+  const token=getAccessToken();
+  if(token) headers.set("Authorization","Bearer "+token);
+  const path="/reports/operations/export?"+new URLSearchParams({format,since,until}).toString();
+  let response:Response;
+  try { response=await fetch(API_BASE_URL+path,{headers}); }
+  catch { throw new ApiError("Cannot reach the OpsAegis API.",0); }
+  if(response.status===401) clearAccessToken();
+  if(!response.ok) {
+    let message="Report export failed ("+response.status+").";
+    try {const payload=await response.json() as {detail?:string};if(payload.detail)message=payload.detail;} catch {/* status fallback */}
+    throw new ApiError(message,response.status);
+  }
+  const blob=await response.blob();
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement("a");
+  anchor.href=url;
+  anchor.download="opsaegis-operations-report-"+since.slice(0,10)+"-to-"+until.slice(0,10)+"."+format;
+  document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+}
 export const getOperationsTrends = (since: string, until: string, bucket: "day" | "week" = "day"): Promise<OperationsTrends> =>
   request("/reports/operations/trends?" + new URLSearchParams({since, until, bucket}).toString());
 export const getOperationalThresholds = (): Promise<OperationalThresholds> => request("/reports/operations/thresholds");
@@ -409,3 +445,45 @@ export const getPlaybookExecutions = (
   if (filters.status) params.set("status", filters.status);
   return request("/playbooks/executions?" + params.toString());
 };
+
+
+export interface PlaybookDefinition {
+  id: string; name: string; version: string; description: string;
+  required_roles: string[];
+  inputs: Record<string, {type:string;minimum?:number;maximum?:number;default?:number;required?:boolean}>;
+  preconditions: string[]; execution_mode: "dry_run_only"; external_actions_enabled: false;
+}
+export interface PlaybookAction {
+  action_id: string; version: string; description: string; target_type: string;
+  timeout_seconds: number; requires_approval: boolean; requires_independent_approver: boolean;
+  idempotency_required: boolean; compensation_action_id: string;
+  enabled: boolean; adapter_registered: boolean; execution_available: false; reason: string;
+}
+export interface PlaybookPreview {
+  playbook_id: string; playbook_version: string; status: "preview_only"; executed: false;
+  external_actions_enabled: false; generated_at: string;
+  inputs: {incident_id:number;lookback_minutes:number};
+  preconditions: {incident_exists:boolean;operator_role:string;passed:boolean};
+  incident: {id:number;title:string;severity:string;status:string};
+  observed_context: {detections_in_window:number;linked_findings:number;affected_asset_ids:number[];window_start:string;window_end:string;possible_truncation:boolean};
+  proposed_checklist: string[]; side_effects: string[]; limitations: string[];
+}
+export type PlaybookApprovalStatus = "pending" | "approved" | "rejected" | "expired";
+export interface PlaybookApproval {
+  id:number;playbook_id:string;playbook_version:string;incident_id:number;
+  requested_by_user_id:number;reviewed_by_user_id:number|null;
+  input_parameters:{lookback_minutes:number};request_reason:string;decision_reason:string|null;
+  status:PlaybookApprovalStatus;expires_at:string;created_at:string;reviewed_at:string|null;
+  execution_enabled:false;
+}
+export const getPlaybooks = ():Promise<{items:PlaybookDefinition[];count:number}> => request("/playbooks");
+export const getPlaybookActions = (id:string):Promise<{playbook_id:string;items:PlaybookAction[];count:number;external_actions_enabled:false}> =>
+  request("/playbooks/"+encodeURIComponent(id)+"/actions");
+export const previewPlaybook = (id:string,payload:{incident_id:number;lookback_minutes:number}):Promise<PlaybookPreview> =>
+  request("/playbooks/"+encodeURIComponent(id)+"/dry-run",{method:"POST",body:JSON.stringify(payload)});
+export const createPlaybookApproval = (id:string,payload:{incident_id:number;lookback_minutes:number;reason:string}):Promise<PlaybookApproval> =>
+  request("/playbooks/"+encodeURIComponent(id)+"/approval-requests",{method:"POST",body:JSON.stringify(payload)});
+export const getPlaybookApprovals = (status:"pending"|"approved"|"rejected"|"expired"|"all"="pending"):Promise<{items:PlaybookApproval[];count:number}> =>
+  request("/playbooks/approvals?status_filter="+encodeURIComponent(status));
+export const decidePlaybookApproval = (id:number,payload:{decision:"approve"|"reject";reason:string}):Promise<PlaybookApproval> =>
+  request("/playbooks/approvals/"+id+"/decision",{method:"POST",body:JSON.stringify(payload)});

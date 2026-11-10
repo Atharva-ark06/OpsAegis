@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, login, saveAccessToken } from "./api";
+import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, getPlaybooks, getPlaybookActions, previewPlaybook, createPlaybookApproval, getPlaybookApprovals, decidePlaybookApproval, getOperationsReport, downloadOperationsReport, login, saveAccessToken } from "./api";
 
 function mockResponse(status: number, payload: unknown) {
   return {
@@ -177,4 +177,69 @@ describe("OpsAegis API client", () => {
     });
   });
 
+
+  it("loads the playbook catalogue and explicitly disabled action contracts", async () => {
+    const catalogue = {items:[{id:"incident-investigation",name:"Incident investigation",version:"1.0.0"}],count:1};
+    const actions = {playbook_id:"incident-investigation",items:[{action_id:"wazuh.agent_isolate",enabled:false,adapter_registered:false,execution_available:false}],count:1,external_actions_enabled:false};
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200,catalogue)).mockResolvedValueOnce(mockResponse(200,actions));
+    await expect(getPlaybooks()).resolves.toEqual(catalogue);
+    await expect(getPlaybookActions("incident-investigation")).resolves.toEqual(actions);
+    expect(fetch).toHaveBeenNthCalledWith(1,"http://localhost:8000/api/v1/playbooks",expect.objectContaining({headers:expect.any(Headers)}));
+    expect(fetch).toHaveBeenNthCalledWith(2,"http://localhost:8000/api/v1/playbooks/incident-investigation/actions",expect.objectContaining({headers:expect.any(Headers)}));
+  });
+
+  it("supports preview-only playbooks and independent approval lifecycle requests", async () => {
+    saveAccessToken("operator-session");
+    const preview = {status:"preview_only",executed:false,external_actions_enabled:false};
+    const approval = {id:4,status:"pending",execution_enabled:false};
+    const decided = {id:4,status:"approved",execution_enabled:false};
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockResponse(200,preview))
+      .mockResolvedValueOnce(mockResponse(201,approval))
+      .mockResolvedValueOnce(mockResponse(200,{items:[approval],count:1}))
+      .mockResolvedValueOnce(mockResponse(200,decided));
+    await expect(previewPlaybook("incident-investigation",{incident_id:9,lookback_minutes:60})).resolves.toEqual(preview);
+    await expect(createPlaybookApproval("incident-investigation",{incident_id:9,lookback_minutes:60,reason:"Independent investigation review requested."})).resolves.toEqual(approval);
+    await expect(getPlaybookApprovals("pending")).resolves.toEqual({items:[approval],count:1});
+    await expect(decidePlaybookApproval(4,{decision:"approve",reason:"Reviewed the evidence and agree."})).resolves.toEqual(decided);
+    expect(fetch).toHaveBeenNthCalledWith(1,"http://localhost:8000/api/v1/playbooks/incident-investigation/dry-run",expect.objectContaining({method:"POST"}));
+    expect(fetch).toHaveBeenNthCalledWith(2,"http://localhost:8000/api/v1/playbooks/incident-investigation/approval-requests",expect.objectContaining({method:"POST"}));
+    expect(fetch).toHaveBeenNthCalledWith(3,"http://localhost:8000/api/v1/playbooks/approvals?status_filter=pending",expect.objectContaining({headers:expect.any(Headers)}));
+    expect(fetch).toHaveBeenNthCalledWith(4,"http://localhost:8000/api/v1/playbooks/approvals/4/decision",expect.objectContaining({method:"POST"}));
+  });
+
+
+  it("loads an authenticated bounded-window operations report", async () => {
+    saveAccessToken("report-session");
+    const report = {window:{since:"2026-11-01T00:00:00Z",until:"2026-11-10T00:00:00Z",timezone:"UTC"},collection:{sources:[]},response:{},data_quality:{}};
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200,report));
+    await expect(getOperationsReport("2026-11-01T00:00:00Z","2026-11-10T00:00:00Z")).resolves.toEqual(report);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/reports/operations?since=2026-11-01T00%3A00%3A00Z&until=2026-11-10T00%3A00%3A00Z",
+      expect.objectContaining({headers:expect.any(Headers)}),
+    );
+  });
+
+  it("requests the authenticated CSV export endpoint", async () => {
+    saveAccessToken("report-session");
+    const originalCreate=Object.getOwnPropertyDescriptor(URL,"createObjectURL");
+    const originalRevoke=Object.getOwnPropertyDescriptor(URL,"revokeObjectURL");
+    const createObjectURL=vi.fn(()=> "blob:test");
+    const revokeObjectURL=vi.fn(()=>{});
+    Object.defineProperty(URL,"createObjectURL",{configurable:true,value:createObjectURL});
+    Object.defineProperty(URL,"revokeObjectURL",{configurable:true,value:revokeObjectURL});
+    const click=vi.spyOn(HTMLAnchorElement.prototype,"click").mockImplementation(()=>{});
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok:true,status:200,blob:async()=>new Blob(["metric,source,value,unit"]),
+    } as Response);
+    await downloadOperationsReport("csv","2026-11-01T00:00:00Z","2026-11-10T00:00:00Z");
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/reports/operations/export?format=csv&since=2026-11-01T00%3A00%3A00Z&until=2026-11-10T00%3A00%3A00Z",
+      expect.objectContaining({headers:expect.any(Headers)}),
+    );
+    expect(click).toHaveBeenCalledOnce();
+    if(originalCreate) Object.defineProperty(URL,"createObjectURL",originalCreate); else Reflect.deleteProperty(URL,"createObjectURL");
+    if(originalRevoke) Object.defineProperty(URL,"revokeObjectURL",originalRevoke); else Reflect.deleteProperty(URL,"revokeObjectURL");
+    click.mockRestore();
+  });
 });

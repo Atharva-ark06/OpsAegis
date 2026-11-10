@@ -1,5 +1,14 @@
 # OpsAegis — Project Status
 
+## Current release checkpoint (2026-11-10)
+
+- Phase 6.1 collection orchestration and Phase 6.2 investigation core: merged in PR #72; binary evidence attachments and private persistent storage: merged in PR #95.
+- Phase 6.3 bounded playbook framework, independent approval records, fail-closed adapter contracts, execution ledger and recovery guidance: merged in PRs #73–#75 and #79–#86. Provider execution remains deliberately disabled; the current dashboard increment adds the missing catalogue/preview/approval UI.
+- Phase 6.4 operational metrics, trends, thresholds and evidence validation tooling: merged in PRs #76–#78. The current dashboard increment adds the missing report summary and JSON/CSV export controls.
+- Wazuh staging lab scaffold: merged in PR #88. Local disposable agent enrollment is not equivalent to OpsAegis ingestion evidence.
+- PR #95 branch-head CI and security workflows passed, including backend tests/migrations, frontend tests/build, production Compose smoke test, secret scan and dependency audit. This is CI evidence only, not live staging evidence.
+- Phase 5 and Phase 6.1–6.4 operational acceptance remain pending until authorized local/staging integration, recovery, evidence-volume restore and report-validation drills are recorded. No live or investor KPI is claimed without those records.
+
 ## Phase 5 closeout checkpoint (2026-11-09)
 
 PR #70 is merged at `61c78e66c2980b9ea435a461060d2e8483ea7b69`. It adds optional, bounded CrowdSec alert-history reads using a dedicated machine account, separate from the bouncer-key active-decision path. The feature remains opt-in because CrowdSec machine credentials have broader LAPI permissions.
@@ -77,7 +86,7 @@ The repository-side validator checks evidence-register structure in CI. Run `pyt
 
 - Adds disabled-by-default schedules for Wazuh Manager registered-agent inventory and Wazuh Indexer alert windows, durable collection run history, a dedicated Redis-leased worker, bounded retries, restart recovery and run fencing. Manual runs use the same Wazuh sync functions as scheduled runs. CrowdSec, scanners and response actions are not part of this worker.
 - Adds an incident investigation timeline combining audit changes, analyst notes, correlated detections and linked findings with provenance labels, plus a redacted JSON export. Binary evidence uploads are bounded and content-sniffed, operator-only, stored in a persistent volume outside the web root, and verified by SHA-256 on download. Configurable expiry and an explicit dry-run-first pruning command are included; automatic pruning, malware scanning, immutable storage and cryptographic chain-of-custody remain out of scope pending separate design and staging review.
-- Automated tests were added for schedule enqueue/recovery, role/allowlist enforcement, analyst notes and redaction. They have not been run in this environment; CI must validate the branch. No live integration or staging result is claimed.
+- Automated tests cover schedule enqueue/recovery, role/allowlist enforcement, analyst notes and redaction. The merged PR #95 branch-head CI subsequently passed the full backend and frontend suites plus the production Compose smoke test. No live integration or staging result is claimed.
 
 ## Phase 6 kickoff
 
@@ -309,7 +318,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Approval is a recorded governance decision only: it does not execute the playbook, invoke external integrations, or enable response actions.
 
 
-## Phase 6.3 action-adapter safety contracts (PR in review)
+## Phase 6.3 action-adapter safety contracts (PR #75 merged; request-binding hardening in PR #83 merged)
 
 - Adds a read-only action catalogue and a fail-closed adapter contract. The initial Wazuh agent-isolation action is descriptive only: no provider adapter is registered, enabled or callable.
 - Requires independent human approval, deterministic SHA-256 idempotency keys bound to approval/action/target/parameters, a bounded 1–30 second adapter timeout, and a declared compensation action.
@@ -318,7 +327,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - No endpoint isolation, unisolation, external request, command execution or other response action is performed. A concrete provider adapter remains gated on integration-specific threat modelling and authorized staging validation.
 
 
-## Phase 6.4 — operational reporting (PR in review)
+## Phase 6.4 — operational reporting (PR #76 merged)
 
 - Adds authenticated `GET /api/v1/reports/operations` with explicit UTC `since`/`until` bounds (default seven days, maximum 90 days).
 - Reports collection source coverage, successful/failed run counts, terminal failure rate, received/created/updated/skipped totals, possible truncation and freshness against the last successful run.
@@ -327,7 +336,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Includes explicit data-quality caveats and bounded metric queries. These are repository-derived operational metrics, not proof of complete upstream telemetry or live staging health.
 
 
-## Phase 6.4 — operational trends and thresholds (PR pending review)
+## Phase 6.4 — operational trends and thresholds (PR #77 merged)
 - Adds authenticated daily/weekly trend buckets for persisted collection runs, correlated detections, incidents and audited resolution transitions, with a 10,000-row bound and explicit data-quality caveats.
 - Adds a dashboard operational trends panel with collection success/failure and detection/incident volume visualizations; empty data is shown as empty, never fabricated.
 - Adds persisted singleton operational thresholds. Administrators can configure collection terminal-failure percentage, source freshness age, detection-to-incident SLA and incident-resolution SLA; changes are audit logged. Analysts/viewers can read thresholds and computed breach summaries but cannot change settings.
@@ -335,13 +344,13 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Automated tests cover bucket counts, weekly mode, authentication, role restrictions, validation and threshold audit records. CI must validate this branch; no live staging data is claimed.
 
 
-## Phase 6.4 — staging validation tooling (PR in review)
+## Phase 6.4 — staging validation tooling (PR #78 merged)
 - Adds an offline validator comparing a sanitized aggregate report export with independently recorded expected source counts, failure rate, detection-to-incident timing and incident-resolution timing.
 - The validator fails closed on UTC-window mismatch, missing sources/metrics, row caps and missing data-quality limitations. It reports metric mismatches without dumping raw report payloads.
 - Adds an operator runbook and evidence template. The utility does not call staging, generate events, or claim live validation; Phase 6.4 staging evidence remains pending until an authorized operator runs and reviews it.
 
 
-## Phase 6.3 framework completion (PR pending review)
+## Phase 6.3 framework completion (PRs #80–#83 merged)
 - Completes the bounded playbook framework scope: catalogue, typed dry-run, independent approval, action safety contract, durable execution/compensation ledger, read-only API and dashboard visibility.
 - Hardens the future adapter-call boundary so request action IDs must match the registered action, approval IDs and target IDs must be canonical and bounded, and the idempotency key must exactly bind approval/action/target/parameters. Non-JSON and non-finite parameter values are rejected.
 - Adds regression tests for action substitution, target/digest substitution, malformed identifiers and canonical JSON requirements.

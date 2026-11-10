@@ -54,7 +54,7 @@ Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer al
 
 ### Phase 6.3 — Playbook framework
 
-**Status: bounded framework complete; provider-specific response integration deferred.** The delivered framework includes a code-defined, versioned incident-investigation catalogue, strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records, a durable execution/compensation ledger, read-only operator visibility and fail-closed adapter contracts. No provider adapter is registered or enabled, and no execution endpoint or worker exists.
+**Status: bounded framework complete; provider-specific response integration deferred.** The delivered framework includes a code-defined, versioned incident-investigation catalogue, strict typed inputs, role-gated preconditions, bounded read-only context lookup, audited dry-run previews, independent approval records, a durable execution/compensation ledger, read-only operator visibility and fail-closed adapter contracts. The dashboard UI for catalogue inspection, dry-run preview, approval requests and independent decisions is being added in a focused frontend increment; no execution UI is exposed. No provider adapter is registered or enabled, and no execution endpoint or worker exists.
 
 - [x] Versioned playbook definition and strict input validation.
 - [x] Operator-only dry-run preview with bounded lookback and audit record.
@@ -73,7 +73,7 @@ Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer al
 
 ### Phase 6.4 — Reporting and operational metrics
 
-**Delivered increments:** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
+**Delivered increments:** authenticated UTC-windowed operational summary and JSON/CSV aggregate export, computed from persisted collection, detection, incident and audit records. The dashboard report summary and export controls are being added in a focused frontend increment. Includes source freshness/coverage, collection failure rates and detection/incident lifecycle timing. Reports are privacy-minimized and disclose data limitations; no synthetic metrics are generated.
 
 - [x] Collection freshness, source coverage and terminal failure rates for the two supported collection sources.
 - [x] Detection-to-incident timing from linked correlated detections and incident records.
