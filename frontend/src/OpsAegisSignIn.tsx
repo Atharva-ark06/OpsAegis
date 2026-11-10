@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { bootstrapFirstAdmin, getAuthSetupStatus } from "./api";
 import "./OpsAegisSignIn.css";
 
