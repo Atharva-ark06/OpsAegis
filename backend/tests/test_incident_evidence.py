@@ -113,3 +113,39 @@ def test_expired_attachment_is_not_downloadable(client, analyst_headers, db_sess
         headers=analyst_headers,
     )
     assert response.status_code == 404
+
+
+def test_tampered_attachment_fails_integrity_check(client, analyst_headers, monkeypatch, tmp_path, db_session):
+    monkeypatch.setattr(settings, "evidence_storage_path", str(tmp_path))
+    incident_id = _create_incident(client, analyst_headers)
+    payload = b"integrity fixture"
+    uploaded = client.post(
+        f"/api/v1/incidents/{incident_id}/attachments",
+        headers=analyst_headers,
+        files={"file": ("fixture.txt", payload, "text/plain")},
+    )
+    assert uploaded.status_code == 201
+    attachment = db_session.get(IncidentEvidenceAttachment, uploaded.json()["id"])
+    (tmp_path / f"{attachment.storage_key}.blob").write_bytes(b"tampered")
+    response = client.get(
+        f"/api/v1/incidents/{incident_id}/attachments/{attachment.id}",
+        headers=analyst_headers,
+    )
+    assert response.status_code == 409
+
+
+def test_viewer_cannot_download_operator_evidence(client, analyst_headers, db_session, monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "evidence_storage_path", str(tmp_path))
+    incident_id = _create_incident(client, analyst_headers)
+    uploaded = client.post(
+        f"/api/v1/incidents/{incident_id}/attachments",
+        headers=analyst_headers,
+        files={"file": ("private.txt", b"restricted", "text/plain")},
+    )
+    assert uploaded.status_code == 201
+    viewer = _viewer_headers(db_session)
+    response = client.get(
+        f"/api/v1/incidents/{incident_id}/attachments/{uploaded.json()['id']}",
+        headers=viewer,
+    )
+    assert response.status_code == 403
