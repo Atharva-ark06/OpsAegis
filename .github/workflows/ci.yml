@@ -39,7 +39,7 @@ jobs:
         run: |
           cp .env.example .env
           docker compose -f docker-compose.yml config --format json > "$RUNNER_TEMP/opsaegis-dev-compose.json"
-          docker compose --env-file .env.production.example -f compose.production.yaml config --format json > "$RUNNER_TEMP/opsaegis-prod-compose.json"
+          docker compose --profile scanner --env-file .env.production.example -f compose.production.yaml config --format json > "$RUNNER_TEMP/opsaegis-prod-compose.json"
           python - "$RUNNER_TEMP/opsaegis-dev-compose.json" "$RUNNER_TEMP/opsaegis-prod-compose.json" <<'PY'
           import json
           import sys
