@@ -170,8 +170,8 @@ Uploads are content-sniffed (PDF, PNG, JPEG or UTF-8 text), capped at 10 MiB by 
 
 Expired-file pruning is explicit and dry-run by default:
 ```powershell
-docker compose -f compose.production.yaml exec backend python scripts/purge_expired_evidence.py
-docker compose -f compose.production.yaml exec backend python scripts/purge_expired_evidence.py --apply
+docker compose -f compose.production.yaml exec backend python -m scripts.purge_expired_evidence
+docker compose -f compose.production.yaml exec backend python -m scripts.purge_expired_evidence --apply
 ```
 Run the first command to inspect the count; use `--apply` only under an approved retention procedure. Back up the evidence volume with the database, protect it with encrypted off-host storage, and restrict volume access. This implementation does not provide automatic scheduled deletion, malware scanning, tenant isolation, immutable/WORM storage or a cryptographic chain of custody. Phase 6.2 still requires staging validation and an independently reviewed retention/backup drill. See [the evidence attachment runbook](docs/PHASE6_EVIDENCE_ATTACHMENTS.md).
 
