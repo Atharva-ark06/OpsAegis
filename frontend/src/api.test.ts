@@ -177,8 +177,6 @@ describe("OpsAegis API client", () => {
     });
   });
 
-});
-
 
   it("loads the playbook catalogue and explicitly disabled action contracts", async () => {
     const catalogue = {items:[{id:"incident-investigation",name:"Incident investigation",version:"1.0.0"}],count:1};
@@ -244,3 +242,4 @@ describe("OpsAegis API client", () => {
     if(originalRevoke) Object.defineProperty(URL,"revokeObjectURL",originalRevoke); else Reflect.deleteProperty(URL,"revokeObjectURL");
     click.mockRestore();
   });
+});
