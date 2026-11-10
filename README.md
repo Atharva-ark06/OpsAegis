@@ -98,7 +98,7 @@ Production operators can create a PostgreSQL custom-format backup, verify its SH
 - Distinguish active CrowdSec decisions from historical alerts and firewall enforcement.
 - Nuclei and Shannon workers require target allowlists, explicit authorization, isolation, resource limits and audit trails before execution is enabled.
 
-See docs/PROJECT_STATUS.md and docs/SECURITY_BASELINE.md for implementation boundaries. Phase 5 exit requirements and the evidence-register validator are documented in [the Phase 5 staging evidence register](docs/PHASE5_STAGING_EVIDENCE.md). The next product increment is defined in the [Phase 6 SOC automation roadmap](docs/PHASE6_ROADMAP.md). For Phase 5 live-service and staging validation steps, see [the integration validation runbook](docs/PHASE5_INTEGRATION_VALIDATION.md) and [the staging evidence register](docs/PHASE5_STAGING_EVIDENCE.md).
+See [project status](docs/PROJECT_STATUS.md), [security baseline](docs/SECURITY_BASELINE.md) and the [Phase 6 SOC automation roadmap](docs/PHASE6_ROADMAP.md) for implementation boundaries. Phase 5 and Phase 6 live acceptance requirements are tracked in the [Phase 5 evidence register](docs/PHASE5_STAGING_EVIDENCE.md), [Phase 6 evidence register](docs/PHASE6_STAGING_EVIDENCE.md) and [consolidated release-readiness matrix](docs/RELEASE_READINESS.md). Investor and design-partner materials are available in the [investor brief](docs/INVESTOR_BRIEF.md), [pitch deck storyboard](docs/INVESTOR_DECK_STORYBOARD.md) and [demo runbook](docs/INVESTOR_DEMO_RUNBOOK.md). These materials intentionally contain no fabricated traction or live-performance metrics.
 
 ## Nuclei authorized scanning
 
