@@ -13,7 +13,7 @@ def upgrade() -> None:
     op.create_table(
         "incident_evidence_attachments",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("incident_id", sa.Integer(), sa.ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("incident_id", sa.Integer(), sa.ForeignKey("incidents.id", ondelete="RESTRICT"), nullable=False),
         sa.Column("uploaded_by_user_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
         sa.Column("storage_key", sa.String(length=64), nullable=False),
         sa.Column("original_filename", sa.String(length=160), nullable=False),
