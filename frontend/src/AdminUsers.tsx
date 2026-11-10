@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { AdminUser, User, UserRole, createAdminUser, getAdminUsers, updateAdminUser } from "./api";
 
 export function AdminUsers({ currentUser }: { currentUser: User }) {
