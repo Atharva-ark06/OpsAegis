@@ -487,3 +487,20 @@ export const getPlaybookApprovals = (status:"pending"|"approved"|"rejected"|"exp
   request("/playbooks/approvals?status_filter="+encodeURIComponent(status));
 export const decidePlaybookApproval = (id:number,payload:{decision:"approve"|"reject";reason:string}):Promise<PlaybookApproval> =>
   request("/playbooks/approvals/"+id+"/decision",{method:"POST",body:JSON.stringify(payload)});
+
+
+export interface AuthSetupStatus { setup_required: boolean; setup_enabled: boolean; }
+export interface AdminUser extends User {}
+export function getAuthSetupStatus(): Promise<AuthSetupStatus> {
+  return request("/auth/setup-status", {}, false);
+}
+export function bootstrapFirstAdmin(email: string, password: string, setupToken: string): Promise<AdminUser> {
+  return request("/auth/bootstrap", { method: "POST", headers: { "X-Setup-Token": setupToken }, body: JSON.stringify({ email, password }) }, false);
+}
+export function getAdminUsers(): Promise<AdminUser[]> { return request("/auth/users?skip=0&limit=200"); }
+export function createAdminUser(payload: { email: string; password: string; role: UserRole }): Promise<AdminUser> {
+  return request("/auth/users", { method: "POST", body: JSON.stringify(payload) });
+}
+export function updateAdminUser(id: number, payload: { role?: UserRole; is_active?: boolean }): Promise<AdminUser> {
+  return request("/auth/users/" + id, { method: "PATCH", body: JSON.stringify(payload) });
+}
