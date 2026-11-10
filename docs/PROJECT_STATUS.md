@@ -3,10 +3,10 @@
 ## Current release checkpoint (2026-11-10)
 
 - Phase 6.1 collection orchestration and Phase 6.2 investigation core: merged in PR #72; binary evidence attachments and private persistent storage: merged in PR #95.
-- Phase 6.3 bounded playbook framework, independent approval records, fail-closed adapter contracts, execution ledger and recovery guidance: merged in PRs #73–#75 and #79–#86. Provider execution remains deliberately disabled; the current dashboard increment adds the missing catalogue/preview/approval UI.
-- Phase 6.4 operational metrics, trends, thresholds and evidence validation tooling: merged in PRs #76–#78. The current dashboard increment adds the missing report summary and JSON/CSV export controls.
+- Phase 6.3 bounded playbook framework, independent approval records, fail-closed adapter contracts, execution ledger and recovery guidance: merged in PRs #73–#75 and #79–#86. PR #96 completes the dashboard catalogue, dry-run preview, approval queue and independent decision workflows. Provider execution remains deliberately disabled.
+- Phase 6.4 operational metrics, trends, thresholds and evidence validation tooling: merged in PRs #76–#78. PR #96 completes the dashboard report summary and authenticated JSON/CSV export controls.
 - Wazuh staging lab scaffold: merged in PR #88. Local disposable agent enrollment is not equivalent to OpsAegis ingestion evidence.
-- PR #95 branch-head CI and security workflows passed, including backend tests/migrations, frontend tests/build, production Compose smoke test, secret scan and dependency audit. This is CI evidence only, not live staging evidence.
+- PR #95 and PR #96 branch-head CI and security workflows passed, including backend tests/migrations, frontend tests/build, production Compose smoke test, PowerShell syntax validation, full-history secret scan and dependency audit. This is CI evidence only, not live staging evidence.
 - Phase 5 and Phase 6.1–6.4 operational acceptance remain pending until authorized local/staging integration, recovery, evidence-volume restore and report-validation drills are recorded. No live or investor KPI is claimed without those records.
 
 ## Phase 5 closeout checkpoint (2026-11-09)
@@ -307,7 +307,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 
 - Adds a versioned, code-defined incident-investigation playbook catalogue.
 - Adds strict typed input validation, admin/analyst-only dry-run previews, bounded read-only context lookup and audit records.
-- No external action adapter, command execution, scanner invocation, containment, notification or approval bypass is introduced. Approval and controlled execution remain separate future increments.
+- No external action adapter, command execution, scanner invocation, containment or approval bypass is introduced. Independent approval records are implemented; provider-side execution remains a separately gated future proposal.
 
 
 ## Phase 6.3 second increment (approval workflow foundations)
@@ -351,7 +351,7 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 
 
 ## Phase 6.3 framework completion (PRs #80–#83 merged)
-- Completes the bounded playbook framework scope: catalogue, typed dry-run, independent approval, action safety contract, durable execution/compensation ledger, read-only API and dashboard visibility.
+- Completes the bounded playbook framework scope: catalogue, typed dry-run, independent approval, action safety contract, durable execution/compensation ledger, read-only APIs and dashboard catalogue/preview/approval/ledger workflows (PR #96).
 - Hardens the future adapter-call boundary so request action IDs must match the registered action, approval IDs and target IDs must be canonical and bounded, and the idempotency key must exactly bind approval/action/target/parameters. Non-JSON and non-finite parameter values are rejected.
 - Adds regression tests for action substitution, target/digest substitution, malformed identifiers and canonical JSON requirements.
 - No provider adapter, dispatch endpoint, execution worker, Wazuh request, isolation or compensation operation is introduced. Provider integration remains a separately gated proposal requiring security approval and authorized staging evidence.
@@ -362,6 +362,6 @@ Phase 5 is in progress. The focus is validating existing integrations and operat
 - Added a local-only bootstrap for the official Wazuh Docker `v4.14.10` single-node release, with loopback-only published ports and a private-network disposable agent.
 - Added a local agent readiness check, safe stop command, explicit confirmation before deleting lab volumes, and CI checks for scaffold safety / nested PowerShell syntax.
 - Generated certificates, cloned vendor configuration and lab state remain under the ignored `ops/wazuh-staging/runtime/` directory; no secrets or generated artifacts are committed.
-- This is lab setup only. No live OpsAegis-to-Wazuh ingestion/report validation has been performed; Phase 6.4 staging evidence remains pending.
+- This is lab setup only. No live OpsAegis-to-Wazuh ingestion/report validation has been performed; Phase 6 staging evidence remains pending.
 - No Wazuh isolation/unisolation adapter, mutation endpoint, dispatcher, queue consumer or provider call has been added. The action remains disabled and unregistered pending independently reviewed staging evidence and a separate implementation PR.
 - Operator guide: [Phase 6 Wazuh staging lab](PHASE6_WAZUH_STAGING_LAB.md).
