@@ -409,3 +409,45 @@ export const getPlaybookExecutions = (
   if (filters.status) params.set("status", filters.status);
   return request("/playbooks/executions?" + params.toString());
 };
+
+
+export interface PlaybookDefinition {
+  id: string; name: string; version: string; description: string;
+  required_roles: string[];
+  inputs: Record<string, {type:string;minimum?:number;maximum?:number;default?:number;required?:boolean}>;
+  preconditions: string[]; execution_mode: "dry_run_only"; external_actions_enabled: false;
+}
+export interface PlaybookAction {
+  action_id: string; version: string; description: string; target_type: string;
+  timeout_seconds: number; requires_approval: boolean; requires_independent_approver: boolean;
+  idempotency_required: boolean; compensation_action_id: string;
+  enabled: boolean; adapter_registered: boolean; execution_available: false; reason: string;
+}
+export interface PlaybookPreview {
+  playbook_id: string; playbook_version: string; status: "preview_only"; executed: false;
+  external_actions_enabled: false; generated_at: string;
+  inputs: {incident_id:number;lookback_minutes:number};
+  preconditions: {incident_exists:boolean;operator_role:string;passed:boolean};
+  incident: {id:number;title:string;severity:string;status:string};
+  observed_context: {detections_in_window:number;linked_findings:number;affected_asset_ids:number[];window_start:string;window_end:string;possible_truncation:boolean};
+  proposed_checklist: string[]; side_effects: string[]; limitations: string[];
+}
+export type PlaybookApprovalStatus = "pending" | "approved" | "rejected" | "expired";
+export interface PlaybookApproval {
+  id:number;playbook_id:string;playbook_version:string;incident_id:number;
+  requested_by_user_id:number;reviewed_by_user_id:number|null;
+  input_parameters:{lookback_minutes:number};request_reason:string;decision_reason:string|null;
+  status:PlaybookApprovalStatus;expires_at:string;created_at:string;reviewed_at:string|null;
+  execution_enabled:false;
+}
+export const getPlaybooks = ():Promise<{items:PlaybookDefinition[];count:number}> => request("/playbooks");
+export const getPlaybookActions = (id:string):Promise<{playbook_id:string;items:PlaybookAction[];count:number;external_actions_enabled:false}> =>
+  request("/playbooks/"+encodeURIComponent(id)+"/actions");
+export const previewPlaybook = (id:string,payload:{incident_id:number;lookback_minutes:number}):Promise<PlaybookPreview> =>
+  request("/playbooks/"+encodeURIComponent(id)+"/dry-run",{method:"POST",body:JSON.stringify(payload)});
+export const createPlaybookApproval = (id:string,payload:{incident_id:number;lookback_minutes:number;reason:string}):Promise<PlaybookApproval> =>
+  request("/playbooks/"+encodeURIComponent(id)+"/approval-requests",{method:"POST",body:JSON.stringify(payload)});
+export const getPlaybookApprovals = (status:"pending"|"approved"|"rejected"|"expired"|"all"="pending"):Promise<{items:PlaybookApproval[];count:number}> =>
+  request("/playbooks/approvals?status_filter="+encodeURIComponent(status));
+export const decidePlaybookApproval = (id:number,payload:{decision:"approve"|"reject";reason:string}):Promise<PlaybookApproval> =>
+  request("/playbooks/approvals/"+id+"/decision",{method:"POST",body:JSON.stringify(payload)});
