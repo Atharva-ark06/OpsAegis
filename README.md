@@ -166,7 +166,7 @@ Evidence attachments are now supported through admin/analyst-only upload, list a
 - `GET /api/v1/incidents/{id}/attachments`
 - `GET /api/v1/incidents/{id}/attachments/{attachment_id}`
 
-Uploads are content-sniffed (PDF, PNG, JPEG or UTF-8 text), capped at 10 MiB by default (25 MiB hard configuration ceiling), stored in a persistent volume outside the web root, and never embedded in JSON exports. Downloads verify SHA-256 before serving and force attachment disposition with `no-store` and `nosniff`. Metadata includes uploader, size, digest and expiry; the default retention is 365 days. Configure `EVIDENCE_STORAGE_PATH`, `EVIDENCE_MAX_ATTACHMENT_BYTES` and `EVIDENCE_RETENTION_DAYS` on the backend. Production Compose mounts the `evidence_data` volume and the proxy caps request bodies at 11 MiB.
+Uploads are content-sniffed (PDF, PNG, JPEG or UTF-8 text), capped at 10 MiB by default (25 MiB hard configuration ceiling), stored in a persistent volume outside the web root, and never embedded in JSON exports. Downloads verify SHA-256 before serving and force attachment disposition with `no-store` and `nosniff`. Metadata includes uploader, size, digest and expiry; the default retention is 365 days. For standalone deployments configure `EVIDENCE_STORAGE_PATH`, `EVIDENCE_MAX_ATTACHMENT_BYTES` and `EVIDENCE_RETENTION_DAYS` on the backend; Compose pins the storage path to its mounted evidence volume. Production Compose mounts the `evidence_data` volume and the proxy caps request bodies at 11 MiB.
 
 Expired-file pruning is explicit and dry-run by default:
 ```powershell
