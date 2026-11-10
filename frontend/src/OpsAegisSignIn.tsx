@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { bootstrapFirstAdmin, getAuthSetupStatus } from "./api";
 import "./OpsAegisSignIn.css";
 
 type ThemePreference = "dark" | "light" | "system";
@@ -12,7 +13,11 @@ interface OpsAegisSignInProps {
 }
 
 export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "sign-up" | "setup">("sign-in");
+  const [setupToken, setSetupToken] = useState("");
+  const [setupRequired, setSetupRequired] = useState(false);
+  const [setupEnabled, setSetupEnabled] = useState(false);
+  useEffect(() => { getAuthSetupStatus().then(status => { setSetupRequired(status.setup_required); setSetupEnabled(status.setup_enabled); if (status.setup_required && status.setup_enabled) setMode("setup"); }).catch(() => setError("Cannot verify initial setup status. Check the API connection.")); }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +30,7 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
     setError("");
     setBusy(true);
     try {
-      await onLogin(email.trim(), password);
+      if (mode === "setup") {\n        if (!setupToken) throw new Error("Enter the one-time setup token configured by the deployment administrator.");\n        await bootstrapFirstAdmin(email.trim(), password, setupToken);\n        setSetupToken(""); setSetupRequired(false); setMode("sign-in");\n        setError("");\n      } else { await onLogin(email.trim(), password); }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Sign-in failed. Please try again.");
     } finally {
@@ -48,10 +53,10 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
           <div className="oa-auth-card">
             <div className="oa-auth-tabs" role="tablist" aria-label="Account access">
               <button type="button" role="tab" aria-selected={mode === "sign-in"} className={mode === "sign-in" ? "active" : ""} onClick={() => { setMode("sign-in"); setError(""); }}>Sign in</button>
-              <button type="button" role="tab" aria-selected={mode === "sign-up"} className={mode === "sign-up" ? "active" : ""} onClick={() => { setMode("sign-up"); setError(""); }}>Create account</button>
+              <button type="button" role="tab" aria-selected={mode === "sign-up"} className={mode === "sign-up" ? "active" : ""} onClick={() => { setMode("sign-up"); setError(""); }}>Request access</button>
             </div>
 
-            {mode === "sign-in" ? (
+            {mode === "setup" ? (\n              <>\n                <p className="oa-eyebrow">INITIAL WORKSPACE SETUP</p><h1>Create administrator.</h1>\n                <p className="oa-auth-copy">No accounts exist yet. Use the one-time setup token configured by your deployment administrator to create the first administrator.</p>\n                <form className="oa-auth-form" onSubmit={submit}>\n                  <label htmlFor="oa-email">Administrator email</label><input id="oa-email" type="email" required maxLength={320} value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email"/>\n                  <label htmlFor="oa-password">Password (minimum 12 characters)</label><input id="oa-password" type="password" required minLength={12} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password"/>\n                  <label htmlFor="oa-setup-token">One-time setup token</label><input id="oa-setup-token" type="password" required value={setupToken} onChange={e=>setSetupToken(e.target.value)} autoComplete="off"/>\n                  {error && <div className="oa-auth-error" role="alert">{error}</div>}\n                  <button className="oa-submit" type="submit" disabled={busy}>{busy ? "Creating administrator…" : "Initialize secure workspace"} <span aria-hidden="true">→</span></button>\n                </form>\n              </>\n            ) : mode === "sign-in" ? (
               <>
                 <p className="oa-eyebrow">SECURE OPERATIONS CONSOLE</p>
                 <h1>Welcome back.</h1>
@@ -75,7 +80,7 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
                 <p className="oa-eyebrow">ACCOUNT PROVISIONING</p>
                 <h1>Request access.</h1>
                 <p className="oa-auth-copy">OpsAegis accounts are created by an authorized administrator. This prevents untrusted users from registering themselves into your security operations workspace.</p>
-                <div className="oa-provision-steps">
+                {setupRequired && !setupEnabled && <div className="oa-auth-error">Initial setup is not enabled. Set OPS_AEGIS_BOOTSTRAP_TOKEN on the API service, then reload this page.</div>}\n                <div className="oa-provision-steps">
                   <span>01</span><div><strong>Contact your workspace administrator</strong><p>Ask them to provision an OpsAegis account using your work email.</p></div>
                   <span>02</span><div><strong>Receive your account details</strong><p>Your administrator assigns the appropriate role: viewer, analyst or admin.</p></div>
                   <span>03</span><div><strong>Sign in securely</strong><p>Return to this page and sign in with the credentials provided to you.</p></div>
