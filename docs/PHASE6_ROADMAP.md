@@ -45,7 +45,7 @@ Initial implementation scope: Wazuh Manager agent inventory and Wazuh Indexer al
 
 ### Phase 6.2 — Investigation workspace
 
-**Implementation status:** Timeline, provenance labels, analyst notes, redacted JSON export and bounded binary evidence attachments are implemented. Live staging validation remains pending. Retention pruning is an explicit operator command (dry-run by default), not an automatic scheduler. Stronger chain-of-custody controls remain outstanding.
+**Implementation status:** Timeline, provenance labels, analyst notes, redacted JSON export and bounded binary evidence attachments are implemented ([attachment operations runbook](PHASE6_EVIDENCE_ATTACHMENTS.md)). Live staging validation remains pending. Retention pruning is an explicit operator command (dry-run by default), not an automatic scheduler. Stronger chain-of-custody controls remain outstanding.
 - Unified incident timeline and evidence provenance.
 - [x] Analyst notes and evidence attachments with bounded size/type allowlists, operator-only access, SHA-256 verification and configurable expiry.
 - [x] Persistent evidence volume in local and production Compose; proxy request-body cap; explicit dry-run-first expired-evidence pruning command.
