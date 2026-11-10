@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { OpsAegisSignIn } from "./OpsAegisSignIn";
 import { ShannonPanel } from "./ShannonPanel";
 import { DetectionsPanel } from "./DetectionsPanel";
 import { ThreatIntelPanel } from "./ThreatIntelPanel";
@@ -56,43 +57,6 @@ function ThemeToggle({ theme, onChange }: { theme: ThemePreference; onChange: (v
       <option value="dark">Dark</option><option value="light">Light</option><option value="system">System</option>
     </select>
   </label>;
-}
-
-function LoginScreen({ onLogin, theme, onThemeChange }: { onLogin: (email: string, password: string) => Promise<void>; theme: ThemePreference; onThemeChange: (value: ThemePreference) => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      await onLogin(email.trim(), password);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Sign-in failed. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  return <main className="login-screen">
-    <div className="login-orbit orbit-one" /><div className="login-orbit orbit-two" />
-    <section className="login-panel">
-      <div className="brand brand-login"><span className="brand-mark">OA</span><span><strong>OpsAegis</strong><small>SECURITY OPERATIONS</small></span></div>
-      <p className="eyebrow">IDENTITY VERIFICATION</p>
-      <h1>Welcome back.</h1>
-      <p className="login-copy">Sign in with your OpsAegis account to access your operational workspace.</p>
-      <form onSubmit={submit} className="login-form">
-        <label htmlFor="email">Email address</label>
-        <input id="email" type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="analyst@organization.com" required maxLength={320} />
-        <label htmlFor="password">Password</label>
-        <input id="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required maxLength={256} />
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        <button className="primary-button login-button" type="submit" disabled={busy}>{busy ? "Authenticating…" : "Sign in"} <span aria-hidden="true">→</span></button>
-      </form>
-      <p className="login-footnote">Protected by OpsAegis API authentication · Session-scoped access</p>
-    </section>
-  </main>;
 }
 
 function StatCard({ label, value, detail, accent }: { label: string; value: number; detail: string; accent: string }) {
@@ -399,7 +363,7 @@ function App() {
   if (authState === "loading" || (token && !user && authState !== "idle")) {
     return <main className="auth-loading"><div className="loading-mark">OA</div><span>Verifying your session…</span></main>;
   }
-  if (!token || !user) return <LoginScreen onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
+  if (!token || !user) return <OpsAegisSignIn onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
 
   return <div className="app-shell min-h-screen bg-ops-canvas text-slate-100">
     <aside className="sidebar">
