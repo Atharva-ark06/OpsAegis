@@ -1,0 +1,7 @@
+/* Prism Flux loader — successful login-to-dashboard handoff only. */
+.prism-flux-screen{position:fixed;inset:0;z-index:9999;display:grid;min-height:100vh;min-height:100dvh;place-items:center;overflow:hidden;background:#fff;color:#111}
+.prism-flux-content{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:27px;transform:translateY(-1px)}
+.prism-flux-perspective{display:grid;width:100px;height:76px;place-items:center;perspective:520px}
+.prism-flux-cube{position:relative;transform-style:preserve-3d;will-change:transform}
+.prism-flux-face{position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center;border:1px solid #171717;background:rgba(255,255,255,.96);color:#111;backface-visibility:hidden}
+.prism-flux-status{margin:0;color:#111;font-size:25px;font-weight:700;letter-spacing:-.025em;line-height:1.2}
