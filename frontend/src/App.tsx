@@ -372,7 +372,7 @@ function App() {
   return <AppDashboardShell
     workspace={{ name: "OpsAegis", plan: "Security Operations" }}
     user={{ name: user.email, email: user.email, role: user.role }}
-    nav={navigation.map((item) => ({ ...item, badge: item.id === "findings" && filteredFindingCount > 0 ? String(filteredFindingCount) : undefined }))}
+    nav={navigation.filter((item) => (item.id !== "playbooks" || canOperate) && (item.id !== "users" || user.role === "admin")).map((item) => ({ ...item, badge: item.id === "findings" && filteredFindingCount > 0 ? String(filteredFindingCount) : undefined }))}
     activeId={view}
     onNavigate={(id) => { setView(id as View); setQuery(""); }}
     onLogout={handleLogout}
