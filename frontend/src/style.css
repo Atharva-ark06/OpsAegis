@@ -827,3 +827,26 @@ html[data-theme="dark"] {
   .aegis-search { width:38vw; padding:0 6px; }
   .aegis-shell .stats-grid { grid-template-columns:1fr; }
 }
+
+/* Light-theme finishing details for controls and persisted operations charts. */
+.aegis-shell .theme-control { border-color:var(--aegis-border-strong); color:var(--aegis-muted); background:var(--aegis-panel); }
+.aegis-shell .theme-control select { color:var(--aegis-text); }
+.aegis-shell .trend-chart { border-color:var(--aegis-border); background:var(--aegis-panel-muted); }
+.aegis-shell .trend-chart-heading { color:var(--aegis-text); }
+.aegis-shell .trend-chart-heading span,.aegis-shell .trend-column small,.aegis-shell .trend-empty { color:var(--aegis-muted); }
+.aegis-shell .trend-bars { border-color:var(--aegis-border-strong); }
+.aegis-shell .trend-stack { background:var(--aegis-active); }
+.aegis-shell .trend-warning { border-left-color:#d99a4e; color:#80521f; background:#fff3df; }
+.aegis-shell .trend-error { color:#b33c36; }
+.aegis-shell .threshold-form { border-color:var(--aegis-border); }
+.aegis-shell .threshold-fields label { color:var(--aegis-muted); }
+.aegis-shell .threshold-fields input { border-color:var(--aegis-border-strong); color:var(--aegis-text); background:var(--aegis-panel); }
+.aegis-shell .threshold-actions { color:var(--aegis-muted); }
+.aegis-shell .loading-banner { border-color:var(--aegis-border-strong); color:#73512e; background:#fff7e9; }
+.aegis-shell .error-banner { border-color:#edc4bd; color:#9f3d34; background:#fff0ed; }
+.aegis-shell .success-banner { border-color:#c6e2d4; color:#276b4c; background:#edf8f1; }
+html[data-theme="dark"] .aegis-shell .trend-warning { color:#e7c48e; background:#302719; }
+html[data-theme="dark"] .aegis-shell .loading-banner { color:#d5b98c; background:#302719; }
+html[data-theme="dark"] .aegis-shell .error-banner { color:#ffb1ad; background:#301d25; }
+html[data-theme="dark"] .aegis-shell .success-banner { color:#9de0c4; background:#142a25; }
+@media (max-width:700px) { .aegis-collapse { display:none; } }
