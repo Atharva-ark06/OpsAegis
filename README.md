@@ -331,3 +331,10 @@ Pull requests and pushes to \`main\` run a separate security workflow:
 - Strict vulnerability audits of the declared Python dependency sets.
 
 See [Security Scanning in CI](docs/SECURITY_SCANNING.md) for remediation steps and limitations. A green scan does not prove that previously exposed credentials were rotated or that a deployed environment is secure.
+
+
+## Phase 6 operator workspace
+
+The authenticated dashboard includes disabled-by-default Wazuh collection schedules and run history, incident investigation timelines with analyst notes and bounded evidence attachments, operational trends and threshold summaries, and a read-only playbook execution ledger. The focused Playbooks workspace exposes the investigation catalogue, dry-run previews and independent approval queue; approval records do not execute actions. The Phase 6.4 report panel exposes persisted UTC-window metrics and JSON/CSV exports.
+
+The Wazuh isolation action remains disabled and unregistered. Nuclei and Shannon execution remain gated by their separate target authorization and isolated-runner requirements. A dashboard status or green CI check is not proof of a live provider integration. See [the Phase 6 roadmap](docs/PHASE6_ROADMAP.md), [evidence attachment runbook](docs/PHASE6_EVIDENCE_ATTACHMENTS.md), and [Wazuh recovery/staging runbook](docs/PHASE6_RECOVERY_STAGING.md).
