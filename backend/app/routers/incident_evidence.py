@@ -99,19 +99,15 @@ def list_incident_attachments(incident_id: int, db: Session = Depends(get_db),
 async def upload_incident_attachment(incident_id: int, file: UploadFile = File(...),
                                      db: Session = Depends(get_db),
                                      actor: User = Depends(require_roles(*OPERATORS))):
-    if db.get(Incident, incident_id) is None:
+    incident = db.scalar(select(Incident).where(Incident.id == incident_id).with_for_update())
+    if incident is None:
         raise HTTPException(404, "Incident not found")
-    active_count = db.scalar(select(IncidentEvidenceAttachment.id).where(
+    active_count = len(db.scalars(select(IncidentEvidenceAttachment.id).where(
         IncidentEvidenceAttachment.incident_id == incident_id,
         IncidentEvidenceAttachment.expires_at > datetime.now(timezone.utc),
-    ).limit(100))
-    if active_count is not None:
-        total_active = len(db.scalars(select(IncidentEvidenceAttachment.id).where(
-            IncidentEvidenceAttachment.incident_id == incident_id,
-            IncidentEvidenceAttachment.expires_at > datetime.now(timezone.utc),
-        ).limit(100)).all())
-        if total_active >= 100:
-            raise HTTPException(409, "Incident evidence attachment limit (100) reached")
+    ).limit(100)).all())
+    if active_count >= 100:
+        raise HTTPException(409, "Incident evidence attachment limit (100) reached")
     root = _storage_root()
     temp_path: Path | None = None
     final_path: Path | None = None
