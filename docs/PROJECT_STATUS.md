@@ -86,13 +86,13 @@ The repository-side validator checks evidence-register structure in CI. Run `pyt
 
 - Adds disabled-by-default schedules for Wazuh Manager registered-agent inventory and Wazuh Indexer alert windows, durable collection run history, a dedicated Redis-leased worker, bounded retries, restart recovery and run fencing. Manual runs use the same Wazuh sync functions as scheduled runs. CrowdSec, scanners and response actions are not part of this worker.
 - Adds an incident investigation timeline combining audit changes, analyst notes, correlated detections and linked findings with provenance labels, plus a redacted JSON export. Binary evidence uploads are bounded and content-sniffed, operator-only, stored in a persistent volume outside the web root, and verified by SHA-256 on download. Configurable expiry and an explicit dry-run-first pruning command are included; automatic pruning, malware scanning, immutable storage and cryptographic chain-of-custody remain out of scope pending separate design and staging review.
-- Automated tests cover schedule enqueue/recovery, role/allowlist enforcement, analyst notes and redaction. The merged PR #95 branch-head CI subsequently passed the full backend and frontend suites plus the production Compose smoke test. No live integration or staging result is claimed.
+- PR #96 completes the dashboard workflows for the playbook catalogue, dry-run previews, independent approval queue and operational report/export panel. Automated tests cover the backend and frontend contracts. PR #95 and PR #96 branch-head CI/security workflows passed; this does not establish live integration or staging acceptance.
 
-## Phase 6 kickoff
+## Phase 6 implementation checkpoint
 
-Phase 6 begins with the [SOC Automation & Response Orchestration roadmap](PHASE6_ROADMAP.md). Its first increment is durable, bounded, read-only integration collection scheduling. Human approval, auditability and fail-closed behavior remain mandatory; autonomous destructive response is explicitly out of scope.
+The repository-side Phase 6.1–6.4 implementation is present on main: collection scheduling/run history, investigation timelines and evidence attachments, bounded playbook previews and independent approval records, execution-ledger visibility, operational trends/thresholds, and the Playbooks/report dashboard workflows delivered in PR #96. Provider-side response execution remains disabled and unregistered. The remaining Phase 6 acceptance work is local/staging evidence: real source ingestion, worker recovery, evidence-volume restore, report reconciliation and independent review. See the [Phase 6 roadmap](PHASE6_ROADMAP.md) and [release-readiness matrix](RELEASE_READINESS.md).
 
-No live Nuclei scan or engine connection is claimed. Live validation requires explicit written authorization.
+No live Nuclei scan, Shannon run or provider-side response action is claimed. Live validation requires explicit written authorization and the independent safety gates described in the relevant runbooks.
 
 See docs/SHANNON_RUNNER.md for runner requirements and limitations. Shannon remains disabled until the external HTTPS runner is configured and health-checked.
 
