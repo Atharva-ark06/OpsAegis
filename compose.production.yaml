@@ -49,7 +49,7 @@ services:
       dockerfile: Dockerfile.production
     environment:
       OPS_AEGIS_ENV: production
-      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:?Set OPS_AEGIS_SECRET_KEY in .env.production}
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_WORKER_SECRET_KEY:?Set OPS_AEGIS_WORKER_SECRET_KEY in .env.production}
       OPS_AEGIS_ACCESS_TOKEN_MINUTES: ${OPS_AEGIS_ACCESS_TOKEN_MINUTES:-15}
       OPS_AEGIS_ALLOWED_HOSTS: ${OPS_AEGIS_ALLOWED_HOSTS:?Set OPS_AEGIS_ALLOWED_HOSTS in .env.production}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
@@ -115,7 +115,7 @@ services:
       dockerfile: Dockerfile.production
     environment:
       OPS_AEGIS_ENV: production
-      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:?Set OPS_AEGIS_SECRET_KEY in .env.production}
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_WORKER_SECRET_KEY:?Set OPS_AEGIS_WORKER_SECRET_KEY in .env.production}
       OPS_AEGIS_ACCESS_TOKEN_MINUTES: ${OPS_AEGIS_ACCESS_TOKEN_MINUTES:-15}
       OPS_AEGIS_ALLOWED_HOSTS: ${OPS_AEGIS_ALLOWED_HOSTS:?Set OPS_AEGIS_ALLOWED_HOSTS in .env.production}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
@@ -148,7 +148,7 @@ services:
       dockerfile: Dockerfile.production
     environment:
       OPS_AEGIS_ENV: production
-      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:?Set OPS_AEGIS_SECRET_KEY in .env.production}
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_WORKER_SECRET_KEY:?Set OPS_AEGIS_WORKER_SECRET_KEY in .env.production}
       OPS_AEGIS_ACCESS_TOKEN_MINUTES: ${OPS_AEGIS_ACCESS_TOKEN_MINUTES:-15}
       OPS_AEGIS_ALLOWED_HOSTS: ${OPS_AEGIS_ALLOWED_HOSTS:?Set OPS_AEGIS_ALLOWED_HOSTS in .env.production}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
@@ -199,7 +199,7 @@ services:
       dockerfile: Dockerfile.nuclei-worker
     environment:
       OPS_AEGIS_ENV: production
-      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_SECRET_KEY:?Set OPS_AEGIS_SECRET_KEY in .env.production}
+      OPS_AEGIS_SECRET_KEY: ${OPS_AEGIS_WORKER_SECRET_KEY:?Set OPS_AEGIS_WORKER_SECRET_KEY in .env.production}
       OPS_AEGIS_ACCESS_TOKEN_MINUTES: ${OPS_AEGIS_ACCESS_TOKEN_MINUTES:-15}
       OPS_AEGIS_ALLOWED_HOSTS: ${OPS_AEGIS_ALLOWED_HOSTS:?Set OPS_AEGIS_ALLOWED_HOSTS in .env.production}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}

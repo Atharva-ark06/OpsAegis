@@ -18,7 +18,14 @@ Copy-Item .env.production.example .env.production
 notepad .env.production
 ```
 
-Replace every `CHANGE_ME` value. The template intentionally fails the API's production secret/password checks until you replace them. Generate the application signing key with:
+Replace every `CHANGE_ME` value. The template intentionally fails production secret/password checks until you replace them. Generate the API signing key and a separate worker validation key with these commands; use different outputs and never copy the API key into worker services:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Set the first value as `OPS_AEGIS_SECRET_KEY` and the second as `OPS_AEGIS_WORKER_SECRET_KEY`. The detection and collection workers do not need the API's JWT signing key.
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(48))"

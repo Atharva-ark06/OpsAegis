@@ -5,7 +5,7 @@
 Use this register to distinguish implementation and automated test coverage from evidence obtained against real staging or production services. Do not mark a check complete because a feature exists, a mocked test passes, a container builds, or a health endpoint responds.
 
 **Current review baseline:** 2026-11-10  
-**Repository baseline:** `main` at PR #97 merge commit `64e72127e97ae1eeb2155d9d5661805610c99a27`. Refresh this SHA after subsequent merges.  
+**Repository baseline:** `main` at PR #98 merge commit `8119b05668567f1760b926428e39ffca818b7ad6`. Refresh this SHA after subsequent merges.  
 **Live environment evidence supplied for this register:** none. All live validation items below remain pending or blocked until an operator records evidence.
 
 ## Status vocabulary
