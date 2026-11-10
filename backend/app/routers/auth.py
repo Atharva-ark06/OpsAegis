@@ -3,7 +3,7 @@ import hmac
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -114,6 +114,8 @@ def bootstrap_first_admin(payload: BootstrapRequest, request: Request, db: Sessi
     supplied = request.headers.get('X-Setup-Token', '')
     if not configured or not supplied or not hmac.compare_digest(configured, supplied):
         raise HTTPException(status_code=403, detail='First-admin setup is not authorized')
+    if db.get_bind().dialect.name == 'postgresql':
+        db.execute(text('SELECT pg_advisory_xact_lock(731904221)'))
     if db.scalar(select(User.id).limit(1)) is not None:
         raise HTTPException(status_code=409, detail='Setup is already complete')
     user = User(email=payload.email.lower().strip(), password_hash=hash_password(payload.password), role=UserRole.admin, is_active=True)
@@ -142,6 +144,8 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
     if target is None:
         raise HTTPException(status_code=404, detail='User not found')
     changes = payload.model_dump(exclude_unset=True)
+    if any(value is None for value in changes.values()):
+        raise HTTPException(status_code=422, detail='User update fields cannot be null')
     if target.id == actor.id and changes.get('is_active') is False:
         raise HTTPException(status_code=400, detail='You cannot deactivate your own account')
     removes_admin = target.role == UserRole.admin and (changes.get('role') not in (None, UserRole.admin) or changes.get('is_active') is False)
