@@ -67,9 +67,9 @@ function StatCard({ label, value, detail, accent }: { label: string; value: numb
   </article>;
 }
 
-function DataTable({ view, assets, findings, incidents, query, user, canOperate, onFindingStatus, onIncidentUpdate }: {
+function DataTable({ view, assets, findings, incidents, query, user, canOperate, onFindingStatus, onIncidentUpdate, onIncidentCreated }: {
   view: View; assets: Asset[]; findings: Finding[]; incidents: Incident[]; query: string;
-  user: User; canOperate: boolean; onIncidentCreated: () => void;
+  user: User; canOperate: boolean;
   onFindingStatus: (id: number, status: Finding["status"]) => void;
   onIncidentUpdate: (id: number, status: Incident["status"], resolution: string, assignToMe?: boolean) => void;
   onIncidentCreated: () => void;
