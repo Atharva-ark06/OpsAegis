@@ -7,7 +7,7 @@ The attachment API stores bounded evidence files associated with one incident. I
 Only active administrators and analysts may list, upload or download attachments. Viewers remain unable to access the attachment endpoints. The API:
 - accepts PDF, PNG, JPEG and UTF-8 text after inspecting file bytes; it does not trust the browser-supplied MIME type;
 - enforces a configurable per-file byte limit (10 MiB default; configuration is capped at 25 MiB);
-- limits each incident to 100 unexpired attachments;
+- limits each incident to 100 unexpired attachments and a configurable aggregate byte quota (100 MiB default; 500 MiB hard ceiling);
 - generates opaque storage keys and never uses a supplied filename as a path;
 - writes a temporary file then atomically moves it into the private evidence directory;
 - records uploader, original display filename, detected media type, size, SHA-256 digest, creation time and expiry;
@@ -24,6 +24,7 @@ Backend settings:
 |---|---:|---|
 | `EVIDENCE_STORAGE_PATH` | `./.data/evidence` | Operator-managed filesystem path |
 | `EVIDENCE_MAX_ATTACHMENT_BYTES` | `10485760` (10 MiB) | 1 byte–25 MiB |
+| `EVIDENCE_MAX_INCIDENT_BYTES` | `104857600` (100 MiB) | 1 MiB–500 MiB |
 | `EVIDENCE_RETENTION_DAYS` | `365` | 1–3650 days |
 
 Local and production Compose mount a named `evidence_data` volume at `/var/lib/opsaegis/evidence`. The production API container runs unprivileged; the image prepares the mount point for UID 10001. The production reverse proxy allows an 11 MiB request body to accommodate multipart overhead around the default 10 MiB file limit. If the configured file limit is increased, update the reverse-proxy limit deliberately and keep it no higher than the application hard ceiling plus multipart overhead.
