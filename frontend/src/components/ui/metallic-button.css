@@ -128,7 +128,12 @@
   min-height: 50px;
   height: 50px;
   margin-top: 8px;
+  border: 1.5px solid transparent;
   border-radius: 999px;
+  padding: 1.5px;
+  color: #fff;
+  background: conic-gradient(from var(--metallic-angle), #50545a, #f8fbff 12%, #8b929b 22%, #e9d6a9 27%, #fdfefe 32%, #737a83 48%, #d9dde2 65%, #52575f 78%, #fff 88%, #50545a);
+  box-shadow: 0 5px 14px rgba(0,0,0,.16), inset 0 1px 1px rgba(255,255,255,.42);
 }
 .oa-auth .metallic-button.oa-submit .metallic-button-face {
   min-height: 47px;
