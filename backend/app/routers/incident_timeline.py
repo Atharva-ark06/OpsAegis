@@ -90,7 +90,10 @@ def get_incident_timeline(incident_id: int, db: Session = Depends(get_db),
             "id": f"audit:{audit.id}", "type": audit.action,
             "occurred_at": audit.created_at, "actor_user_id": audit.actor_user_id,
             "summary": ("Analyst updated incident" if audit.action == "incident.update" else
-                        "Evidence export generated" if audit.action == "incident.evidence.export" else\n                        "Evidence attachment uploaded" if audit.action == "incident.evidence.upload" else\n                        "Evidence attachment downloaded" if audit.action == "incident.evidence.download" else\n                        "Evidence retention purge recorded" if audit.action == "incident.evidence.retention_purge" else "Analyst note added"),
+                        "Evidence export generated" if audit.action == "incident.evidence.export" else
+                        "Evidence attachment uploaded" if audit.action == "incident.evidence.upload" else
+                        "Evidence attachment downloaded" if audit.action == "incident.evidence.download" else
+                        "Evidence retention purge recorded" if audit.action == "incident.evidence.retention_purge" else "Analyst note added"),
             "details": {"change": audit.detail or ""},
             "provenance": "audit_log",
         })
