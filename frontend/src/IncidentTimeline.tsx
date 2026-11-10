@@ -99,7 +99,7 @@ export function IncidentTimeline({ incidentId, canOperate }: { incidentId: numbe
       </form>
       <form className="timeline-note-form evidence-upload-form" onSubmit={uploadFile}>
         <label htmlFor={"incident-evidence-" + incidentId}>Attach evidence (PDF, PNG, JPEG or UTF-8 text; server limit applies)</label>
-        <input id={"incident-evidence-" + incidentId} type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.log,.csv" disabled={busy}
+        <input key={incidentId + "-" + (selectedFile ? selectedFile.name : "empty")} id={"incident-evidence-" + incidentId} type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.log,.csv" disabled={busy}
           onChange={(event: ChangeEvent<HTMLInputElement>) => setSelectedFile(event.target.files?.[0] ?? null)} />
         <button className="secondary-button compact" type="submit" disabled={busy || !selectedFile}>{busy ? "Working…" : "Upload evidence"}</button>
       </form>
