@@ -19,7 +19,7 @@ import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTarge
 import { describeEngineHealth } from "./engineHealth";
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, WazuhManagerHealth, WazuhManagerSync, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth, getWazuhManagerHealth, syncWazuhManager,
-  clearAccessToken, collectWazuh, getAccessToken, getAssets, getCurrentUser,
+  clearAccessToken, collectWazuh, createIncident, getAccessToken, getAssets, getCurrentUser,
   getFindings, getIncidents, getWazuhHealth, getDetections, Detection, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
 } from "./api";
 
@@ -69,9 +69,10 @@ function StatCard({ label, value, detail, accent }: { label: string; value: numb
 
 function DataTable({ view, assets, findings, incidents, query, user, canOperate, onFindingStatus, onIncidentUpdate }: {
   view: View; assets: Asset[]; findings: Finding[]; incidents: Incident[]; query: string;
-  user: User; canOperate: boolean;
+  user: User; canOperate: boolean; onIncidentCreated: () => void;
   onFindingStatus: (id: number, status: Finding["status"]) => void;
   onIncidentUpdate: (id: number, status: Incident["status"], resolution: string, assignToMe?: boolean) => void;
+  onIncidentCreated: () => void;
 }) {
   const [resolutionNotes, setResolutionNotes] = useState<Record<number, string>>({});
   const [incidentStatuses, setIncidentStatuses] = useState<Record<number, Incident["status"]>>({});
@@ -81,6 +82,11 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
   const [incidentDetections, setIncidentDetections] = useState<Detection[]>([]);
   const [incidentDetectionsError, setIncidentDetectionsError] = useState("");
   const [expandedIncidentIds, setExpandedIncidentIds] = useState<number[]>([]);
+  const [newIncidentTitle, setNewIncidentTitle] = useState("");
+  const [newIncidentSeverity, setNewIncidentSeverity] = useState<Incident["severity"]>("medium");
+  const [newIncidentDescription, setNewIncidentDescription] = useState("");
+  const [creatingIncident, setCreatingIncident] = useState(false);
+  const [createIncidentError, setCreateIncidentError] = useState("");
   useEffect(() => {
     if (view !== "incidents") return;
     let active = true;
@@ -129,7 +135,6 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
     return <div className="table-wrap"><table><thead><tr><th>Finding</th><th>Source</th><th>Severity</th><th>Status</th><th>Last seen</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td><strong>{item.title}</strong><small>FINDING-{item.id}{item.asset_id ? " · ASSET-" + item.asset_id : ""}</small></td><td>{titleCase(item.source_engine)}</td><td><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></td><td>{canOperate ? <select aria-label={"Update finding " + item.id + " status"} value={item.status} onChange={(event) => onFindingStatus(item.id, event.target.value as Finding["status"])}>{["new","triaged","accepted","false_positive","resolved"].map((value) => <option key={value} value={value}>{titleCase(value)}</option>)}</select> : <span className="tag">{titleCase(item.status)}</span>}</td><td>{formatDate(item.last_seen_at)}</td></tr>)}</tbody></table></div>;
   }
   const rows = incidents.filter((item) => [item.title, item.status, item.severity, item.description || "", item.resolution || ""].join(" ").toLowerCase().includes(needle));
-  if (!rows.length) return <EmptyState title={needle ? "No matching incidents" : "No incidents recorded"} detail={needle ? "Try another search term." : "Incidents created in OpsAegis will appear here. No incidents are generated automatically yet."} />;
   return <div className="incident-workspace">
     <div className="incident-summary">
       <article><small>RETURNED INCIDENTS</small><strong>{incidents.length}</strong><span>API records · max 200</span></article>
@@ -137,6 +142,28 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
       <article><small>CONTAINED</small><strong>{incidents.filter((item) => item.status === "contained").length}</strong><span>Containment recorded</span></article>
       <article><small>RESOLVED / CLOSED</small><strong>{incidents.filter((item) => ["resolved", "closed"].includes(item.status)).length}</strong><span>Completed lifecycle states</span></article>
     </div>
+    {canOperate && <form className="panel incident-create-form" onSubmit={async (event) => {
+      event.preventDefault();
+      if (!newIncidentTitle.trim()) return;
+      setCreatingIncident(true); setCreateIncidentError("");
+      try {
+        await createIncident({title:newIncidentTitle.trim(),severity:newIncidentSeverity,description:newIncidentDescription.trim() || undefined});
+        setNewIncidentTitle(""); setNewIncidentDescription(""); setNewIncidentSeverity("medium");
+        onIncidentCreated();
+      } catch (reason) {
+        setCreateIncidentError(reason instanceof Error ? reason.message : "Incident creation failed.");
+      } finally { setCreatingIncident(false); }
+    }}>
+      <div className="panel-heading"><div><p className="eyebrow">CASE MANAGEMENT</p><h3>Create incident</h3></div></div>
+      {createIncidentError && <ErrorMessage>{createIncidentError}</ErrorMessage>}
+      <div className="incident-actions">
+        <label>Incident title<input value={newIncidentTitle} onChange={(event)=>setNewIncidentTitle(event.target.value)} maxLength={500} required placeholder="Describe the security incident"/></label>
+        <label>Severity<select value={newIncidentSeverity} onChange={(event)=>setNewIncidentSeverity(event.target.value as Incident["severity"])}>{["critical","high","medium","low","informational","unknown"].map(value=><option key={value} value={value}>{titleCase(value)}</option>)}</select></label>
+        <label className="resolution-field">Description<textarea rows={2} maxLength={10000} value={newIncidentDescription} onChange={(event)=>setNewIncidentDescription(event.target.value)} placeholder="Add initial context and evidence references"/></label>
+        <button className="primary-button compact" type="submit" disabled={creatingIncident || !newIncidentTitle.trim()}>{creatingIncident?"Creating…":"Create incident"}</button>
+      </div>
+    </form>}
+    {!rows.length && <EmptyState title={needle ? "No matching incidents" : "No incidents recorded"} detail={needle ? "Try another search term or clear the search." : "Create an incident above, or connect an event source to generate incidents from detections."} />}
     {incidentDetectionsError && <div className="inline-error" role="status">Linked detection context unavailable: {incidentDetectionsError}</div>}
     <div className="incident-register">{rows.map((item) => {
       const expanded = expandedIncidentIds.includes(item.id);
@@ -463,7 +490,7 @@ function App() {
       {view !== "overview" && <div className="page-content">
         {view !== "detections" && view !== "threat-intel" && view !== "vulnerabilities" && view !== "playbooks" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
         {view === "users" ? <AdminUsers currentUser={user} /> : view === "playbooks" ? <PlaybooksPanel incidents={incidents} user={user} /> : view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /><CollectionPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
-          <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} /></section>}
+          <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} onIncidentCreated={() => setRefreshKey((value) => value + 1)} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
   </AppDashboardShell>;
