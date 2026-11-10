@@ -1,0 +1,122 @@
+@property --metallic-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.metallic-button {
+  --metallic-angle: 0deg;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 142px;
+  padding: 1.5px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: conic-gradient(from var(--metallic-angle), #50545a, #f8fbff 12%, #8b929b 22%, #e9d6a9 27%, #fdfefe 32%, #737a83 48%, #d9dde2 65%, #52575f 78%, #fff 88%, #50545a);
+  box-shadow: 0 8px 22px rgba(0,0,0,.18), inset 0 1px 1px rgba(255,255,255,.42);
+  cursor: pointer;
+  transition: transform .2s ease, filter .2s ease, box-shadow .2s ease;
+  animation: metallic-rim-turn 5s linear infinite;
+  -webkit-tap-highlight-color: transparent;
+}
+.metallic-button::before {
+  position: absolute;
+  z-index: -1;
+  inset: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #242424 0%, #050505 100%);
+  content: "";
+}
+.metallic-button-face {
+  display: flex;
+  width: 100%;
+  min-height: inherit;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 26px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 48%);
+}
+.metallic-button-content {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font: 600 13px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .005em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  white-space: nowrap;
+}
+.metallic-button:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 11px 26px rgba(0,0,0,.22), inset 0 1px 1px rgba(255,255,255,.5);
+  animation-duration: 2.2s;
+}
+.metallic-button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+.metallic-button:focus-visible { outline: 2px solid #d7dce2; outline-offset: 4px; }
+.metallic-button:disabled { cursor: wait; opacity: .58; filter: grayscale(.25); }
+@keyframes metallic-rim-turn { to { --metallic-angle: 360deg; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .metallic-button { animation: none; transition: none; }
+}
+
+/* Shared metallic treatment for dashboard actions and controls. */
+.aegis-shell .primary-button,
+.aegis-shell .secondary-button,
+.aegis-shell .aegis-refresh,
+.aegis-shell .aegis-logout,
+.aegis-shell .aegis-collapse,
+.aegis-shell .aegis-mobile-menu {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--aegis-text);
+  background:
+    linear-gradient(var(--aegis-panel), var(--aegis-panel)) padding-box,
+    linear-gradient(115deg, #666b72, #f5f7fa 22%, #8a9098 48%, #e8d7b1 55%, #f7f8fa 63%, #737982) border-box;
+  box-shadow: 0 2px 7px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.55);
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+.aegis-shell .primary-button {
+  color: #fff;
+  background:
+    linear-gradient(180deg, #242424, #050505) padding-box,
+    linear-gradient(115deg, #777d86, #fff 22%, #9ba1a8 45%, #f0d9a6 53%, #fff 62%, #6c737c) border-box;
+  box-shadow: 0 5px 14px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.aegis-shell .primary-button:hover:not(:disabled),
+.aegis-shell .secondary-button:hover:not(:disabled),
+.aegis-shell .aegis-refresh:hover:not(:disabled),
+.aegis-shell .aegis-logout:hover:not(:disabled),
+.aegis-shell .aegis-collapse:hover:not(:disabled),
+.aegis-shell .aegis-mobile-menu:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 7px 17px rgba(0,0,0,.13), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.aegis-shell .primary-button:active:not(:disabled),
+.aegis-shell .secondary-button:active:not(:disabled),
+.aegis-shell .aegis-refresh:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+.aegis-shell .primary-button:disabled,
+.aegis-shell .secondary-button:disabled,
+.aegis-shell .aegis-refresh:disabled { cursor: not-allowed; opacity: .52; }
+.aegis-shell .text-button {
+  border-radius: 999px;
+  padding: 6px 11px;
+  color: var(--aegis-text);
+  background: transparent;
+  transition: background .18s ease, color .18s ease;
+}
+.aegis-shell .text-button:hover { color: var(--aegis-text); background: var(--aegis-hover); }
+@media (prefers-reduced-motion: reduce) {
+  .aegis-shell .primary-button,
+  .aegis-shell .secondary-button,
+  .aegis-shell .aegis-refresh { transition: none; }
+}
