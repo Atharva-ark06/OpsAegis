@@ -231,6 +231,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=32m
+      - /etc/nginx/conf.d:rw,noexec,nosuid,size=1m,uid=101,gid=101,mode=0755
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     build:
