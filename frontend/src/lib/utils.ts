@@ -1,4 +1,7 @@
-/** Small class-name helper for shadcn-style components. */
-export function cn(...values: Array<string | false | null | undefined>): string {
-  return values.filter((value): value is string => Boolean(value)).join(" ");
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/** Merge conditional class names without leaving conflicting Tailwind utilities. */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }
