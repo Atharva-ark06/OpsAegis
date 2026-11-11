@@ -129,9 +129,8 @@
 }
 
 
-/* Full-width navigation variant: same liquid-metal shader treatment, with
-   dashboard-native sizing, icons, active state, and collapsed-sidebar support. */
-.liquid-metal-button-navigation { display:block; width:calc(100% - 8px); margin-inline:auto; }
+/* Dashboard navigation: narrower buttons with a clean, scrollbar-free rail. */
+.liquid-metal-button-navigation { display:block; width:calc(100% - 28px); margin-inline:auto; }
 .liquid-metal-button-navigation .liquid-metal-button-perspective,
 .liquid-metal-button-navigation .liquid-metal-button-stage { width:100%; }
 .liquid-metal-button-navigation .liquid-metal-button-stage { min-width:0; }
@@ -215,6 +214,11 @@
   outline:2px solid #8ccfff;
   outline-offset:2px;
 }
+.aegis-nav {
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.aegis-nav::-webkit-scrollbar { display:none; width:0; height:0; }
 .aegis-sidebar.is-collapsed .liquid-metal-button-navigation-content { justify-content:center; padding:0; }
 .aegis-sidebar.is-collapsed .liquid-metal-button-navigation .liquid-metal-button-inner { width:calc(100% - 4px); }
 @media (prefers-reduced-motion:reduce) {
