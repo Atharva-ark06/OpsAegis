@@ -970,3 +970,34 @@ html[data-theme="dark"] .aegis-shell .success-banner { color:#9de0c4; background
   .aegis-shell .vulnerability-detail-grid { grid-template-columns:1fr; }
   .aegis-shell .aegis-page-heading h1 { font-size:22px; }
 }
+
+/* Rich, source-attributed threat-intelligence evidence. */
+.aegis-shell .ioc-combined-report { display:grid; gap:12px; }
+.aegis-shell .ioc-conflict-banner { padding:11px 13px; border:1px solid #d9a45c; border-radius:8px; color:#87551f; background:#fff5e6; font-size:12px; }
+html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; border-color:#76572e; background:#302719; }
+.aegis-shell .ioc-provider-results { align-items:start; }
+.aegis-shell .ioc-provider-result { display:grid; gap:10px; }
+.aegis-shell .ioc-evidence-section { display:grid; gap:8px; padding-top:10px; border-top:1px solid var(--aegis-border); }
+.aegis-shell .ioc-evidence-section h4 { display:flex; align-items:center; gap:8px; margin:0; color:var(--aegis-text); font-size:10px; text-transform:uppercase; letter-spacing:.07em; }
+.aegis-shell .ioc-count { padding:2px 6px; border-radius:20px; color:var(--aegis-muted); background:var(--aegis-hover); font-size:9px; }
+.aegis-shell .ioc-analysis-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+.aegis-shell .ioc-analysis-stat { display:grid; gap:3px; padding:9px; border:1px solid var(--aegis-border); border-radius:7px; background:var(--aegis-panel-muted); }
+.aegis-shell .ioc-analysis-stat strong { font-size:16px; }
+.aegis-shell .ioc-analysis-stat small { color:var(--aegis-muted); font-size:9px; }
+.aegis-shell .ioc-analysis-stat.malicious strong,.aegis-shell .ioc-flag-category.malicious { color:#dc626b; }
+.aegis-shell .ioc-analysis-stat.suspicious strong,.aegis-shell .ioc-flag-category.suspicious { color:#d49b43; }
+.aegis-shell .ioc-analysis-stat.harmless strong { color:#36a67b; }
+.aegis-shell .ioc-flag-list,.aegis-shell .ioc-report-list { display:grid; gap:7px; }
+.aegis-shell .ioc-flag-row,.aegis-shell .ioc-report { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px 10px; padding:9px; border:1px solid var(--aegis-border); border-radius:7px; background:var(--aegis-panel-muted); }
+.aegis-shell .ioc-flag-row > div { display:grid; gap:3px; }
+.aegis-shell .ioc-flag-row strong,.aegis-shell .ioc-report strong { font-size:10px; }
+.aegis-shell .ioc-flag-row small { color:var(--aegis-muted); font-size:9px; }
+.aegis-shell .ioc-flag-row p,.aegis-shell .ioc-report p { grid-column:1 / -1; margin:0; color:var(--aegis-muted); font-size:10px; overflow-wrap:anywhere; }
+.aegis-shell .ioc-flag-category { align-self:start; font-size:9px; font-weight:800; text-transform:uppercase; }
+.aegis-shell .ioc-chip-list { display:flex; flex-wrap:wrap; gap:6px; }
+.aegis-shell .ioc-data-chip { display:inline-flex; max-width:100%; padding:4px 7px; border:1px solid var(--aegis-border); border-radius:5px; color:var(--aegis-muted); background:var(--aegis-panel-muted); font-size:9px; overflow-wrap:anywhere; }
+.aegis-shell .ioc-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:0; }
+.aegis-shell .ioc-detail-grid > div { min-width:0; padding:8px; border:1px solid var(--aegis-border); border-radius:6px; }
+.aegis-shell .ioc-detail-grid dt { color:var(--aegis-muted); font-size:9px; text-transform:uppercase; }
+.aegis-shell .ioc-detail-grid dd { margin:4px 0 0; color:var(--aegis-text); font-size:10px; overflow-wrap:anywhere; }
+@media (max-width:480px) { .aegis-shell .ioc-analysis-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .aegis-shell .ioc-detail-grid { grid-template-columns:1fr; } }
