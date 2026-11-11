@@ -127,3 +127,96 @@
   .liquid-metal-button-rim { transition: none; }
   .liquid-metal-button-ripple { animation-duration: .01ms; }
 }
+
+
+/* Full-width navigation variant: same liquid-metal shader treatment, with
+   dashboard-native sizing, icons, active state, and collapsed-sidebar support. */
+.liquid-metal-button-navigation { display:block; width:100%; }
+.liquid-metal-button-navigation .liquid-metal-button-perspective,
+.liquid-metal-button-navigation .liquid-metal-button-stage { width:100%; }
+.liquid-metal-button-navigation .liquid-metal-button-stage { min-width:0; }
+.liquid-metal-button-navigation .liquid-metal-button-label-layer,
+.liquid-metal-button-navigation .liquid-metal-button-inner-layer,
+.liquid-metal-button-navigation .liquid-metal-button-shader-layer,
+.liquid-metal-button-navigation .liquid-metal-button-rim,
+.liquid-metal-button-navigation .liquid-metal-button-shader { width:100%; }
+.liquid-metal-button-navigation .liquid-metal-button-rim {
+  border-radius:11px;
+  box-shadow:0 1px 3px rgba(0,0,0,.18),0 7px 18px rgba(0,0,0,.10);
+}
+.liquid-metal-button-navigation .liquid-metal-button-rim.is-hovered {
+  box-shadow:0 0 0 1px rgba(132,190,235,.32),0 8px 20px rgba(0,0,0,.18);
+}
+.liquid-metal-button-navigation .liquid-metal-button-inner {
+  width:calc(100% - 4px);
+  border-radius:9px;
+  background:linear-gradient(180deg,rgba(24,38,54,.94),rgba(8,17,29,.97));
+}
+.liquid-metal-button-navigation-content {
+  justify-content:flex-start;
+  gap:12px;
+  padding:0 13px;
+  color:#aabbd0;
+  transform:translateZ(20px);
+  transition:color .2s ease;
+}
+.liquid-metal-button-navigation-icon {
+  display:grid;
+  flex:0 0 19px;
+  place-items:center;
+  width:19px;
+  height:19px;
+  color:currentColor;
+}
+.liquid-metal-button-navigation-icon svg { width:18px; height:18px; }
+.liquid-metal-button-navigation-label {
+  overflow:hidden;
+  color:inherit;
+  font-size:12px;
+  font-weight:600;
+  line-height:1;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.liquid-metal-button-navigation-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:20px;
+  height:20px;
+  margin-left:auto;
+  padding:0 6px;
+  border:1px solid rgba(231,174,97,.28);
+  border-radius:99px;
+  color:#ffd39a;
+  background:rgba(92,61,30,.72);
+  font-size:9px;
+  line-height:1;
+}
+.liquid-metal-button-navigation-hit-area {
+  width:100%;
+  border-radius:11px;
+  transform:translateZ(25px);
+}
+.liquid-metal-button-navigation:hover .liquid-metal-button-navigation-content,
+.liquid-metal-button-navigation .liquid-metal-button-navigation-hit-area:focus-visible + * {
+  color:#e5f3ff;
+}
+.liquid-metal-button-navigation:has(.liquid-metal-button-navigation-hit-area[aria-pressed="true"]) .liquid-metal-button-rim {
+  box-shadow:0 0 0 1px rgba(99,182,244,.55),0 0 18px rgba(99,182,244,.18),0 8px 20px rgba(0,0,0,.16);
+}
+.liquid-metal-button-navigation:has(.liquid-metal-button-navigation-hit-area[aria-pressed="true"]) .liquid-metal-button-inner {
+  background:linear-gradient(180deg,rgba(27,59,84,.96),rgba(10,30,49,.98));
+}
+.liquid-metal-button-navigation:has(.liquid-metal-button-navigation-hit-area[aria-pressed="true"]) .liquid-metal-button-navigation-content {
+  color:#d8efff;
+}
+.liquid-metal-button-navigation .liquid-metal-button-hit-area:focus-visible {
+  outline:2px solid #8ccfff;
+  outline-offset:2px;
+}
+.aegis-sidebar.is-collapsed .liquid-metal-button-navigation-content { justify-content:center; padding:0; }
+.aegis-sidebar.is-collapsed .liquid-metal-button-navigation .liquid-metal-button-inner { width:calc(100% - 4px); }
+@media (prefers-reduced-motion:reduce) {
+  .liquid-metal-button-navigation .liquid-metal-button-rim { transition:none; }
+}
