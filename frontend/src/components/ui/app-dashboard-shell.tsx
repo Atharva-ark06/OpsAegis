@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { LiquidMetalButton } from "./liquid-metal-button";
 import { BookOpen, Boxes, Bug, Eye, Globe, LayoutDashboard, Plug, ShieldAlert, Siren, Users, type LucideIcon } from "lucide-react";
 
 export interface DashboardNavItem {
@@ -58,15 +59,18 @@ export function AppDashboardShell({
       </div>
       <nav className="aegis-nav" aria-label="Primary navigation">
         {nav.map((item) => (
-          <button key={item.id} type="button" className={["aegis-nav-item", activeId === item.id ? "is-active" : ""].filter(Boolean).join(" ")}
-            aria-current={activeId === item.id ? "page" : undefined}
+          <LiquidMetalButton
+            key={item.id}
+            variant="navigation"
+            label={item.label}
+            icon={<NavGlyph id={item.id} />}
+            active={activeId === item.id}
+            collapsed={collapsed}
+            badge={item.badge}
+            ariaCurrent={activeId === item.id ? "page" : undefined}
             title={collapsed ? item.label : undefined}
-            onClick={() => { onNavigate(item.id); setMobileOpen(false); }}>
-            <NavGlyph id={item.id}/>
-            {!collapsed && <span className="aegis-nav-label">{item.label}</span>}
-            {!collapsed && item.badge && <span className="aegis-nav-badge">{item.badge}</span>}
-            {collapsed && item.badge && <span className="aegis-nav-dot" aria-hidden="true"/>}
-          </button>
+            onClick={() => { onNavigate(item.id); setMobileOpen(false); }}
+          />
         ))}
       </nav>
       <div className="aegis-sidebar-bottom">

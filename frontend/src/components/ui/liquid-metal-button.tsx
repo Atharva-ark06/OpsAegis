@@ -8,6 +8,13 @@ interface LiquidMetalButtonProps {
   label?: string;
   onClick?: () => void;
   viewMode?: "text" | "icon";
+  variant?: "default" | "navigation";
+  icon?: React.ReactNode;
+  active?: boolean;
+  collapsed?: boolean;
+  badge?: string;
+  title?: string;
+  ariaCurrent?: "page";
 }
 
 interface ShaderMountHandle {
@@ -25,6 +32,13 @@ export function LiquidMetalButton({
   label = "Get Started",
   onClick,
   viewMode = "text",
+  variant = "default",
+  icon,
+  active = false,
+  collapsed = false,
+  badge,
+  title,
+  ariaCurrent,
 }: LiquidMetalButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
@@ -35,13 +49,13 @@ export function LiquidMetalButton({
   const rippleId = useRef(0);
   const hoverRef = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const isNavigation = variant === "navigation";
 
   const dimensions = useMemo(() => {
-    if (viewMode === "icon") {
-      return { width: 46, height: 46, innerWidth: 42, innerHeight: 42 };
-    }
+    if (isNavigation) return { width: 0, height: 43, innerWidth: 0, innerHeight: 39 };
+    if (viewMode === "icon") return { width: 46, height: 46, innerWidth: 42, innerHeight: 42 };
     return { width: 142, height: 46, innerWidth: 138, innerHeight: 42 };
-  }, [viewMode]);
+  }, [isNavigation, viewMode]);
 
   useEffect(() => {
     if (!shaderRef.current) return;
@@ -67,7 +81,6 @@ export function LiquidMetalButton({
         0.6,
       ) as unknown as ShaderMountHandle;
     } catch (error) {
-      // Keep the button usable if WebGL is unavailable or shader setup fails.
       console.error("[LiquidMetalButton] Failed to initialize shader:", error);
     }
 
@@ -101,33 +114,39 @@ export function LiquidMetalButton({
 
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect) {
-      const ripple = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-        id: rippleId.current++,
-      };
+      const ripple = { x: event.clientX - rect.left, y: event.clientY - rect.top, id: rippleId.current++ };
       setRipples((previous) => [...previous, ripple]);
       const rippleTimer = setTimeout(() => {
         setRipples((previous) => previous.filter((item) => item.id !== ripple.id));
       }, 600);
       timers.current.push(rippleTimer);
     }
-
     onClick?.();
   };
 
+  const buttonClass = [
+    "liquid-metal-button-hit-area",
+    isNavigation ? "liquid-metal-button-navigation-hit-area" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className="liquid-metal-button-wrap">
+    <div className={["liquid-metal-button-wrap", isNavigation ? "liquid-metal-button-navigation" : "", isNavigation && active ? "is-active" : ""].filter(Boolean).join(" ")}>
       <div className="liquid-metal-button-perspective">
         <div
           className="liquid-metal-button-stage"
-          style={{ width: dimensions.width, height: dimensions.height }}
+          style={isNavigation ? { height: dimensions.height } : { width: dimensions.width, height: dimensions.height }}
         >
           <div
-            className="liquid-metal-button-label-layer"
-            style={{ width: dimensions.width, height: dimensions.height }}
+            className={["liquid-metal-button-label-layer", isNavigation ? "liquid-metal-button-navigation-content" : ""].filter(Boolean).join(" ")}
+            style={isNavigation ? { height: dimensions.height } : { width: dimensions.width, height: dimensions.height }}
           >
-            {viewMode === "icon" ? (
+            {isNavigation ? (
+              <>
+                <span className="liquid-metal-button-navigation-icon">{icon}</span>
+                {!collapsed && <span className="liquid-metal-button-navigation-label">{label}</span>}
+                {!collapsed && badge && <span className="liquid-metal-button-navigation-badge">{badge}</span>}
+              </>
+            ) : viewMode === "icon" ? (
               <Sparkles className="liquid-metal-button-icon" size={16} aria-hidden="true" />
             ) : (
               <span className="liquid-metal-button-label">{label}</span>
@@ -137,39 +156,28 @@ export function LiquidMetalButton({
           <div
             className="liquid-metal-button-inner-layer"
             style={{
-              width: dimensions.width,
-              height: dimensions.height,
+              ...(isNavigation ? {} : { width: dimensions.width, height: dimensions.height }),
               transform: isPressed ? "translateZ(10px) translateY(1px) scale(.98)" : "translateZ(10px)",
             }}
           >
             <div
-              className="liquid-metal-button-inner"
-              style={{
-                width: dimensions.innerWidth,
-                height: dimensions.innerHeight,
-                boxShadow: isPressed
-                  ? "inset 0 2px 4px rgba(0,0,0,.4), inset 0 1px 2px rgba(0,0,0,.3)"
-                  : "none",
-              }}
+              className={["liquid-metal-button-inner", isNavigation ? "liquid-metal-button-navigation-inner" : ""].filter(Boolean).join(" ")}
+              style={isNavigation ? { height: dimensions.innerHeight } : { width: dimensions.innerWidth, height: dimensions.innerHeight }}
             />
           </div>
 
           <div
             className="liquid-metal-button-shader-layer"
             style={{
-              width: dimensions.width,
-              height: dimensions.height,
+              ...(isNavigation ? {} : { width: dimensions.width, height: dimensions.height }),
               transform: isPressed ? "translateZ(0) translateY(1px) scale(.98)" : "translateZ(0)",
             }}
           >
-            <div
-              className={`liquid-metal-button-rim${isHovered ? " is-hovered" : ""}`}
-              style={{ width: dimensions.width, height: dimensions.height }}
-            >
+            <div className={`liquid-metal-button-rim${isHovered ? " is-hovered" : ""}`} style={isNavigation ? { height: dimensions.height } : { width: dimensions.width, height: dimensions.height }}>
               <div
                 ref={shaderRef}
                 className="liquid-metal-button-shader"
-                style={{ width: dimensions.width, height: dimensions.height }}
+                style={isNavigation ? { height: dimensions.height } : { width: dimensions.width, height: dimensions.height }}
               />
             </div>
           </div>
@@ -177,8 +185,8 @@ export function LiquidMetalButton({
           <button
             ref={buttonRef}
             type="button"
-            className="liquid-metal-button-hit-area"
-            style={{ width: dimensions.width, height: dimensions.height }}
+            className={buttonClass}
+            style={isNavigation ? { height: dimensions.height } : { width: dimensions.width, height: dimensions.height }}
             onClick={handleClick}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -186,13 +194,11 @@ export function LiquidMetalButton({
             onMouseUp={() => setIsPressed(false)}
             onBlur={() => setIsPressed(false)}
             aria-label={label}
+            aria-current={ariaCurrent}
+            title={title}
           >
             {ripples.map((ripple) => (
-              <span
-                key={ripple.id}
-                className="liquid-metal-button-ripple"
-                style={{ left: ripple.x, top: ripple.y }}
-              />
+              <span key={ripple.id} className="liquid-metal-button-ripple" style={{ left: ripple.x, top: ripple.y }} />
             ))}
           </button>
         </div>
