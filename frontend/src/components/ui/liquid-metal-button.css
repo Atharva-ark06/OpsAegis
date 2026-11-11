@@ -202,13 +202,13 @@
 .liquid-metal-button-navigation .liquid-metal-button-navigation-hit-area:focus-visible + * {
   color:#e5f3ff;
 }
-.liquid-metal-button-navigation:has(.liquid-metal-button-navigation-hit-area[aria-pressed="true"]) .liquid-metal-button-rim {
+.liquid-metal-button-navigation.is-active .liquid-metal-button-rim {
   box-shadow:0 0 0 1px rgba(99,182,244,.55),0 0 18px rgba(99,182,244,.18),0 8px 20px rgba(0,0,0,.16);
 }
-.liquid-metal-button-navigation:has(.liquid-metal-button-navigation-hit-area[aria-pressed="true"]) .liquid-metal-button-inner {
+.liquid-metal-button-navigation.is-active .liquid-metal-button-inner {
   background:linear-gradient(180deg,rgba(27,59,84,.96),rgba(10,30,49,.98));
 }
-.liquid-metal-button-navigation:has(.liquid-metal-button-navigation-hit-area[aria-pressed="true"]) .liquid-metal-button-navigation-content {
+.liquid-metal-button-navigation.is-active .liquid-metal-button-navigation-content {
   color:#d8efff;
 }
 .liquid-metal-button-navigation .liquid-metal-button-hit-area:focus-visible {
