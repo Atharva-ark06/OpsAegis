@@ -185,7 +185,7 @@ export function LiquidMetalButton({
             onMouseDown={() => setIsPressed(true)}
             onMouseUp={() => setIsPressed(false)}
             onBlur={() => setIsPressed(false)}
-            aria-label={viewMode === "icon" ? label : undefined}
+            aria-label={label}
           >
             {ripples.map((ripple) => (
               <span
