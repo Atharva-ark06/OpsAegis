@@ -131,7 +131,7 @@
 
 /* Full-width navigation variant: same liquid-metal shader treatment, with
    dashboard-native sizing, icons, active state, and collapsed-sidebar support. */
-.liquid-metal-button-navigation { display:block; width:100%; }
+.liquid-metal-button-navigation { display:block; width:calc(100% - 8px); margin-inline:auto; }
 .liquid-metal-button-navigation .liquid-metal-button-perspective,
 .liquid-metal-button-navigation .liquid-metal-button-stage { width:100%; }
 .liquid-metal-button-navigation .liquid-metal-button-stage { min-width:0; }
@@ -142,10 +142,10 @@
 .liquid-metal-button-navigation .liquid-metal-button-shader { width:100%; }
 .liquid-metal-button-navigation .liquid-metal-button-rim {
   border-radius:11px;
-  box-shadow:0 1px 3px rgba(0,0,0,.18),0 7px 18px rgba(0,0,0,.10);
+  box-shadow:0 0 0 1px rgba(112,190,244,.16),0 0 10px rgba(86,177,239,.14),0 1px 3px rgba(0,0,0,.18),0 7px 18px rgba(0,0,0,.10);
 }
 .liquid-metal-button-navigation .liquid-metal-button-rim.is-hovered {
-  box-shadow:0 0 0 1px rgba(132,190,235,.32),0 8px 20px rgba(0,0,0,.18);
+  box-shadow:0 0 0 1px rgba(151,211,255,.52),0 0 16px rgba(86,177,239,.32),0 0 28px rgba(86,177,239,.16),0 8px 20px rgba(0,0,0,.18);
 }
 .liquid-metal-button-navigation .liquid-metal-button-inner {
   width:calc(100% - 4px);
@@ -203,7 +203,7 @@
   color:#e5f3ff;
 }
 .liquid-metal-button-navigation.is-active .liquid-metal-button-rim {
-  box-shadow:0 0 0 1px rgba(99,182,244,.55),0 0 18px rgba(99,182,244,.18),0 8px 20px rgba(0,0,0,.16);
+  box-shadow:0 0 0 1px rgba(120,199,255,.68),0 0 12px rgba(99,182,244,.42),0 0 24px rgba(99,182,244,.24),0 8px 20px rgba(0,0,0,.16);
 }
 .liquid-metal-button-navigation.is-active .liquid-metal-button-inner {
   background:linear-gradient(180deg,rgba(27,59,84,.96),rgba(10,30,49,.98));
