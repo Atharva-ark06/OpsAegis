@@ -1,0 +1,129 @@
+.liquid-metal-button-wrap {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.liquid-metal-button-perspective {
+  perspective: 1000px;
+  perspective-origin: 50% 50%;
+}
+
+.liquid-metal-button-stage {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: width .4s ease, height .4s ease;
+}
+
+.liquid-metal-button-label-layer,
+.liquid-metal-button-inner-layer,
+.liquid-metal-button-shader-layer {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform .18s cubic-bezier(.4,0,.2,1), width .4s ease, height .4s ease;
+}
+
+.liquid-metal-button-label-layer {
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transform: translateZ(20px);
+  pointer-events: none;
+}
+
+.liquid-metal-button-label,
+.liquid-metal-button-icon {
+  color: #bfc2c6;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.5));
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color .2s ease;
+}
+
+.liquid-metal-button-inner-layer { z-index: 20; }
+.liquid-metal-button-inner {
+  box-sizing: border-box;
+  margin: 2px;
+  border-radius: 100px;
+  background: linear-gradient(180deg,#202020 0%,#000 100%);
+  transition: box-shadow .15s ease;
+}
+
+.liquid-metal-button-shader-layer { z-index: 10; }
+.liquid-metal-button-rim {
+  overflow: hidden;
+  border-radius: 100px;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.3), 0 36px 14px rgba(0,0,0,.02), 0 20px 12px rgba(0,0,0,.08), 0 9px 9px rgba(0,0,0,.12), 0 2px 5px rgba(0,0,0,.15);
+  transition: box-shadow .2s ease;
+}
+
+.liquid-metal-button-rim.is-hovered {
+  box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 12px 6px rgba(0,0,0,.05), 0 8px 5px rgba(0,0,0,.1), 0 4px 4px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.2);
+}
+
+.liquid-metal-button-shader {
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+  border-radius: 100px;
+}
+
+.liquid-metal-button-shader canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 100px !important;
+}
+
+.liquid-metal-button-hit-area {
+  position: absolute;
+  z-index: 40;
+  inset: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 100px;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+  transform: translateZ(25px);
+  transform-style: preserve-3d;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.liquid-metal-button-hit-area:focus-visible {
+  outline: 2px solid #dce5ee;
+  outline-offset: 4px;
+}
+
+.liquid-metal-button-ripple {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle,rgba(255,255,255,.4) 0%,rgba(255,255,255,0) 70%);
+  pointer-events: none;
+  transform: translate(-50%,-50%) scale(0);
+  animation: liquid-metal-ripple .6s ease-out forwards;
+}
+
+@keyframes liquid-metal-ripple {
+  to { transform: translate(-50%,-50%) scale(4); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-metal-button-stage,
+  .liquid-metal-button-label-layer,
+  .liquid-metal-button-inner-layer,
+  .liquid-metal-button-shader-layer,
+  .liquid-metal-button-rim { transition: none; }
+  .liquid-metal-button-ripple { animation-duration: .01ms; }
+}
