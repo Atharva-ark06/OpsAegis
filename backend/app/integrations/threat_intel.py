@@ -53,24 +53,30 @@ def _bounded_int(value,maximum:int)->int:
     except (TypeError,ValueError,OverflowError): return 0
     return max(0,min(number,maximum))
 
+def _short_text(value,limit:int=240)->str|None:
+    return value[:limit] if isinstance(value,str) and value.strip() else None
+
+def _provider_result(status:str,verdict:str="unknown",risk_score:int|None=None,details:dict|None=None)->dict:
+    return {"status":status,"verdict":verdict,"risk_score":risk_score,"details":details or {}}
+
 class VirusTotalAdapter:
     BASE_URL="https://www.virustotal.com/api/v3"
     def __init__(self,config:Settings=settings,*,transport:httpx.AsyncBaseTransport|None=None): self.config,self.transport=config,transport
     async def enrich(self,kind:str,value:str)->dict:
-        if not self.config.virustotal_api_key: return {"status":"not_configured","verdict":"unknown","risk_score":None,"details":{}}
+        if not self.config.virustotal_api_key: return _provider_result("not_configured")
         if kind=="url": path="/urls/"+base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
         else: path="/"+{"ip":"ip_addresses","domain":"domains","hash":"files"}[kind]+"/"+value
         try:
             async with httpx.AsyncClient(base_url=self.BASE_URL,headers={"x-apikey":self.config.virustotal_api_key},timeout=httpx.Timeout(self.config.threat_intel_timeout_seconds),verify=True,follow_redirects=False,trust_env=False,transport=self.transport) as client:
                 response=await client.get(path)
-            if response.status_code==404: return {"status":"not_found","verdict":"unknown","risk_score":None,"details":{}}
-            if response.status_code==429: return {"status":"rate_limited","verdict":"unknown","risk_score":None,"details":{}}
-            if response.status_code in (401,403): return {"status":"auth_error","verdict":"unknown","risk_score":None,"details":{}}
+            if response.status_code==404: return _provider_result("not_found")
+            if response.status_code==429: return _provider_result("rate_limited")
+            if response.status_code in (401,403): return _provider_result("auth_error")
             response.raise_for_status(); payload=response.json()
-        except (httpx.HTTPError,ValueError): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
+        except (httpx.HTTPError,ValueError): return _provider_result("error")
         data=payload.get("data") if isinstance(payload,dict) else None
         attrs=data.get("attributes") if isinstance(data,dict) else None
-        if not isinstance(attrs,dict): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
+        if not isinstance(attrs,dict): return _provider_result("error")
         stats=attrs.get("last_analysis_stats",{})
         if not isinstance(stats,dict): stats={}
         counts={key:_bounded_int(stats.get(key,0),10000) for key in ("malicious","suspicious","harmless","undetected")}
@@ -78,28 +84,77 @@ class VirusTotalAdapter:
         verdict="malicious" if counts["malicious"] else "suspicious" if counts["suspicious"] else "clean" if total else "unknown"
         details={"analysis":counts}
         if isinstance(attrs.get("reputation"),int): details["reputation"]=max(-100000,min(attrs["reputation"],100000))
-        return {"status":"ok","verdict":verdict,"risk_score":risk,"details":details}
+        scalar_fields=("asn","as_owner","country","network","regional_internet_registry","registrar","creation_date","expiration_date",
+            "last_analysis_date","last_modification_date","first_submission_date","meaningful_name","type_description","whois")
+        for key in scalar_fields:
+            value=attrs.get(key)
+            if isinstance(value,str):
+                clipped=_short_text(value,1000 if key=="whois" else 240)
+                if clipped: details[key]=clipped
+            elif isinstance(value,int) and not isinstance(value,bool): details[key]=value
+        categories=attrs.get("categories")
+        if isinstance(categories,dict):
+            details["categories"]={str(k)[:80]:str(v)[:120] for k,v in list(categories.items())[:30] if isinstance(v,(str,int,float))}
+        tags=attrs.get("tags")
+        if isinstance(tags,list): details["tags"]=[str(tag)[:80] for tag in tags[:50] if isinstance(tag,(str,int))]
+        results=attrs.get("last_analysis_results")
+        flags=[]
+        if isinstance(results,dict):
+            for engine,result in results.items():
+                if not isinstance(result,dict) or result.get("category") not in {"malicious","suspicious"}: continue
+                flags.append({"engine":str(engine)[:100],"category":str(result.get("category"))[:30],
+                    "result":_short_text(result.get("result"),180),"method":_short_text(result.get("method"),80),
+                    "engine_update":_short_text(result.get("engine_update"),40)})
+        details["detection_flags"]=flags[:100]
+        dns=attrs.get("last_dns_records")
+        if isinstance(dns,list):
+            details["dns_records"]=[{k:v for k,v in record.items() if k in {"type","value","ttl","priority"} and isinstance(v,(str,int,float))}
+                for record in dns[:20] if isinstance(record,dict)]
+        votes=attrs.get("total_votes")
+        if isinstance(votes,dict): details["community_votes"]={k:_bounded_int(v,100000) for k,v in votes.items() if k in {"harmless","malicious"}}
+        return _provider_result("ok",verdict,risk,details)
 
 class AbuseIPDBAdapter:
     BASE_URL="https://api.abuseipdb.com/api/v2"
+    CATEGORY_NAMES={3:"Fraud Orders",4:"DDoS Attack",5:"FTP Brute-Force",6:"Ping of Death",7:"Phishing",8:"Fraud VoIP",9:"Open Proxy",10:"Web Spam",11:"Email Spam",12:"Blog Spam",13:"VPN IP",14:"Port Scan",15:"Hacking",16:"SQL Injection",17:"Spoofing",18:"Brute-Force",19:"Bad Web Bot",20:"Exploited Host",21:"Web App Attack",22:"SSH",23:"IoT Targeted"}
     def __init__(self,config:Settings=settings,*,transport:httpx.AsyncBaseTransport|None=None): self.config,self.transport=config,transport
     async def enrich(self,kind:str,value:str)->dict:
-        if kind!="ip": return {"status":"not_applicable","verdict":"unknown","risk_score":None,"details":{}}
-        if not self.config.abuseipdb_api_key: return {"status":"not_configured","verdict":"unknown","risk_score":None,"details":{}}
+        if kind!="ip": return _provider_result("not_applicable")
+        if not self.config.abuseipdb_api_key: return _provider_result("not_configured")
         try:
             async with httpx.AsyncClient(base_url=self.BASE_URL,headers={"Key":self.config.abuseipdb_api_key,"Accept":"application/json"},timeout=httpx.Timeout(self.config.threat_intel_timeout_seconds),verify=True,follow_redirects=False,trust_env=False,transport=self.transport) as client:
-                response=await client.get("/check",params={"ipAddress":value,"maxAgeInDays":90})
-            if response.status_code==404: return {"status":"not_found","verdict":"unknown","risk_score":None,"details":{}}
-            if response.status_code==429: return {"status":"rate_limited","verdict":"unknown","risk_score":None,"details":{}}
-            if response.status_code in (401,403): return {"status":"auth_error","verdict":"unknown","risk_score":None,"details":{}}
+                response=await client.get("/check",params={"ipAddress":value,"maxAgeInDays":90,"verbose":1})
+            if response.status_code==404: return _provider_result("not_found")
+            if response.status_code==429: return _provider_result("rate_limited")
+            if response.status_code in (401,403): return _provider_result("auth_error")
             response.raise_for_status(); payload=response.json()
-        except (httpx.HTTPError,ValueError): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
+        except (httpx.HTTPError,ValueError): return _provider_result("error")
         data=payload.get("data") if isinstance(payload,dict) else None
-        if not isinstance(data,dict): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
+        if not isinstance(data,dict): return _provider_result("error")
         score=data.get("abuseConfidenceScore")
-        if not isinstance(score,int): return {"status":"error","verdict":"unknown","risk_score":None,"details":{}}
+        if not isinstance(score,int) or isinstance(score,bool): return _provider_result("error")
         score=max(0,min(score,100)); verdict="malicious" if score>=75 else "suspicious" if score>=25 else "clean"
-        details={"total_reports":_bounded_int(data.get("totalReports",0),1000000)}
-        for key in ("countryCode","usageType","isp","lastReportedAt"):
-            if isinstance(data.get(key),str): details[key]=data[key][:160]
-        return {"status":"ok","verdict":verdict,"risk_score":score,"details":details}
+        details={"abuse_confidence_score":score,"total_reports":_bounded_int(data.get("totalReports",0),1000000),
+            "distinct_reporters":_bounded_int(data.get("numDistinctUsers",0),1000000)}
+        field_map={"countryCode":"country_code","usageType":"usage_type","isp":"isp","domain":"domain","lastReportedAt":"last_reported_at"}
+        for source,target in field_map.items():
+            value=_short_text(data.get(source),240)
+            if value: details[target]=value
+        if isinstance(data.get("ipVersion"),int): details["ip_version"]=_bounded_int(data["ipVersion"],6)
+        for source,target in (("isPublic","is_public"),("isWhitelisted","is_whitelisted")):
+            if isinstance(data.get(source),bool): details[target]=data[source]
+        hostnames=data.get("hostnames")
+        if isinstance(hostnames,list): details["hostnames"]=[str(host)[:240] for host in hostnames[:20] if isinstance(host,str)]
+        reports=data.get("reports")
+        normalized_reports=[]
+        if isinstance(reports,list):
+            for report in reports[:20]:
+                if not isinstance(report,dict): continue
+                category_ids=report.get("categories")
+                categories=[{"id":_bounded_int(cid,1000),"name":self.CATEGORY_NAMES.get(_bounded_int(cid,1000),"Other / unclassified")}
+                    for cid in category_ids[:20] if isinstance(cid,int) and not isinstance(cid,bool)] if isinstance(category_ids,list) else []
+                normalized_reports.append({"reported_at":_short_text(report.get("reportedAt"),40),
+                    "comment":_short_text(report.get("comment"),500),"reporter_country_code":_short_text(report.get("reporterCountryCode"),8),
+                    "categories":categories})
+        details["reports"]=normalized_reports
+        return _provider_result("ok",verdict,score,details)
