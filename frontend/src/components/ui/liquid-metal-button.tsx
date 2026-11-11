@@ -130,7 +130,7 @@ export function LiquidMetalButton({
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={["liquid-metal-button-wrap", isNavigation ? "liquid-metal-button-navigation" : ""].filter(Boolean).join(" ")}>
+    <div className={["liquid-metal-button-wrap", isNavigation ? "liquid-metal-button-navigation" : "", isNavigation && active ? "is-active" : ""].filter(Boolean).join(" ")}>
       <div className="liquid-metal-button-perspective">
         <div
           className="liquid-metal-button-stage"
@@ -195,7 +195,6 @@ export function LiquidMetalButton({
             onBlur={() => setIsPressed(false)}
             aria-label={label}
             aria-current={ariaCurrent}
-            aria-pressed={isNavigation ? active : undefined}
             title={title}
           >
             {ripples.map((ripple) => (
