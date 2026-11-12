@@ -1,6 +1,4 @@
 import jwt
-import pytest
-
 from app.config import settings
 from app.models.entities import AuditLog, User, UserRole
 from app.routers.kali_terminal import COOKIE_NAME, TOKEN_AUDIENCE, TOKEN_ISSUER
@@ -98,3 +96,13 @@ def test_viewer_cannot_access_terminal_health(client, db_session):
     response = client.get("/api/v1/integrations/kali/health",
                           headers={"Authorization": "Bearer " + create_access_token(viewer)})
     assert response.status_code == 403
+
+def test_terminal_authorization_fails_closed_when_disabled(client, db_session, monkeypatch):
+    monkeypatch.setattr(settings, "kali_terminal_enabled", False)
+    analyst = create_user(db_session, "kali-disabled@example.com", UserRole.analyst)
+    from app.routers.kali_terminal import _session_token
+    token = _session_token(analyst)
+    response = client.get("/api/v1/integrations/kali/authorize",
+                          headers={"Cookie": f"{COOKIE_NAME}={token}"})
+    assert response.status_code == 403
+
