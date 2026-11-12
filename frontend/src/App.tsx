@@ -19,7 +19,7 @@ import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTarge
 import { describeEngineHealth } from "./engineHealth";
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, WazuhManagerHealth, WazuhManagerSync, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth, getWazuhManagerHealth, syncWazuhManager,
-  clearAccessToken, collectWazuh, createIncident, getAccessToken, getAssets, getCurrentUser,
+  clearAccessToken, collectWazuh, createAsset, createIncident, getAccessToken, getAssets, getCurrentUser,
   getFindings, getIncidents, getWazuhHealth, getDetections, Detection, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
 } from "./api";
 
@@ -67,13 +67,20 @@ function StatCard({ label, value, detail, accent }: { label: string; value: numb
   </article>;
 }
 
-function DataTable({ view, assets, findings, incidents, query, user, canOperate, onFindingStatus, onIncidentUpdate, onIncidentCreated }: {
+function DataTable({ view, assets, findings, incidents, query, user, canOperate, onFindingStatus, onIncidentUpdate, onIncidentCreated, onAssetCreated }: {
   view: View; assets: Asset[]; findings: Finding[]; incidents: Incident[]; query: string;
   user: User; canOperate: boolean;
   onFindingStatus: (id: number, status: Finding["status"]) => void;
   onIncidentUpdate: (id: number, status: Incident["status"], resolution: string, assignToMe?: boolean) => void;
   onIncidentCreated: () => void;
+  onAssetCreated: () => void;
 }) {
+  const [newAssetName, setNewAssetName] = useState("");
+  const [newAssetType, setNewAssetType] = useState("endpoint");
+  const [newAssetEnvironment, setNewAssetEnvironment] = useState("unknown");
+  const [creatingAsset, setCreatingAsset] = useState(false);
+  const [createAssetError, setCreateAssetError] = useState("");
+  const [createAssetNotice, setCreateAssetNotice] = useState("");
   const [resolutionNotes, setResolutionNotes] = useState<Record<number, string>>({});
   const [incidentStatuses, setIncidentStatuses] = useState<Record<number, Incident["status"]>>({});
   const [assetStatus, setAssetStatus] = useState("all");
@@ -111,7 +118,41 @@ function DataTable({ view, assets, findings, incidents, query, user, canOperate,
       const matchesSource = assetSource === "all" || (item.source_engine || "manual") === assetSource;
       return matchesSearch && matchesStatus && matchesEnvironment && matchesSource;
     });
+    async function handleCreateAsset(event: FormEvent<HTMLFormElement>) {
+      event.preventDefault();
+      setCreatingAsset(true);
+      setCreateAssetError("");
+      setCreateAssetNotice("");
+      try {
+        await createAsset({
+          name: newAssetName.trim(),
+          asset_type: newAssetType,
+          environment: newAssetEnvironment,
+        });
+        setNewAssetName("");
+        setNewAssetType("endpoint");
+        setNewAssetEnvironment("unknown");
+        setCreateAssetNotice("Asset registered successfully.");
+        onAssetCreated();
+      } catch (reason) {
+        setCreateAssetError(reason instanceof Error ? reason.message : "Asset registration failed.");
+      } finally {
+        setCreatingAsset(false);
+      }
+    }
     return <div className="asset-workspace">
+      {canOperate && <section className="nuclei-workspace">
+        <div className="panel-heading"><div><p className="eyebrow">MANUAL INVENTORY</p><h3>Register an asset</h3></div></div>
+        <p className="integration-note">Use this for assets not yet discovered through Wazuh. Wazuh-managed records remain source-managed.</p>
+        {createAssetError && <div className="error-banner" role="alert">{createAssetError}</div>}
+        {createAssetNotice && <div className="success-banner" role="status">{createAssetNotice}</div>}
+        <form className="nuclei-target-form" onSubmit={handleCreateAsset}>
+          <label>Asset name<input required minLength={1} maxLength={255} value={newAssetName} onChange={event => setNewAssetName(event.target.value)} placeholder="Production API server"/></label>
+          <label>Asset type<select value={newAssetType} onChange={event => setNewAssetType(event.target.value)}><option value="endpoint">Endpoint</option><option value="server">Server</option><option value="web_application">Web application</option><option value="network_device">Network device</option><option value="database">Database</option><option value="cloud_resource">Cloud resource</option><option value="other">Other</option></select></label>
+          <label>Environment<select value={newAssetEnvironment} onChange={event => setNewAssetEnvironment(event.target.value)}><option value="unknown">Unknown</option><option value="production">Production</option><option value="staging">Staging</option><option value="development">Development</option><option value="testing">Testing</option><option value="lab">Lab</option></select></label>
+          <button className="primary-button compact" disabled={creatingAsset || !newAssetName.trim()}>{creatingAsset ? "Registering…" : "Register asset"}</button>
+        </form>
+      </section>}
       <div className="asset-summary">
         <article><small>INVENTORY RECORDS</small><strong>{assets.length}</strong><span>Returned by API · max 200</span></article>
         <article><small>WAZUH-MAPPED AGENTS</small><strong>{registeredAgents.length}</strong><span>Identified by source and agent ID</span></article>
@@ -490,7 +531,7 @@ function App() {
       {view !== "overview" && <div className="page-content">
         {view !== "detections" && view !== "threat-intel" && view !== "vulnerabilities" && view !== "playbooks" && <section className="list-intro"><div><p className="eyebrow">OPERATIONAL DATA</p><h2>{view === "integrations" ? "Connected security engines" : pageTitle + " register"}</h2><p>{view === "assets" ? "Inventory returned by the authenticated assets API." : view === "findings" ? "Normalized findings returned by the authenticated findings API." : view === "incidents" ? "Incident records returned by the authenticated incidents API." : "Connection state is read from the backend integration health endpoint."}</p></div></section>}
         {view === "users" ? <AdminUsers currentUser={user} /> : view === "playbooks" ? <PlaybooksPanel incidents={incidents} user={user} /> : view === "vulnerabilities" ? <VulnerabilityPanel canOperate={canOperate} assets={assets} /> : view === "threat-intel" ? <ThreatIntelPanel canOperate={canOperate} /> : view === "detections" ? <DetectionsPanel canOperate={canOperate} isAdmin={user?.role === "admin"} /> : view === "integrations" ? <section className="panel integration-page"><div className="panel-heading"><div><p className="eyebrow">ADAPTER STATUS</p><h3>Engine connectivity</h3></div>{canOperate && <div className="header-actions"><button className="primary-button compact" onClick={handleCollect} disabled={collecting || !wazuh?.configured}>{collecting ? "Collecting Wazuh…" : "Collect Wazuh alerts"}</button><button className="primary-button compact" onClick={handleCollectCrowdSec} disabled={collectingCrowdSec || !crowdsec?.configured}>{collectingCrowdSec ? "Syncing CrowdSec…" : "Sync CrowdSec decisions"}</button><button className="secondary-button" onClick={handleWazuhManagerSync} disabled={syncingWazuhManager||!wazuhManager?.configured}>{syncingWazuhManager?"Syncing agents…":"Sync Manager agents"}</button></div>}</div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /><CollectionPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><NucleiPanel canOperate={canOperate} isAdmin={user.role === "admin"} assets={assets} /><ShannonPanel canOperate={canOperate} isAdmin={user.role === "admin"} /><p className="integration-note">Wazuh collection is read-only. CrowdSec imports active decisions only. Nuclei uses its fixed safe profile. Shannon dispatch requires a separately deployed isolated runner and written authorization.</p></section> :
-          <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} onIncidentCreated={() => setRefreshKey((value) => value + 1)} /></section>}
+          <section className="panel data-panel"><div className="panel-heading"><div><p className="eyebrow">DATABASE RECORDS</p><h3>{pageTitle}</h3></div></div><DataTable view={view} assets={assets} findings={findings} incidents={incidents} query={query} user={user} canOperate={canOperate} onFindingStatus={async (id, status) => { try { await updateFindingStatus(id, status); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Finding update failed."); } }} onIncidentUpdate={async (id, status, resolution, assignToMe) => { try { await updateIncident(id, {status, ...(assignToMe ? {assigned_to_user_id: user.id} : {}), resolution: resolution || undefined}); setRefreshKey((value) => value + 1); } catch (reason) { setCollectionError(reason instanceof Error ? reason.message : "Incident update failed."); } }} onIncidentCreated={() => setRefreshKey((value) => value + 1)} onAssetCreated={() => setRefreshKey((value) => value + 1)} /></section>}
       </div>}
       <footer className="app-footer"><span>OPSAEGIS · OPERATIONAL SECURITY & INCIDENT GOVERNANCE</span><span>API v1 <i /> SESSION AUTHENTICATED</span></footer>
   </AppDashboardShell>;

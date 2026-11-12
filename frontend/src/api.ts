@@ -141,6 +141,9 @@ export function getCurrentUser(): Promise<User> {
 export function getAssets(): Promise<Asset[]> {
   return request("/assets?skip=0&limit=200");
 }
+export function createAsset(payload: { name: string; asset_type: string; environment: string }): Promise<Asset> {
+  return request("/assets", { method: "POST", body: JSON.stringify(payload) });
+}
 export function getFindings(): Promise<Finding[]> {
   return request("/findings?skip=0&limit=200");
 }

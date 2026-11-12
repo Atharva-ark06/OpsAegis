@@ -2,14 +2,25 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.entities import Asset, User, UserRole
+from app.models.entities import Asset, AuditLog, User, UserRole
 from app.schemas import AssetCreate, AssetRead
 from app.security import get_current_user, require_roles
 router = APIRouter(prefix="/assets", tags=["assets"])
 @router.post("", response_model=AssetRead, status_code=status.HTTP_201_CREATED)
 def create_asset(payload: AssetCreate, db: Session = Depends(get_db),
                  actor: User = Depends(require_roles(UserRole.admin, UserRole.analyst))):
-    item = Asset(**payload.model_dump()); db.add(item); db.commit(); db.refresh(item); return item
+    item = Asset(**payload.model_dump())
+    db.add(item)
+    db.flush()
+    db.add(AuditLog(
+        actor_user_id=actor.id,
+        action="asset.create",
+        target=f"asset:{item.id}",
+        detail=f"type:{item.asset_type};environment:{item.environment}",
+    ))
+    db.commit()
+    db.refresh(item)
+    return item
 @router.get("", response_model=list[AssetRead])
 def list_assets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db),
                 actor: User = Depends(get_current_user)):
