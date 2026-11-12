@@ -13,10 +13,13 @@ def payload(target="https://staging.example.test"):
     return {"client":"opsaegis","scan_id":1,"target_url":target,"source_repository":"https://github.com/example-org/example-app",
       "authorization_reference":"AUTH-2026-008 approved","profile":"authorized-staging"}
 
-def test_health_fails_closed(monkeypatch):
+def test_health_fails_closed_on_both_supported_paths(monkeypatch):
     monkeypatch.setattr(main.settings,"enabled",False)
-    response=TestClient(main.app).get("/health")
-    assert response.json()["execution_enabled"] is False
+    client=TestClient(main.app)
+    for path in ("/health", "/v1/health"):
+        response=client.get(path)
+        assert response.status_code == 200
+        assert response.json()["execution_enabled"] is False
 
 def test_requires_bearer(monkeypatch):
     configure(monkeypatch)
