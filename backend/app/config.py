@@ -168,7 +168,7 @@ class Settings(BaseSettings):
             raise ValueError("KALI_TERMINAL_ENABLED requires KALI_TERMINAL_URL")
         if self.kali_terminal_url and self.environment.lower() == "production":
             terminal_parts = urlsplit(self.kali_terminal_url)
-            if terminal_parts.scheme != "http" or not terminal_parts.hostname or not terminal_parts.hostname.endswith(".railway.internal") or terminal_parts.port != 7681 or terminal_parts.path or terminal_parts.query or terminal_parts.fragment:
+            if terminal_parts.scheme != "http" or not terminal_parts.hostname or terminal_parts.hostname != "kali-terminal.railway.internal" or terminal_parts.port != 7681 or terminal_parts.path or terminal_parts.query or terminal_parts.fragment:
                 raise ValueError("Production KALI_TERMINAL_URL must be the private Railway terminal hostname on port 7681")
         return self
 
