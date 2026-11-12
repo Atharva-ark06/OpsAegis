@@ -77,7 +77,7 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
   <div className="provider-strip">
    <div className="provider-chip"><i className={providers?.virustotal.configured?"configured":""}/><strong>VirusTotal</strong> · {providers?.virustotal.status||"Loading"}</div>
    <div className="provider-chip"><i className={providers?.abuseipdb.configured?"configured":""}/><strong>AbuseIPDB</strong> · {providers?.abuseipdb.status||"Loading"}</div>
-   <div className="provider-chip"><i className={providers?.crowdsec_cti.configured?"configured":""}/><strong>CrowdSec CTI</strong> · {providers?.crowdsec_cti.status||"Loading"}</div>
+   <div className="provider-chip"><i className={providers?.crowdsec_cti?.configured?"configured":""}/><strong>CrowdSec CTI</strong> · {providers?.crowdsec_cti?.status||"Loading"}</div>
    <div className="provider-chip">Cache · {providers?Math.round(providers.cache_ttl_seconds/60)+" min":"—"}</div>
   </div>
   {canOperate&&<form className="threat-intel-form" onSubmit={event=>void enrich(event)}>
