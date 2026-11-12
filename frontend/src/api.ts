@@ -170,7 +170,7 @@ export const getNucleiTargets = (): Promise<NucleiTarget[]> => request("/integra
 export const getNucleiScans = (): Promise<NucleiScan[]> => request("/integrations/nuclei/scans");
 export const registerNucleiTarget = (payload: {name:string;url:string;authorization_reference:string;asset_id?:number|null}): Promise<NucleiTarget> =>
   request("/integrations/nuclei/targets",{method:"POST",body:JSON.stringify(payload)});
-export const startNucleiScan = (id:number): Promise<{scan:NucleiScan;received:number;inserted:number;updated:number}> =>
+export const startNucleiScan = (id:number): Promise<{scan:NucleiScan;queued:boolean;message:string}> =>
   request("/integrations/nuclei/targets/"+id+"/scans",{method:"POST",body:JSON.stringify({profile:"safe"})});
 
 export interface ShannonHealth {
