@@ -131,6 +131,7 @@ async def run_scan(job_id, request):
             job.update(status="failed",error_code=str(exc) if str(exc) in allowed else "runner_internal_error",finished_at=now())
 
 @app.get("/health")
+@app.get("/v1/health")
 async def health():
     why=blocker()
     return {"engine":"shannon","status":"healthy" if why is None else "not_ready","version":settings.cli_version,
