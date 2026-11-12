@@ -9,7 +9,7 @@ This guide describes the current OpsAegis Railway project topology. It is not a 
 | Frontend | `/frontend` | `frontend/Dockerfile.production` |
 | API | `/backend` | `backend/Dockerfile.production` |
 | Detection worker | `/backend` | `backend/Dockerfile.production`, start command `python -m app.worker` |
-| Kali terminal | `/runner/kali-terminal` | `runner/kali-terminal/Dockerfile`, private ttyd service |
+| Kali terminal (planned; not provisioned) | `/runner/kali-terminal` | `runner/kali-terminal/Dockerfile`, private ttyd service |
 | PostgreSQL | Managed Railway service | Persistent database |
 | Redis | Managed Railway service | Queue/cache/coordination |
 
@@ -74,7 +74,7 @@ For local production Compose deployment, see [PRODUCTION_DEPLOYMENT.md](PRODUCTI
 
 ## Kali team terminal
 
-The Kali terminal is a separate service in the same production environment. It must use root directory `/runner/kali-terminal`, private endpoint `kali-terminal`, `PORT=7681`, and a persistent volume mounted at `/workspace`. Do not create a public Railway domain or TCP proxy for it.
+The Kali terminal is a planned separate service in the same production environment; Railway has not provisioned it yet because the current project hit its Free-plan resource limit. Once capacity is available, it must use root directory `/runner/kali-terminal`, private endpoint `kali-terminal`, `PORT=7681`, and a persistent volume mounted at `/workspace`. Do not create a public Railway domain or TCP proxy for it.
 
 The frontend exposes only the same-origin `/terminal/` path. Nginx performs an API `auth_request` for every terminal page request and WebSocket handshake. The API issues a five-minute HttpOnly, Secure-in-production, SameSite=Strict cookie only to active administrators and analysts; it rechecks the current database role and account status. Viewers are denied. The API service uses `KALI_TERMINAL_ENABLED=true` and `KALI_TERMINAL_URL=http://kali-terminal.railway.internal:7681` after the terminal service is deployed and reachable.
 
