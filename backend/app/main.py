@@ -11,6 +11,7 @@ from app.routers.auth import router as auth_router
 from app.routers.integrations import router as integrations_router
 from app.routers.nuclei import router as nuclei_router
 from app.routers.shannon import router as shannon_router
+from app.routers.kali_terminal import router as kali_terminal_router
 from app.routers.detections import router as detections_router
 from app.routers.threat_intel import router as threat_intel_router
 from app.routers.vulnerabilities import router as vulnerabilities_router
@@ -59,7 +60,7 @@ async def add_security_headers(request: Request, call_next):
 
 for router in (
     health_router, auth_router, assets_router, findings_router, incidents_router,
-    integrations_router, nuclei_router, shannon_router, detections_router,
+    integrations_router, nuclei_router, shannon_router, kali_terminal_router, detections_router,
     threat_intel_router, vulnerabilities_router, collections_router, incident_timeline_router, incident_evidence_router, playbooks_router, reports_router, operational_trends_router, execution_ledger_router,
 ):
     app.include_router(router, prefix="/api/v1")
