@@ -74,3 +74,35 @@ async def test_provider_auth_error_and_not_found_are_distinct():
     for status,expected in ((403,"auth_error"),(404,"not_found")):
         result=await VirusTotalAdapter(config(),transport=httpx.MockTransport(lambda request:httpx.Response(status))).enrich("ip","8.8.8.8")
         assert result["status"]==expected and result["verdict"]=="unknown"
+
+@pytest.mark.asyncio
+async def test_crowdsec_cti_uses_smoke_endpoint_and_normalizes_reputation():
+    from app.integrations.threat_intel import CrowdSecCTIAdapter
+    seen=[]
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200,json={"ip":"8.8.8.8","ip_range":"8.8.8.0/24","ip_range_score":92,
+            "classifications":[{"name":"known scanner","label":"malicious"}],
+            "behaviors":[{"name":"http:scan","label":"http scanning"}],
+            "location":{"country":"US"},"as":{"number":15169,"name":"Google"}})
+    result=await CrowdSecCTIAdapter(config(crowdsec_cti_api_key="cti-test-key"),
+        transport=httpx.MockTransport(handler)).enrich("ip","8.8.8.8")
+    assert result["status"]=="ok" and result["verdict"]=="malicious" and result["risk_score"]==92
+    assert seen[0].url.host=="cti.api.crowdsec.net" and seen[0].url.path=="/v2/smoke/8.8.8.8"
+    assert seen[0].headers["x-api-key"]=="cti-test-key"
+    assert result["details"]["classifications"][0]["name"]=="known scanner"
+    assert result["details"]["location"]["country"]=="US"
+
+@pytest.mark.asyncio
+async def test_crowdsec_cti_reports_auth_and_rate_limit_without_leaking_body():
+    from app.integrations.threat_intel import CrowdSecCTIAdapter
+    for status,expected in ((401,"auth_error"),(403,"auth_error"),(429,"rate_limited"),(404,"not_found")):
+        result=await CrowdSecCTIAdapter(config(crowdsec_cti_api_key="cti-test-key"),
+            transport=httpx.MockTransport(lambda request:httpx.Response(status,json={"secret":"must-not-leak"}))).enrich("ip","8.8.8.8")
+        assert result["status"]==expected and "must-not-leak" not in str(result)
+
+@pytest.mark.asyncio
+async def test_crowdsec_cti_is_ip_only_and_does_not_call_network_when_unconfigured():
+    from app.integrations.threat_intel import CrowdSecCTIAdapter
+    assert (await CrowdSecCTIAdapter(config(crowdsec_cti_api_key="")).enrich("ip","8.8.8.8"))["status"]=="not_configured"
+    assert (await CrowdSecCTIAdapter(config(crowdsec_cti_api_key="cti-test-key")).enrich("domain","example.com"))["status"]=="not_applicable"

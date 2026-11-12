@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     crowdsec_machine_password: str | None = Field(default=None, validation_alias="CROWDSEC_MACHINE_PASSWORD")
     virustotal_api_key: str | None = Field(default=None, validation_alias="VIRUSTOTAL_API_KEY")
     abuseipdb_api_key: str | None = Field(default=None, validation_alias="ABUSEIPDB_API_KEY")
+    crowdsec_cti_api_key: str | None = Field(default=None, validation_alias="CROWDSEC_CTI_API_KEY")
     threat_intel_timeout_seconds: int = Field(default=10, validation_alias="THREAT_INTEL_TIMEOUT_SECONDS")
     threat_intel_cache_ttl_seconds: int = Field(default=900, validation_alias="THREAT_INTEL_CACHE_TTL_SECONDS")
     nvd_api_key: str | None = Field(default=None, validation_alias="NVD_API_KEY")

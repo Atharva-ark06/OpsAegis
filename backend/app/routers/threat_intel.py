@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
-from app.integrations.threat_intel import AbuseIPDBAdapter,VirusTotalAdapter,normalize_indicator
+from app.integrations.threat_intel import AbuseIPDBAdapter,CrowdSecCTIAdapter,VirusTotalAdapter,normalize_indicator
 from app.models.entities import AuditLog,ThreatIntelIOC,User,UserRole
 from app.security import get_current_user,require_roles
 router=APIRouter(prefix="/threat-intel",tags=["threat-intelligence"])
@@ -25,6 +25,7 @@ def serialize(item:ThreatIntelIOC)->dict:
 def provider_status(actor:User=Depends(get_current_user))->dict:
     return {"virustotal":{"configured":bool(settings.virustotal_api_key),"status":"configured" if settings.virustotal_api_key else "not_configured"},
         "abuseipdb":{"configured":bool(settings.abuseipdb_api_key),"status":"configured" if settings.abuseipdb_api_key else "not_configured"},
+        "crowdsec_cti":{"configured":bool(settings.crowdsec_cti_api_key),"status":"configured" if settings.crowdsec_cti_api_key else "not_configured"},
         "cache_ttl_seconds":settings.threat_intel_cache_ttl_seconds}
 
 @router.get("/iocs")
@@ -36,7 +37,7 @@ def list_iocs(skip:int=Query(default=0,ge=0,le=100000),limit:int=Query(default=5
 async def enrich_indicator(payload:EnrichmentRequest,db:Session=Depends(get_db),actor:User=Depends(require_roles(*OPERATORS)))->dict:
     try: kind,value=normalize_indicator(payload.indicator_type,payload.indicator_value)
     except ValueError as exc: raise HTTPException(status_code=422,detail=str(exc)) from None
-    if not settings.virustotal_api_key and not settings.abuseipdb_api_key: raise HTTPException(status_code=503,detail="No threat-intelligence provider is configured")
+    if not settings.virustotal_api_key and not settings.abuseipdb_api_key and not settings.crowdsec_cti_api_key: raise HTTPException(status_code=503,detail="No threat-intelligence provider is configured")
     digest=hashlib.sha256(f"{kind}:{value}".encode()).hexdigest()
     item=db.scalar(select(ThreatIntelIOC).where(ThreatIntelIOC.indicator_hash==digest)); now=datetime.now(timezone.utc)
     if item is not None and item.enriched_at is not None and not payload.force_refresh:
@@ -44,11 +45,12 @@ async def enrich_indicator(payload:EnrichmentRequest,db:Session=Depends(get_db),
         if now-previous<timedelta(seconds=settings.threat_intel_cache_ttl_seconds):
             db.add(AuditLog(actor_user_id=actor.id,action="threat_intel.enrich.cached",target=f"ioc:{item.id}",detail=json.dumps({"indicator_type":kind})))
             db.commit();return {**serialize(item),"cached":True}
-    vt,abuse=await asyncio.gather(VirusTotalAdapter().enrich(kind,value),AbuseIPDBAdapter().enrich(kind,value))
-    results={"virustotal":vt,"abuseipdb":abuse}; successful=[v for v in results.values() if v["status"]=="ok"]
+    vt,abuse,crowdsec=await asyncio.gather(VirusTotalAdapter().enrich(kind,value),AbuseIPDBAdapter().enrich(kind,value),CrowdSecCTIAdapter().enrich(kind,value))
+    results={"virustotal":vt,"abuseipdb":abuse,"crowdsec_cti":crowdsec}; successful=[v for v in results.values() if v["status"]=="ok"]
     scores=[v["risk_score"] for v in successful if v["risk_score"] is not None]; verdicts=[v["verdict"] for v in successful]
     failed_configured = ((bool(settings.virustotal_api_key) and vt["status"] in {"error","auth_error","rate_limited","not_found"}) or
-                         (bool(settings.abuseipdb_api_key) and abuse["status"] in {"error","auth_error","rate_limited"}))
+                         (bool(settings.abuseipdb_api_key) and abuse["status"] in {"error","auth_error","rate_limited"}) or
+                         (bool(settings.crowdsec_cti_api_key) and crowdsec["status"] in {"error","auth_error","rate_limited","not_found"}))
     verdict="malicious" if "malicious" in verdicts else "suspicious" if "suspicious" in verdicts else "clean" if successful and all(v=="clean" for v in verdicts) and not failed_configured else "unknown"
     score=max(scores) if scores else None
     if item is None:

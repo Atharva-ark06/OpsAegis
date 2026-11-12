@@ -59,6 +59,56 @@ def _short_text(value,limit:int=240)->str|None:
 def _provider_result(status:str,verdict:str="unknown",risk_score:int|None=None,details:dict|None=None)->dict:
     return {"status":status,"verdict":verdict,"risk_score":risk_score,"details":details or {}}
 
+class CrowdSecCTIAdapter:
+    """Read-only CrowdSec CTI IP reputation lookup (not a Local API client)."""
+    BASE_URL="https://cti.api.crowdsec.net/v2"
+    def __init__(self,config:Settings=settings,*,transport:httpx.AsyncBaseTransport|None=None):
+        self.config,self.transport=config,transport
+    async def enrich(self,kind:str,value:str)->dict:
+        if kind!="ip": return _provider_result("not_applicable")
+        key=getattr(self.config,"crowdsec_cti_api_key",None)
+        if not key: return _provider_result("not_configured")
+        try:
+            async with httpx.AsyncClient(base_url=self.BASE_URL,headers={"x-api-key":key,"Accept":"application/json"},
+                timeout=httpx.Timeout(self.config.threat_intel_timeout_seconds),verify=True,follow_redirects=False,
+                trust_env=False,transport=self.transport) as client:
+                response=await client.get("/smoke/"+value)
+            if response.status_code==404: return _provider_result("not_found")
+            if response.status_code==429: return _provider_result("rate_limited")
+            if response.status_code in (401,403): return _provider_result("auth_error")
+            response.raise_for_status()
+            payload=response.json()
+        except (httpx.HTTPError,ValueError): return _provider_result("error")
+        if not isinstance(payload,dict): return _provider_result("error")
+        score=payload.get("ip_range_score",payload.get("score"))
+        if not isinstance(score,(int,float)) or isinstance(score,bool): score=None
+        if score is not None: score=max(0,min(round(score),100))
+        classifications=payload.get("classifications")
+        if not isinstance(classifications,list): classifications=[]
+        normalized=[]
+        for entry in classifications[:30]:
+            if isinstance(entry,dict):
+                normalized.append({str(k)[:60]:str(v)[:180] for k,v in entry.items()
+                    if isinstance(v,(str,int,float,bool))})
+            elif isinstance(entry,str): normalized.append(entry[:180])
+        behaviors=payload.get("behaviors")
+        if not isinstance(behaviors,list): behaviors=[]
+        normalized_behaviors=[{str(k)[:60]:str(v)[:180] for k,v in item.items()
+            if isinstance(v,(str,int,float,bool))} for item in behaviors[:30] if isinstance(item,dict)]
+        location=payload.get("location") if isinstance(payload.get("location"),dict) else {}
+        as_data=payload.get("as") if isinstance(payload.get("as"),dict) else {}
+        details={"ip":value,"classifications":normalized,"behaviors":normalized_behaviors}
+        for source,target in ((location,"location"),(as_data,"as")):
+            safe={str(k)[:60]:str(v)[:180] for k,v in list(source.items())[:20]
+                if isinstance(v,(str,int,float,bool))}
+            if safe: details[target]=safe
+        for key_name in ("ip_range","ip_range_score","confidence","last_seen","first_seen"):
+            raw=payload.get(key_name)
+            if isinstance(raw,(str,int,float)) and not isinstance(raw,bool):
+                details[key_name]=str(raw)[:180] if isinstance(raw,str) else raw
+        verdict="malicious" if score is not None and score>=75 else "suspicious" if score is not None and score>=25 else "clean" if score is not None else "unknown"
+        return _provider_result("ok",verdict,score,details)
+
 class VirusTotalAdapter:
     BASE_URL="https://www.virustotal.com/api/v3"
     def __init__(self,config:Settings=settings,*,transport:httpx.AsyncBaseTransport|None=None): self.config,self.transport=config,transport

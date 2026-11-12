@@ -77,19 +77,20 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
   <div className="provider-strip">
    <div className="provider-chip"><i className={providers?.virustotal.configured?"configured":""}/><strong>VirusTotal</strong> · {providers?.virustotal.status||"Loading"}</div>
    <div className="provider-chip"><i className={providers?.abuseipdb.configured?"configured":""}/><strong>AbuseIPDB</strong> · {providers?.abuseipdb.status||"Loading"}</div>
+   <div className="provider-chip"><i className={providers?.crowdsec_cti.configured?"configured":""}/><strong>CrowdSec CTI</strong> · {providers?.crowdsec_cti.status||"Loading"}</div>
    <div className="provider-chip">Cache · {providers?Math.round(providers.cache_ttl_seconds/60)+" min":"—"}</div>
   </div>
   {canOperate&&<form className="threat-intel-form" onSubmit={event=>void enrich(event)}>
    <label>Indicator type<select value={kind} onChange={event=>setKind(event.target.value as IOCType)}><option value="ip">IP address</option><option value="domain">Domain</option><option value="url">URL</option><option value="hash">File hash</option></select></label>
    <label>Indicator value<input value={value} onChange={event=>setValue(event.target.value)} required maxLength={2048} placeholder={kind==="ip"?"8.8.8.8":kind==="domain"?"example.com":kind==="url"?"https://example.com/path":"SHA-256 / SHA-1 / MD5 / SHA-512"} /></label>
-   <button className="primary-button compact" disabled={busy||!value.trim()||(!providers?.virustotal.configured&&!providers?.abuseipdb.configured)}>{busy?"Checking…":"Generate combined report"}</button>
+   <button className="primary-button compact" disabled={busy||!value.trim()||(!providers?.virustotal.configured&&!providers?.abuseipdb.configured&&!providers?.crowdsec_cti.configured)}>{busy?"Checking…":"Generate combined report"}</button>
    <span className="integration-note">Read-only lookup · No file upload or URL visit · AbuseIPDB supports public IPs only</span>
   </form>}
   {selected&&<section className="panel ioc-combined-report">
    <div className="panel-heading"><div><p className="eyebrow">COMBINED THREAT INTELLIGENCE REPORT · IOC-{selected.id}</p><h3>{selected.indicator_value}</h3></div><span className={"ioc-verdict "+selected.verdict}>{verdictLabel(selected.verdict)} · {selected.risk_score===null?"No score":selected.risk_score+"/100"}</span></div>
    <p className="integration-note">Type: {selected.indicator_type.toUpperCase()} · Enriched: {dateLabel(selected.enriched_at)} · {selected.cached?"Cached":"Fresh lookup"} · Combined score uses the highest available provider score; it is not a probability.</p>
    {providerConflict&&<div className="ioc-conflict-banner" role="status"><strong>Provider disagreement detected.</strong> VirusTotal and AbuseIPDB returned different verdicts. Review their separate evidence before making a decision.</div>}
-   <div className="ioc-provider-results"><ProviderResult name="VirusTotal" result={selected.provider_results.virustotal}/><ProviderResult name="AbuseIPDB" result={selected.provider_results.abuseipdb}/></div>
+   <div className="ioc-provider-results"><ProviderResult name="VirusTotal" result={selected.provider_results.virustotal}/><ProviderResult name="AbuseIPDB" result={selected.provider_results.abuseipdb}/>{selected.provider_results.crowdsec_cti&&<ProviderResult name="CrowdSec CTI" result={selected.provider_results.crowdsec_cti}/>}</div>
   </section>}
   <section className="panel"><div className="panel-heading"><div><p className="eyebrow">PERSISTED INDICATORS</p><h3>IOC enrichment history</h3></div><button className="secondary-button" onClick={()=>void refresh()}>Refresh history</button></div>
    {items.length===0?<div className="empty-state"><strong>No IOC lookups recorded</strong><p>Enriched indicators will appear here after a provider lookup.</p></div>:
@@ -99,6 +100,6 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
      <td><div className="ioc-actions"><button className="text-button" onClick={()=>setSelected(item)}>Details</button>{canOperate&&<button className="text-button" disabled={busy} onClick={event=>void enrich(event as unknown as FormEvent<HTMLFormElement>,item.indicator_type,item.indicator_value,true)}>Recheck</button>}</div></td>
     </tr>)}</tbody></table></div>}
   </section>
-  <p className="integration-note">A clean verdict only reflects the available provider data at lookup time. AbuseIPDB is not applicable to domains, URLs or file hashes. Provider rate limits and account coverage affect returned evidence.</p>
+  <p className="integration-note">A clean verdict only reflects the available provider data at lookup time. AbuseIPDB and CrowdSec CTI support public IP lookups only. Provider rate limits and account coverage affect returned evidence.</p>
  </section>;
 }
