@@ -173,6 +173,11 @@ export const registerNucleiTarget = (payload: {name:string;url:string;authorizat
 export const startNucleiScan = (id:number): Promise<{scan:NucleiScan;queued:boolean;message:string}> =>
   request("/integrations/nuclei/targets/"+id+"/scans",{method:"POST",body:JSON.stringify({profile:"safe"})});
 
+export interface KaliTerminalHealth { integration:string; configured:boolean; status:"not_configured"|"healthy"|"unhealthy"; execution_enabled:boolean; }
+export const getKaliTerminalHealth = ():Promise<KaliTerminalHealth> => request("/integrations/kali/health");
+export const createKaliTerminalSession = ():Promise<{expires_in:number}> => request("/integrations/kali/session",{method:"POST"});
+export const revokeKaliTerminalSession = ():Promise<{revoked:boolean}> => request("/integrations/kali/session/revoke",{method:"POST"});
+
 export interface ShannonHealth {
   integration: string; configured: boolean;
   status: "not_configured" | "healthy" | "unhealthy";
