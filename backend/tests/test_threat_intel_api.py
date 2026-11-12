@@ -21,6 +21,8 @@ def test_enrichment_validates_indicator_and_missing_provider_config(client,db_se
     assert invalid.status_code==422
     monkeypatch.setattr(threat_router.settings,"virustotal_api_key","")
     monkeypatch.setattr(threat_router.settings,"abuseipdb_api_key","")
+    monkeypatch.setattr(threat_router.settings,"crowdsec_cti_api_key","")
+    monkeypatch.setattr(threat_router.settings,"crowdsec_cti_api_key","")
     unavailable=client.post("/api/v1/threat-intel/enrich",headers=headers,json={"indicator_type":"ip","indicator_value":"8.8.8.8"})
     assert unavailable.status_code==503
 
@@ -28,20 +30,24 @@ def test_enrichment_persists_deduplicates_and_caches(client,db_session,monkeypat
     headers=auth(db_session,UserRole.admin)
     monkeypatch.setattr(threat_router.settings,"virustotal_api_key","test-vt")
     monkeypatch.setattr(threat_router.settings,"abuseipdb_api_key","test-abuse")
-    calls={"vt":0,"abuse":0}
+    monkeypatch.setattr(threat_router.settings,"crowdsec_cti_api_key","")
+    calls={"vt":0,"abuse":0,"crowdsec":0}
     class FakeVT:
         async def enrich(self,kind,value):
             calls["vt"]+=1;return {"status":"ok","verdict":"malicious","risk_score":70,"details":{"analysis":{"malicious":7}}}
     class FakeAbuse:
         async def enrich(self,kind,value):
             calls["abuse"]+=1;return {"status":"ok","verdict":"suspicious","risk_score":30,"details":{"total_reports":4}}
-    monkeypatch.setattr(threat_router,"VirusTotalAdapter",FakeVT);monkeypatch.setattr(threat_router,"AbuseIPDBAdapter",FakeAbuse)
+    class FakeCrowdSec:
+        async def enrich(self,kind,value):
+            calls["crowdsec"]+=1;return {"status":"not_configured","verdict":"unknown","risk_score":None,"details":{}}
+    monkeypatch.setattr(threat_router,"VirusTotalAdapter",FakeVT);monkeypatch.setattr(threat_router,"AbuseIPDBAdapter",FakeAbuse);monkeypatch.setattr(threat_router,"CrowdSecCTIAdapter",FakeCrowdSec)
     payload={"indicator_type":"ip","indicator_value":"8.8.8.8"}
     first=client.post("/api/v1/threat-intel/enrich",headers=headers,json=payload)
     second=client.post("/api/v1/threat-intel/enrich",headers=headers,json=payload)
     assert first.status_code==200 and first.json()["verdict"]=="malicious" and first.json()["risk_score"]==70
     assert first.json()["cached"] is False and second.status_code==200 and second.json()["cached"] is True
-    assert calls=={"vt":1,"abuse":1} and db_session.query(ThreatIntelIOC).count()==1
+    assert calls=={"vt":1,"abuse":1,"crowdsec":1} and db_session.query(ThreatIntelIOC).count()==1
     assert db_session.query(AuditLog).filter_by(action="threat_intel.enrich").count()==1
     assert db_session.query(AuditLog).filter_by(action="threat_intel.enrich.cached").count()==1
 
