@@ -104,6 +104,8 @@ def authorize_terminal_request(
     request: Request,
     db: Session = Depends(get_db),
 ) -> Response:
+    if not settings.kali_terminal_enabled or not settings.kali_terminal_url:
+        raise HTTPException(403, "Kali terminal is disabled")
     token = request.cookies.get(COOKIE_NAME)
     unauthorized = HTTPException(401, "A valid OpsAegis terminal session is required")
     if not token:
