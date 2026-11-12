@@ -20,7 +20,7 @@ import { NucleiHealth, NucleiTarget, NucleiScan, getNucleiHealth, getNucleiTarge
 import { describeEngineHealth } from "./engineHealth";
 import {
   ApiError, Asset, Finding, Incident, User, WazuhCollection, WazuhHealth, WazuhManagerHealth, WazuhManagerSync, CrowdSecCollection, CrowdSecHealth, collectCrowdSec, getCrowdSecHealth, getWazuhManagerHealth, syncWazuhManager,
-  clearAccessToken, collectWazuh, createIncident, getAccessToken, getAssets, getCurrentUser,
+  clearAccessToken, revokeKaliTerminalSession, collectWazuh, createIncident, getAccessToken, getAssets, getCurrentUser,
   getFindings, getIncidents, getWazuhHealth, getDetections, Detection, login as loginRequest, saveAccessToken, updateFindingStatus, updateIncident,
 } from "./api";
 
@@ -389,6 +389,7 @@ function App() {
     setLoadErrors([]);
   }
   function handleLogout() {
+    void revokeKaliTerminalSession().catch(() => undefined);
     clearAccessToken();
     setPostLoginTransition(false);
     setToken(null);
