@@ -1011,3 +1011,16 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 :root[data-theme="light"] .kali-terminal-workspace{border-color:#dce4ee;background:#fff}
 :root[data-theme="light"] .kali-terminal-frame{border-color:#dce4ee;background:#f8fafc}
 @media(max-width:760px){.kali-terminal-frame{height:60vh;min-height:360px}.kali-terminal-workspace{padding:13px}}
+
+
+.engine-command-guide{display:grid;gap:14px;margin-top:16px;padding:18px;border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel)}
+.engine-command-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.engine-command-card{display:grid;align-content:start;gap:12px;min-width:0;padding:15px;border:1px solid var(--aegis-border);border-radius:9px;background:var(--aegis-panel-muted)}
+.engine-command-card h4{margin:3px 0 0;color:var(--aegis-text);font-size:15px}
+.engine-command{display:grid;gap:7px;min-width:0}
+.engine-command-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.engine-command-heading strong{font-size:11px;color:var(--aegis-text)}
+.engine-command pre{max-width:100%;margin:0;padding:11px;border:1px solid var(--aegis-border);border-radius:7px;background:#0c1420;color:#d8e5f5;white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto}
+.engine-command code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;line-height:1.65}
+.engine-command small{color:var(--aegis-muted);font-size:10px;line-height:1.55}
+@media(max-width:760px){.engine-command-columns{grid-template-columns:1fr}.engine-command-guide{padding:13px}}
