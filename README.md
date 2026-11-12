@@ -192,6 +192,8 @@ To report a security issue, contact the repository maintainer through a private 
 | [Data flow](docs/DATA_FLOW.md) | Collection, normalization, detections and incidents |
 | [Local development](docs/LOCAL_DEVELOPMENT.md) | Workstation setup and development commands |
 | [Railway deployment](docs/RAILWAY_DEPLOYMENT.md) | Current hosted service topology and deployment checks |
+| [Kali terminal deployment](docs/KALI_TERMINAL_DEPLOYMENT.md) | Separate Railway Kali web terminal setup and frontend connection |
+| [Engine operator commands](docs/ENGINE_OPERATOR_COMMANDS.md) | Nuclei and Shannon install and CLI usage |
 | [Production Docker deployment](docs/PRODUCTION_DEPLOYMENT.md) | Self-managed production Compose setup |
 | [Configuration reference](docs/CONFIGURATION_REFERENCE.md) | Environment-variable handling and secret scope |
 | [Integration matrix](docs/INTEGRATION_MATRIX.md) | Provider capabilities, prerequisites and limitations |
