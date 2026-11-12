@@ -254,7 +254,7 @@ export type IOCType = "ip" | "domain" | "url" | "hash";
 export interface ThreatIntelProviderResult { status:string; verdict:"malicious"|"suspicious"|"clean"|"unknown"; risk_score:number|null; details:Record<string,unknown>; }
 export interface ThreatIntelIOC {
  id:number;indicator_type:IOCType;indicator_value:string;verdict:"malicious"|"suspicious"|"clean"|"unknown";
- risk_score:number|null;provider_results:{virustotal:ThreatIntelProviderResult;abuseipdb:ThreatIntelProviderResult;crowdsec_cti:ThreatIntelProviderResult};
+ risk_score:number|null;provider_results:{virustotal:ThreatIntelProviderResult;abuseipdb:ThreatIntelProviderResult;crowdsec_cti?:ThreatIntelProviderResult};
  enriched_at:string|null;created_at:string;cached?:boolean;
 }
 export interface ThreatIntelProviders { virustotal:{configured:boolean;status:string};abuseipdb:{configured:boolean;status:string};crowdsec_cti:{configured:boolean;status:string};cache_ttl_seconds:number; }
