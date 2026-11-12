@@ -561,7 +561,7 @@ function NucleiPanel({canOperate,isAdmin,assets}:{canOperate:boolean;isAdmin:boo
  }
  async function scan(id:number){
   setBusy(true);setError("");setMessage("");
-  try{const r=await startNucleiScan(id);setMessage("Scan "+r.scan.status+": "+r.received+" results ("+r.inserted+" new, "+r.updated+" updated).");await refresh();}
+  try{const r=await startNucleiScan(id);setMessage(r.queued?"Scan #"+r.scan.id+" queued successfully. The isolated worker will update its status and findings as execution completes.":r.message||"Scan request accepted.");await refresh();}
   catch(e){setError(e instanceof Error?e.message:"Nuclei scan failed.");}finally{setBusy(false);}
  }
  if(!canOperate)return null;
@@ -578,6 +578,6 @@ function NucleiPanel({canOperate,isAdmin,assets}:{canOperate:boolean;isAdmin:boo
   </form>}
   <div className="nuclei-target-list"><h4>Registered targets</h4>{targets.length?targets.map(t=><div className="nuclei-target-row" key={t.id}><div><strong>{t.name}</strong><small>{t.url} · {t.authorization_reference}</small></div><button className="primary-button compact" disabled={busy||!health?.execution_enabled||!t.enabled} onClick={()=>void scan(t.id)}>Run safe scan</button></div>):<EmptyState title="No authorized targets" detail="An administrator must register an approved HTTPS target before scanning."/>}</div>
   <div className="nuclei-target-list"><h4>Recent scan history</h4>{scans.length?scans.slice(0,10).map(s=><div className="nuclei-target-row" key={s.id}><div><strong>Scan #{s.id} · Target #{s.target_id}</strong><small>{s.status} · {s.findings_count} findings · {formatDate(s.created_at)}</small></div><span className="tag">{s.profile}</span></div>):<EmptyState title="No scans yet" detail="Scan execution history will appear here."/>}</div>
-  {!health?.execution_enabled&&<p className="integration-note">Execution remains disabled until NUCLEI_ENABLED=true and the Nuclei binary is installed in the backend runtime.</p>}
+  {!health?.execution_enabled&&<p className="integration-note">Execution remains disabled until NUCLEI_ENABLED=true, NUCLEI_WORKER_ENABLED=true, and the isolated Nuclei worker is deployed, healthy and protected by an outbound target allowlist.</p>}
  </section>;
 }
