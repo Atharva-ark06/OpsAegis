@@ -9,6 +9,7 @@ This guide describes the current OpsAegis Railway project topology. It is not a 
 | Frontend | `/frontend` | `frontend/Dockerfile.production` |
 | API | `/backend` | `backend/Dockerfile.production` |
 | Detection worker | `/backend` | `backend/Dockerfile.production`, start command `python -m app.worker` |
+| Kali terminal (planned; not provisioned) | `/runner/kali-terminal` | `runner/kali-terminal/Dockerfile`, private ttyd service |
 | PostgreSQL | Managed Railway service | Persistent database |
 | Redis | Managed Railway service | Queue/cache/coordination |
 
@@ -69,3 +70,12 @@ Set integration credentials in the API service only unless a specific worker exp
 - Validate the public frontend after deployment; do not assume a successful build means the UI feature works.
 
 For local production Compose deployment, see [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md).
+
+
+## Kali team terminal
+
+The Kali terminal is a planned separate service in the same production environment; Railway has not provisioned it yet because the current project hit its Free-plan resource limit. Once capacity is available, it must use root directory `/runner/kali-terminal`, private endpoint `kali-terminal`, `PORT=7681`, and a persistent volume mounted at `/workspace`. Do not create a public Railway domain or TCP proxy for it.
+
+The frontend exposes only the same-origin `/terminal/` path. Nginx performs an API `auth_request` for every terminal page request and WebSocket handshake. The API issues a five-minute HttpOnly, Secure-in-production, SameSite=Strict cookie only to active administrators and analysts; it rechecks the current database role and account status. Viewers are denied. The API service uses `KALI_TERMINAL_ENABLED=true` and `KALI_TERMINAL_URL=http://kali-terminal.railway.internal:7681` after the terminal service is deployed and reachable.
+
+The shell runs as an unprivileged Linux user. The team shares the container and persistent `/workspace` directory; do not treat it as per-user filesystem isolation. The terminal is for authorized lab, CTF and administrative use only. Its availability does not grant permission to scan arbitrary targets or bypass the separate Nuclei/Shannon authorization workflows.

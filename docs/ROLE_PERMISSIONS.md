@@ -13,6 +13,7 @@ OpsAegis applies authorization in the API. Frontend visibility is a usability ai
 | Add investigation notes and evidence | No | Yes | Yes |
 | Manage users and roles | No | No | Yes |
 | Register authorized scan targets | No | No | Yes |
+| Use the authenticated shared Kali terminal | No | Yes | Yes |
 | Dispatch gated Shannon assessment | No | No | Yes |
 | Approve/reject playbook requests | No | Per workflow policy | Per workflow policy |
 

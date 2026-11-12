@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, getPlaybooks, getPlaybookActions, previewPlaybook, createPlaybookApproval, getPlaybookApprovals, decidePlaybookApproval, getOperationsReport, downloadOperationsReport, login, saveAccessToken } from "./api";
+import { ApiError, clearAccessToken, getAccessToken, getAssets, getNucleiHealth, getShannonHealth, getPlaybookExecutions, getPlaybooks, getPlaybookActions, previewPlaybook, createPlaybookApproval, getPlaybookApprovals, decidePlaybookApproval, getOperationsReport, downloadOperationsReport, getKaliTerminalHealth, createKaliTerminalSession, revokeKaliTerminalSession, login, saveAccessToken } from "./api";
 
 function mockResponse(status: number, payload: unknown) {
   return {
@@ -112,6 +112,35 @@ describe("OpsAegis API client", () => {
     );
     const options = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
     expect(new Headers(options.headers).get("Authorization")).toBe("Bearer analyst-session");
+  });
+
+
+  it("loads Kali terminal health through the authenticated API", async () => {
+    saveAccessToken("analyst-session");
+    const health = { integration: "kali-terminal", configured: true, status: "healthy", execution_enabled: true };
+    vi.mocked(fetch).mockResolvedValueOnce(mockResponse(200, health));
+    await expect(getKaliTerminalHealth()).resolves.toEqual(health);
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/integrations/kali/health",
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    );
+  });
+
+  it("requests and revokes short-lived Kali terminal sessions", async () => {
+    saveAccessToken("analyst-session");
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockResponse(200, { expires_in: 300 }))
+      .mockResolvedValueOnce(mockResponse(200, { revoked: true }));
+    await expect(createKaliTerminalSession()).resolves.toEqual({ expires_in: 300 });
+    await expect(revokeKaliTerminalSession()).resolves.toEqual({ revoked: true });
+    expect(fetch).toHaveBeenNthCalledWith(1,
+      "http://localhost:8000/api/v1/integrations/kali/session",
+      expect.objectContaining({ method: "POST", headers: expect.any(Headers) }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(2,
+      "http://localhost:8000/api/v1/integrations/kali/session/revoke",
+      expect.objectContaining({ method: "POST", headers: expect.any(Headers) }),
+    );
   });
 
   it("removes the session token on explicit sign out", () => {

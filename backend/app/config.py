@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     shannon_timeout_seconds: int = Field(default=15, validation_alias="SHANNON_TIMEOUT_SECONDS")
     shannon_max_response_bytes: int = Field(default=5242880, validation_alias="SHANNON_MAX_RESPONSE_BYTES")
     shannon_max_findings: int = Field(default=200, validation_alias="SHANNON_MAX_FINDINGS")
+    kali_terminal_enabled: bool = Field(default=False, validation_alias="KALI_TERMINAL_ENABLED")
+    kali_terminal_url: str | None = Field(default=None, validation_alias="KALI_TERMINAL_URL")
     evidence_storage_path: str = Field(default="./.data/evidence", validation_alias="EVIDENCE_STORAGE_PATH")
     evidence_max_attachment_bytes: int = Field(default=10485760, validation_alias="EVIDENCE_MAX_ATTACHMENT_BYTES")
     evidence_max_incident_bytes: int = Field(default=104857600, validation_alias="EVIDENCE_MAX_INCIDENT_BYTES")
@@ -162,6 +164,12 @@ class Settings(BaseSettings):
             raise ValueError("SHANNON_ENABLED requires SHANNON_RUNNER_URL and SHANNON_RUNNER_TOKEN")
         if self.shannon_runner_url and not self.shannon_runner_url.startswith("https://"):
             raise ValueError("SHANNON_RUNNER_URL must use HTTPS")
+        if self.kali_terminal_enabled and not self.kali_terminal_url:
+            raise ValueError("KALI_TERMINAL_ENABLED requires KALI_TERMINAL_URL")
+        if self.kali_terminal_url and self.environment.lower() == "production":
+            terminal_parts = urlsplit(self.kali_terminal_url)
+            if terminal_parts.scheme != "http" or not terminal_parts.hostname or terminal_parts.hostname != "kali-terminal.railway.internal" or terminal_parts.port != 7681 or terminal_parts.path or terminal_parts.query or terminal_parts.fragment:
+                raise ValueError("Production KALI_TERMINAL_URL must be the private Railway terminal hostname on port 7681")
         return self
 
     @property
