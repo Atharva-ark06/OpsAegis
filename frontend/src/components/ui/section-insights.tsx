@@ -46,6 +46,7 @@ export function SectionInsights({view,assets,findings,incidents}:Props){
  };
  const [eyebrow,title,description]=heading[view]||heading.reports;
  const sourceGroups=keys.slice(0,3).map(k=>({label:label(k),value:String(rawGroups.get(k)||0)}));
+ const tableRows=sourceGroups.map(r=>({label:r.label,values:[r.value]}));
  const sessionsTotal=detectionDays.reduce((a,b)=>a+b,0)+incidentDays.reduce((a,b)=>a+b,0);
  const eventSeries=days.length>=2?days:[{label:"No data",value:0},{label:"No data",value:0}];
  const dSeries=detectionDays.length>=2?detectionDays:[0,0],iSeries=incidentDays.length>=2?incidentDays:[0,0];
@@ -59,7 +60,7 @@ export function SectionInsights({view,assets,findings,incidents}:Props){
    credit={false}
    revenue={{label:view==="assets"?"Registered assets":view==="incidents"?"Incidents":"Records in section",value:sectionRows.length,delta:"API",note:"Current authenticated record set",caption:"First-seen / created activity · 30 days",series:eventSeries}}
    sessions={{label:"Security event streams",value:sessionsTotal,delta:"30D",note:"Persisted findings + incident records",desktop:[dSeries],mobile:[iSeries],labels:{desktop:"Findings",mobile:"Incidents",prior:"",current:"daily activity"}}}
-   categories={{title:view==="assets"?"Assets by environment":view==="incidents"?"Incidents by severity":view==="integrations"||view==="threat-intel"?"Findings by source":"Records by classification",groups:groups.length?groups:[{id:"none",name:"No records",color:"#6b7280"}],periods:[{label:"Weekly",total:weekly,delta:"API",compare:"Records created / first seen in 7 days"},{label:"Monthly",total:monthly,delta:"API",compare:"Records created / first seen in 30 days"},{label:"Loaded",total:sectionRows.length,delta:"API",compare:"Current authenticated API response"}],items:records,table:{columns:["Category","Records"],rows:sourceGroups}}}
+   categories={{title:view==="assets"?"Assets by environment":view==="incidents"?"Incidents by severity":view==="integrations"||view==="threat-intel"?"Findings by source":"Records by classification",groups:groups.length?groups:[{id:"none",name:"No records",color:"#6b7280"}],periods:[{label:"Weekly",total:weekly,delta:"API",compare:"Records created / first seen in 7 days"},{label:"Monthly",total:monthly,delta:"API",compare:"Records created / first seen in 30 days"},{label:"Loaded",total:sectionRows.length,delta:"API",compare:"Current authenticated API response"}],items:records,table:{columns:["Category","Records"],rows:tableRows}}}
    seasonality={{title:"Security activity rhythm",axis:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],years:[{label:"30 days",values:weekday,stats:[{label:"Active incidents",value:active,delta:"LIVE",note:"current incident records"},{label:"Open findings",value:open,delta:"LIVE",note:"new + triaged"}],rows:sourceGroups.map(r=>({label:r.label,value:r.value}))}]}}
    colors={{revenue:["#22d3ee","#3bf08c"],desktop:["#22d3ee","#3c2cff"],mobile:["#ffb800","#ff3da5"],radar:"#3bf08c"}}
   />
