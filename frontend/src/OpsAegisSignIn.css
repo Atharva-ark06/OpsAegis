@@ -50,3 +50,79 @@
     min-height: 0;
   }
 }
+
+
+/* Tighten the form on shorter laptop and mobile viewports. */
+@media (max-height: 760px) {
+  .oa-auth-main {
+    padding-top: 16px;
+    padding-bottom: 14px;
+  }
+  .oa-auth-content {
+    padding-top: 12px;
+    padding-bottom: 8px;
+  }
+  .oa-auth-tabs {
+    margin-bottom: 16px;
+  }
+  .oa-auth-copy {
+    margin-top: 7px;
+    margin-bottom: 12px;
+  }
+  .oa-auth-divider {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  .oa-auth-form {
+    gap: 5px;
+  }
+  .oa-auth-form label {
+    margin-top: 3px;
+  }
+  .oa-auth-form input:not([type=checkbox]) {
+    height: 41px;
+  }
+  .oa-submit {
+    height: 44px;
+  }
+  .oa-auth-note {
+    margin-top: 9px;
+  }
+  .oa-provision-steps {
+    gap: 11px 10px;
+    margin-top: 13px;
+    margin-bottom: 13px;
+  }
+}
+@media (max-height: 620px) {
+  .oa-auth-main {
+    padding-top: 10px;
+    padding-bottom: 9px;
+  }
+  .oa-auth-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .oa-auth-tabs button {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .oa-auth-card h1 {
+    font-size: 29px;
+  }
+  .oa-auth-copy {
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 8px;
+  }
+  .oa-auth-form input:not([type=checkbox]) {
+    height: 38px;
+  }
+  .oa-submit {
+    height: 40px;
+    margin-top: 5px;
+  }
+  .oa-auth-footer {
+    font-size: 9px;
+  }
+}
