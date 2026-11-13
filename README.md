@@ -11,6 +11,20 @@
   <a href="https://github.com/Atharva-ark06/OpsAegis/pulls">Pull requests</a>
 </p>
 
+## Contents
+
+- [What it does](#what-it-does)
+- [Production dashboard](#production-dashboard)
+- [Capabilities](#capabilities)
+- [Architecture](#architecture)
+- [Local development](#quick-start--local-development)
+- [Production deployment](#production-deployment)
+- [Configuration and secrets](#configuration-and-secrets)
+- [Development and verification](#development-and-verification)
+- [Security and authorization](#security-and-authorization)
+- [Documentation map](#documentation-map)
+- [Project status](#project-status)
+
 ---
 
 ## What it does
