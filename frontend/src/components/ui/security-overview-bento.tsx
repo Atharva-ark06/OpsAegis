@@ -39,15 +39,9 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
 
   const points = trends?.points ?? [];
   const dailyEvents = points.map((p) => ({ label: dateLabel(p.start), value: p.detections + p.incidents }));
-  const detectionSeries = points.map((p) => p.detections);
-  const incidentSeries = points.map((p) => p.incidents);
-  const runSeries = points.map((p) => p.collection_runs);
   const successSeries = points.map((p) => p.collection_succeeded);
   const failureSeries = points.map((p) => p.collection_failed);
   const eventTotal = sum(dailyEvents.map((p) => p.value));
-  const runTotal = sum(runSeries);
-  const successTotal = sum(successSeries);
-  const failureTotal = sum(failureSeries);
   const openFindings = findings.filter((f) => ["new", "triaged"].includes(f.status)).length;
   const activeIncidents = incidents.filter((i) => ["open", "investigating", "contained"].includes(i.status)).length;
   const weeklyFindings = findings.filter((f) => Date.now() - new Date(f.first_seen_at).getTime() <= 7 * 86400000).length;
@@ -58,8 +52,6 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
   points.forEach((p) => { weekday[new Date(p.start).getUTCDay()] += p.detections + p.incidents; });
   const sourceRows = report?.collection.sources ?? [];
   const activitySeries = dailyEvents.length >= 2 ? dailyEvents : dailyZeroSeries(new Date(Date.now()-86400000), new Date());
-  const detections = detectionSeries.length >= 2 ? detectionSeries : [0, 0];
-  const incidentsByDay = incidentSeries.length >= 2 ? incidentSeries : [0, 0];
   const collectionSuccess = successSeries.length >= 2 ? successSeries : [0, 0];
   const collectionFailure = failureSeries.length >= 2 ? failureSeries : [0, 0];
   const sessionsCount = sum(collectionSuccess) + sum(collectionFailure);
