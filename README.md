@@ -25,7 +25,7 @@
 - [Documentation map](#documentation-map)
 - [Project status](#project-status)
 
----
+--- 
 
 ## What it does
 
