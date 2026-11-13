@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Asset, Finding, Incident, OperationsReport, OperationsTrends } from "../../api";
-import { getOperationsReport, getOperationsTrends } from "../api";
+import { getOperationsReport, getOperationsTrends } from "../../api";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
 const SEVERITIES = ["critical", "high", "medium", "low", "informational", "unknown"] as const;
