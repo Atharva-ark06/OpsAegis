@@ -330,7 +330,9 @@ void main(){
   float k = key*e.x*e.y;
   float E = energyAt(rp, uMouse, uRadius, uPresence, fl.b);
   float show = (1.0 - max(E, uRest))*uIntroVis;
-  vec3 mat = uAlphaMode > 0.5 ? col : col*(uBg/max(uImgBg, vec3(0.001)));
+  // Shift flat-background assets instead of scaling them: scaling against a near-black
+  // dark-theme source background would crush highlights or saturate the metallic sculpture.
+  vec3 mat = uAlphaMode > 0.5 ? col : clamp(col + (uBg - uImgBg), 0.0, 1.0);
   // premultiplied: empty areas stay transparent so the page (and the backdrop word) shows through
   float A = k*show;
   o = vec4(mat*A, A);
