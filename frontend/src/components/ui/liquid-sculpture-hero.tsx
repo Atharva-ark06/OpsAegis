@@ -1044,6 +1044,8 @@ export interface SculptureHeroProps {
   body?: string
   primaryCta?: SculptureHeroLink
   onPrimaryCtaClick?: () => void
+  onNavCtaClick?: () => void
+  supportingText?: string
   secondaryCta?: SculptureHeroLink
   hint?: string
   hintTouch?: string
@@ -1190,6 +1192,7 @@ const CSS = `
 .sh-stage{position:absolute;inset:0;z-index:0;pointer-events:none}
 .sh-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .5s ease}
 .sh-fallback{position:absolute;display:block;max-width:none;user-select:none;-webkit-user-drag:none;transition:opacity .5s ease}
+.sh-root[data-theme="dark"] .sh-fallback{mix-blend-mode:screen;filter:brightness(1.18) contrast(1.06)}
 .sh-root[data-gl="on"] .sh-canvas{opacity:1}
 .sh-root[data-gl="on"] .sh-fallback{opacity:0}
 .sh-root[data-swap="1"] .sh-canvas{opacity:0;transition-duration:.25s}
@@ -1225,6 +1228,7 @@ const CSS = `
 .sh-h1 .sh-line{display:block}
 .sh-accent{font-family:var(--sh-accent);font-style:italic;font-weight:400;letter-spacing:-.02em;color:var(--sh-acc)}
 .sh-aside{max-width:400px;justify-self:end;padding-bottom:.6em}
+.sh-supporting{max-width:520px;margin:clamp(16px,1.8cqw,26px) 0 0;font-size:clamp(15px,1.1cqw,17px);line-height:1.55;letter-spacing:-.015em;opacity:.72;text-wrap:pretty}
 .sh-body{font-size:clamp(15px,1.1cqw,17px);line-height:1.5;letter-spacing:-.01em;margin:0 0 26px;opacity:.78;text-wrap:pretty}
 .sh-ctas{display:flex;flex-wrap:wrap;align-items:center;gap:22px}
 .sh-btn{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 22px;border-radius:999px;background:var(--sh-fg);
@@ -1343,6 +1347,8 @@ export default function SculptureHero(props: SculptureHeroProps) {
     body = DEFAULTS.body,
     primaryCta = DEFAULTS.primaryCta,
     onPrimaryCtaClick,
+    onNavCtaClick,
+    supportingText,
     secondaryCta = DEFAULTS.secondaryCta,
     hint = DEFAULTS.hint,
     hintTouch = DEFAULTS.hintTouch,
@@ -1650,7 +1656,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
   const hintText = isTouch ? hintTouch : hint
 
   return (
-    <section ref={rootRef} className={"sh-root" + (className ? " " + className : "")} style={{ ...vars, ...style }}>
+    <section ref={rootRef} data-theme={mode} className={"sh-root" + (className ? " " + className : "")} style={{ ...vars, ...style }}>
       <style>{CSS}</style>
       {backdropText ? (
         <div ref={backdropRef} className="sh-backdrop" aria-hidden="true">
@@ -1689,7 +1695,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
             )}
             {navCta && navCta.label && (
               <li className="sh-keep">
-                <a className="sh-navcta" href={navCta.href}>
+                <a className="sh-navcta" href={onNavCtaClick ? "#login" : navCta.href} onClick={onNavCtaClick ? (event) => { event.preventDefault(); onNavCtaClick() } : undefined}>
                   {navCta.label}
                 </a>
               </li>
@@ -1710,6 +1716,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
         <div>
           {eyebrow ? <p className="sh-eyebrow">{eyebrow}</p> : null}
           <h1 className="sh-h1">{renderHeadline(headline, headlineAccent)}</h1>
+          {supportingText ? <p className="sh-supporting">{supportingText}</p> : null}
         </div>
         <div className="sh-aside">
           {body ? <p className="sh-body">{body}</p> : null}
