@@ -289,7 +289,8 @@ function App() {
       const resolved: ThemeMode = theme === "system"
         ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
         : theme;
-      document.documentElement.dataset.theme = resolved;\n      document.documentElement.classList.toggle("dark", resolved === "dark");
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.classList.toggle("dark", resolved === "dark");
       setSystemTheme((current) => current === resolved ? current : resolved);
     };
     applyTheme();
