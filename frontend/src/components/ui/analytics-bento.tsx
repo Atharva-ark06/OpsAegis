@@ -424,12 +424,12 @@ function Treemap({ data, period, mono, tip }: { data: AnalyticsBentoProps["categ
   const [placed, setPlaced] = React.useState(false);
   React.useEffect(() => { if (W) { const r = requestAnimationFrame(() => requestAnimationFrame(() => setPlaced(true))); return () => cancelAnimationFrame(r); } }, [W]);
   const G = 6;
-  const items = data.items.map((i) => ({ name: i.name, group: i.group, v: i.values[period] ?? 0 })).sort((a, b) => b.v - a.v);
+  const items = data.items.map((i) => ({ name: i.name, group: i.group, v: i.values[period] ?? 0 })).filter((i) => i.v > 0).sort((a, b) => b.v - a.v);
   const total = items.reduce((a, b) => a + b.v, 0) || 1;
   const rects = W ? squarify(items, 0, 0, W + G, H + G) : [];
   return (
     <div ref={ref} className="relative mt-1.5 h-[300px] sm:h-[340px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
-      {rects.map((r) => {
+      {!rects.length && <div className="grid h-full place-items-center text-xs text-muted-foreground">No records in this period.</div>}\n      {rects.map((r) => {
         const g = data.groups.find((x) => x.id === r.group)!;
         const w = r.w - G, h = r.h - G, share = ((r.v / total) * 100).toFixed(2).replace(/\.?0+$/, "") + "%";
         const chars = fmt(r.v).length;
