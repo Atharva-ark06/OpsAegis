@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { bootstrapFirstAdmin, getAuthSetupStatus } from "./api";
 import { MetallicButton } from "./components/ui/metallic-button";
+import SculptureHero from "./components/ui/liquid-sculpture-hero";
 import "./OpsAegisSignIn.css";
 
 type ThemePreference = "dark" | "light" | "system";
@@ -16,6 +17,7 @@ interface OpsAegisSignInProps {
 
 export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "setup">("sign-in");
+  const [showAuth, setShowAuth] = useState(false);
   const [setupToken, setSetupToken] = useState("");
   const [setupRequired, setSetupRequired] = useState(false);
   const [setupEnabled, setSetupEnabled] = useState(false);
@@ -46,7 +48,28 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
   }
 
   return (
-    <main className="oa-auth">
+    <>
+      <SculptureHero
+        brand="OpsAegis"
+        navLinks={[{ label: "Platform", href: "#platform" }, { label: "Security", href: "#security" }, { label: "Intelligence", href: "#intelligence" }, { label: "About", href: "#about" }]}
+        navCta={{ label: "Contact", href: "mailto:security@opsaegis.local" }}
+        eyebrow="SECURITY OPERATIONS — BUILT FOR RESILIENCE"
+        headline={"Clarity in\\nevery signal."}
+        headlineAccent="every signal."
+        body="See threats sooner. Respond with confidence. Keep every operation in control."
+        primaryCta={{ label: "Login Now", href: "#login" }}
+        secondaryCta={undefined}
+        backdropText="OPSAEGIS"
+        showCredit={false}
+        background="#F0EEEA"
+        imageBackground="#EAE9E7"
+        sculptureScale={1.02}
+        onPrimaryCtaClick={() => setShowAuth(true)}
+      />
+      {showAuth && <div className="oa-login-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuth(false); }}>
+        <div className="oa-login-dialog" role="dialog" aria-modal="true" aria-label="OpsAegis sign in">
+          <button className="oa-login-close" type="button" aria-label="Close sign in" onClick={() => setShowAuth(false)}>×</button>
+          <main className="oa-auth oa-auth-modal">
       <section className="oa-auth-main">
         <header className="oa-auth-header">
           <a className="oa-auth-brand" href="/" aria-label="OpsAegis home">
@@ -131,7 +154,10 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
         </div>
         <div className="oa-aside-caption"><span>BUILT FOR SECURITY OPERATIONS</span><strong>One workspace. Clearer signals. Faster response.</strong></div>
       </aside>
-    </main>
+          </main>
+        </div>
+      </div>}
+    </>
   );
 }
 
