@@ -1,9 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+module.exports = {\n  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
-      colors: {
+      colors: {\n        background: "var(--ab-background)",\n        foreground: "var(--ab-foreground)",\n        card: "var(--ab-card)",\n        muted: "var(--ab-muted)",\n        "muted-foreground": "var(--ab-muted-foreground)",\n        border: "var(--ab-border)",\n        popover: "var(--ab-popover)",\n        "popover-foreground": "var(--ab-foreground)",\n        ring: "var(--ab-ring)",
         ops: {
           canvas: "#080e18",
           sidebar: "#0b1421",
