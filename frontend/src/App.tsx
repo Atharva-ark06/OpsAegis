@@ -290,6 +290,7 @@ function App() {
         ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
         : theme;
       document.documentElement.dataset.theme = resolved;
+      document.documentElement.classList.toggle("dark", resolved === "dark");
       setSystemTheme((current) => current === resolved ? current : resolved);
     };
     applyTheme();
@@ -511,7 +512,7 @@ function App() {
       {collectionError && <div className="error-banner" role="alert">{collectionError}</div>}
 
       {view === "overview" && <div className="page-content">
-        <section className="welcome-row"><div><p className="eyebrow">OPERATIONAL SNAPSHOT</p><h2>Security posture at a glance.</h2><p>Live records retrieved from your OpsAegis database. No demo metrics or synthetic telemetry are included.</p></div><div className="snapshot-stamp"><span className="live-dot" /> API DATA SESSION <small>{loadState === "ready" ? "LATEST API READ COMPLETE" : loadState === "error" ? "API READ DEGRADED" : "SYNCING API DATA"}</small></div></section>
+        
         <SecurityOverviewBento assets={assets} findings={findings} incidents={incidents} refreshKey={refreshKey} />
         <OperationsPanel isAdmin={user.role === "admin"} refreshKey={refreshKey} />
         {canOperate && <ExecutionLedgerPanel refreshKey={refreshKey} />}
