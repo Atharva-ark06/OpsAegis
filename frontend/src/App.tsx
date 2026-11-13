@@ -483,7 +483,7 @@ function App() {
   if (authState === "loading" || (token && !user && authState !== "idle")) {
     return <PrismFluxLoader size={64} speed={5} textSize={28} />;
   }
-  if (!token || !user) return <OpsAegisSignIn onLogin={handleLogin} theme={theme} onThemeChange={setTheme} />;
+  if (!token || !user) return <OpsAegisSignIn onLogin={handleLogin} theme={resolvedTheme} onThemeChange={setTheme} />;
 
   return <AppDashboardShell
     workspace={{ name: "OpsAegis", plan: "Security Operations" }}

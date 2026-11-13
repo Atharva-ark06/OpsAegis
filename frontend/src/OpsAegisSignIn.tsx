@@ -15,7 +15,7 @@ interface OpsAegisSignInProps {
   onThemeChange: (value: ThemePreference) => void;
 }
 
-export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
+export function OpsAegisSignIn({ onLogin, theme }: OpsAegisSignInProps) {
   const [mode, setMode] = useState<"sign-in" | "sign-up" | "setup">("sign-in");
   const [showAuth, setShowAuth] = useState(false);
   const [setupToken, setSetupToken] = useState("");
@@ -61,7 +61,9 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
         secondaryCta={undefined}
         backdropText="OPSAEGIS"
         showCredit={false}
+        theme={theme === "light" ? "light" : "dark"}
         background="#F0EEEA"
+        darkBackground="#111110"
         imageBackground="#EAE9E7"
         sculptureScale={1.02}
         onPrimaryCtaClick={() => setShowAuth(true)}
