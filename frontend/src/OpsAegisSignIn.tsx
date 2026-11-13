@@ -51,12 +51,13 @@ export function OpsAegisSignIn({ onLogin, theme }: OpsAegisSignInProps) {
     <>
       <SculptureHero
         brand="OpsAegis"
-        navLinks={[{ label: "Platform", href: "#platform" }, { label: "Security", href: "#security" }, { label: "Intelligence", href: "#intelligence" }, { label: "About", href: "#about" }]}
-        navCta={{ label: "Contact", href: "mailto:security@opsaegis.local" }}
+        navLinks={theme === "dark" ? [{ label: "Features", href: "#features" }, { label: "Solutions", href: "#solutions" }, { label: "Resources", href: "#resources" }, { label: "Pricing", href: "#pricing" }, { label: "About", href: "#about" }] : [{ label: "Platform", href: "#platform" }, { label: "Security", href: "#security" }, { label: "Intelligence", href: "#intelligence" }, { label: "About", href: "#about" }]}
+        navCta={theme === "dark" ? { label: "Login Now", href: "#login" } : { label: "Contact", href: "mailto:security@opsaegis.local" }}
         eyebrow={theme === "dark" ? "AI-NATIVE OPS PLATFORM" : "SECURITY OPERATIONS — BUILT FOR RESILIENCE"}
         headline={theme === "dark" ? "Unified Ops.\nUnstoppable Impact." : "Clarity in\nevery signal."}
         headlineAccent={theme === "dark" ? "Unstoppable Impact." : "every signal."}
-        body={theme === "dark" ? "From real-time visibility to intelligent automation, OpsAegis helps modern operations teams anticipate, adapt, and get ahead.\n\nOpsAegis brings people, processes, and data together so teams can move faster, stay secure, and deliver extraordinary outcomes." : "See threats sooner. Respond with confidence. Keep every operation in control."}
+        body={theme === "dark" ? "From real-time visibility to intelligent automation, OpsAegis helps modern operations teams anticipate, adapt, and get ahead." : "See threats sooner. Respond with confidence. Keep every operation in control."}
+        supportingText={theme === "dark" ? "OpsAegis brings people, processes, and data together so teams can move faster, stay secure, and deliver extraordinary outcomes." : undefined}
         primaryCta={{ label: "Login Now", href: "#login" }}
         secondaryCta={undefined}
         backdropText="OPSAEGIS"
@@ -64,10 +65,11 @@ export function OpsAegisSignIn({ onLogin, theme }: OpsAegisSignInProps) {
         theme={theme === "light" ? "light" : "dark"}
         background="#F0EEEA"
         darkBackground="#111110"
-        imageBackground={theme === "dark" ? "#111110" : "#EAE9E7"}
-        sculptureScale={theme === "dark" ? 1.08 : 1.02}
+        sculptureScale={theme === "dark" ? 1 : 1.02}
+        sculptureY={theme === "dark" ? 5.5 : 0}
         accentColor={theme === "dark" ? "#D9B98F" : undefined}
         onPrimaryCtaClick={() => setShowAuth(true)}
+        onNavCtaClick={theme === "dark" ? () => setShowAuth(true) : undefined}
       />
       {showAuth && <div className="oa-login-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuth(false); }}>
         <div className="oa-login-dialog" role="dialog" aria-modal="true" aria-label="OpsAegis sign in">
