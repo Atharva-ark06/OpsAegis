@@ -1193,6 +1193,14 @@ const CSS = `
 .sh-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .5s ease}
 .sh-fallback{position:absolute;display:block;max-width:none;user-select:none;-webkit-user-drag:none;transition:opacity .5s ease}
 .sh-root[data-theme="dark"] .sh-fallback{mix-blend-mode:screen;filter:brightness(1.18) contrast(1.06)}
+.sh-root[data-theme="dark"] .sh-navcta,.sh-root[data-theme="dark"] .sh-btn{background:#E9CDAA;color:#171411;border-color:#E9CDAA}
+.sh-root[data-theme="dark"] .sh-navcta{padding:10px 22px;font-size:14px;font-weight:500}
+@media (max-height:760px) and (min-width:1024px){
+  .sh-root .sh-h1{font-size:clamp(48px,8.5cqh,72px)}
+  .sh-root .sh-content{padding-bottom:clamp(18px,2.2cqh,28px)}
+  .sh-root .sh-supporting{margin-top:12px;font-size:14px;line-height:1.4}
+  .sh-root .sh-body{margin-bottom:16px;font-size:14px}
+}
 .sh-root[data-gl="on"] .sh-canvas{opacity:1}
 .sh-root[data-gl="on"] .sh-fallback{opacity:0}
 .sh-root[data-swap="1"] .sh-canvas{opacity:0;transition-duration:.25s}
