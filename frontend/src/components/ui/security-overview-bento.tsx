@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnalyticsBento } from "./analytics-bento";
 import type { Asset, Finding, Incident, OperationsReport, OperationsTrends } from "../../api";
 import { getOperationsReport, getOperationsTrends } from "../../api";
@@ -50,25 +50,6 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
   const failureTotal = sum(failureSeries);
   const openFindings = findings.filter((f) => ["new", "triaged"].includes(f.status)).length;
   const activeIncidents = incidents.filter((i) => ["open", "investigating", "contained"].includes(i.status)).length;
-  const periodCounts = useMemo(() => {
-    const now = Date.now();
-    const counts = new Map<string, number[]>();
-    findings.forEach((f) => {
-      const key = f.severity || "unknown";
-      const values = counts.get(key) ?? [0, 0, 0];
-      const t = new Date(f.first_seen_at).getTime();
-      if (Number.isFinite(t) && now - t <= 7 * 86400000) values[0]++;
-      if (Number.isFinite(t) && now - t <= 30 * 86400000) values[1]++;
-      values[2]++;
-      counts.set(key, values);
-    });
-    return counts;
-  }, [findings]);
-  const categoryItems = findings.map((f) => {
-    const vals = periodCounts.get(f.severity || "unknown") ?? [0, 0, 0];
-    const group = f.severity || "unknown";
-    return { name: f.title, group, values: [1, 1, 1] };
-  });
   const weeklyFindings = findings.filter((f) => Date.now() - new Date(f.first_seen_at).getTime() <= 7 * 86400000).length;
   const sourceCounts = new Map<string, number>();
   findings.forEach((f) => sourceCounts.set(f.source_engine || "unknown", (sourceCounts.get(f.source_engine || "unknown") ?? 0) + 1));
