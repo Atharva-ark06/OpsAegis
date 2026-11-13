@@ -12,6 +12,7 @@ import { OperationsPanel } from "./OperationsPanel";
 import { ExecutionLedgerPanel } from "./ExecutionLedgerPanel";
 import { PlaybooksPanel } from "./PlaybooksPanel";
 import { AppDashboardShell } from "./components/ui/app-dashboard-shell";
+import { SecurityOverviewBento } from "./components/ui/security-overview-bento";
 import { PrismFluxLoader } from "./components/ui/prism-flux-loader";
 import { ThemeToggle, type ThemeMode } from "./components/ui/theme-toggle";
 import "./components/ui/prism-flux-loader.css";
@@ -508,13 +509,7 @@ function App() {
 
       {view === "overview" && <div className="page-content">
         <section className="welcome-row"><div><p className="eyebrow">OPERATIONAL SNAPSHOT</p><h2>Security posture at a glance.</h2><p>Live records retrieved from your OpsAegis database. No demo metrics or synthetic telemetry are included.</p></div><div className="snapshot-stamp"><span className="live-dot" /> API DATA SESSION <small>{loadState === "ready" ? "LATEST API READ COMPLETE" : loadState === "error" ? "API READ DEGRADED" : "SYNCING API DATA"}</small></div></section>
-        <section className="stats-grid">
-          <StatCard label="REGISTERED ASSETS" value={assets.length} detail="Records returned · max 200" accent="blue" />
-          <StatCard label="TOTAL FINDINGS" value={findings.length} detail="Records returned · max 200" accent="amber" />
-          <StatCard label="NEW FINDINGS" value={filteredFindingCount} detail="Awaiting analyst triage" accent="red" />
-          <StatCard label="OPEN INCIDENTS" value={incidents.filter((item) => item.status.toLowerCase() === "open").length} detail="Current open status" accent="violet" />
-        </section>
-        <SeverityBreakdown findings={findings} />
+        <SecurityOverviewBento assets={assets} findings={findings} incidents={incidents} refreshKey={refreshKey} />
         <OperationsPanel isAdmin={user.role === "admin"} refreshKey={refreshKey} />
         {canOperate && <ExecutionLedgerPanel refreshKey={refreshKey} />}
         <section className="overview-grid">
