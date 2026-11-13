@@ -1088,3 +1088,111 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 :root[data-theme="light"] .page-content .asset-summary article,:root[data-theme="light"] .page-content .incident-summary article,:root[data-theme="light"] .settings-account-grid article{background:#fff;border-color:#e2e6ec}
 @media(max-width:850px){.section-insights-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.section-insights-distribution{grid-template-columns:1fr;gap:10px}.settings-account-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.section-insights-heading{align-items:flex-start;flex-direction:column}.section-insights-kpis article{padding:13px}.section-insights-bar{grid-template-columns:82px minmax(35px,1fr) 28px}.section-insights-bar>span{font-size:9px}}
+
+/* ------------------------------------------------------------------
+   OpsAegis 21st.dev Analytics Bento integration
+   The original AnalyticsBento component uses these semantic tokens.
+------------------------------------------------------------------- */
+:root {
+  --ab-background: #090909;
+  --ab-foreground: #f5f5f6;
+  --ab-card: #0b0b0d;
+  --ab-muted: #141416;
+  --ab-muted-foreground: #92929b;
+  --ab-border: #29292e;
+  --ab-popover: #17171a;
+  --ab-ring: #35d6a0;
+}
+:root[data-theme="light"] {
+  --ab-background: #f5f6f7;
+  --ab-foreground: #171719;
+  --ab-card: #ffffff;
+  --ab-muted: #f0f0f2;
+  --ab-muted-foreground: #777780;
+  --ab-border: #e2e2e6;
+  --ab-popover: #ffffff;
+  --ab-ring: #16865c;
+}
+.aegis-analytics-stage,.aegis-section-bento {
+  position: relative;
+  isolation: isolate;
+  margin: 0 0 22px;
+  padding: clamp(14px,2.2vw,28px);
+  overflow: hidden;
+  border: 1px solid var(--ab-border);
+  border-radius: 24px;
+  color: var(--ab-foreground);
+  background-color: var(--ab-background);
+  background-image: radial-gradient(circle, color-mix(in srgb,var(--ab-foreground) 10%,transparent) 0 1px,transparent 1.25px);
+  background-size: 20px 13px;
+  background-position: -6px -1px;
+}
+.aegis-analytics-meta {
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  margin:0 auto 14px;max-width:1240px;color:var(--ab-muted-foreground);
+  font-size:9px;font-weight:800;letter-spacing:.13em;
+}
+.aegis-analytics-meta>span:first-child {display:flex;align-items:center;gap:8px}
+.aegis-analytics-meta i,.aegis-section-heading>span i {
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#35d6a0;box-shadow:0 0 10px #35d6a088;
+}
+.aegis-analytics-error {
+  max-width:1240px;margin:0 auto 12px;padding:10px 13px;border:1px solid #a94c4c;
+  border-radius:10px;background:#4b191922;color:#f3a1a1;font-size:11px;
+}
+.aegis-analytics-footnote {
+  max-width:1240px;margin:12px auto 0;color:var(--ab-muted-foreground);
+  font-size:10px;line-height:1.6;
+}
+.aegis-section-heading {
+  display:flex;justify-content:space-between;align-items:flex-end;gap:14px;
+  max-width:1240px;margin:0 auto 16px;
+}
+.aegis-section-heading small {
+  color:var(--ab-muted-foreground);font-size:9px;font-weight:850;letter-spacing:.16em;
+}
+.aegis-section-heading h2 {
+  margin:6px 0 4px;color:var(--ab-foreground);font-size:clamp(22px,2.5vw,30px);
+  font-weight:600;letter-spacing:-.055em;
+}
+.aegis-section-heading p {
+  margin:0;color:var(--ab-muted-foreground);font-size:11px;line-height:1.6;
+}
+.aegis-section-heading>span {
+  display:flex;align-items:center;gap:7px;color:var(--ab-muted-foreground);
+  font-size:9px;font-weight:800;letter-spacing:.1em;white-space:nowrap;
+}
+.aegis-section-bento .ab-root {max-width:1240px}
+.aegis-section-bento .ab-root>div:first-child {gap:12px}
+.aegis-section-bento .ab-root section {border-radius:20px;box-shadow:none}
+.aegis-section-bento .ab-root table {font-size:11px}
+.aegis-section-bento .ab-root table th,.aegis-section-bento .ab-root table td {padding-top:9px;padding-bottom:9px}
+:root[data-theme="light"] .aegis-analytics-stage,:root[data-theme="light"] .aegis-section-bento {
+  border-color:#e1e2e5;background-color:#f7f7f8;
+  background-image:radial-gradient(circle,#17171912 0 1px,transparent 1.25px);
+}
+:root[data-theme="light"] .aegis-analytics-meta,:root[data-theme="light"] .aegis-analytics-footnote {color:#73737b}
+:root[data-theme="light"] .aegis-section-heading h2 {color:#171719}
+:root[data-theme="light"] .aegis-section-heading p,:root[data-theme="light"] .aegis-section-heading small {color:#73737b}
+/* Carry the same fine borders, compact labels and restrained surfaces into
+   the operational tables, forms, and management panels below each bento. */
+.page-content .panel {
+  border-radius:18px;
+  border-color:var(--ab-border);
+  background:var(--ab-card);
+  box-shadow:none;
+}
+.page-content .panel-heading h3 {letter-spacing:-.035em}
+.page-content .list-intro {padding-top:18px;padding-bottom:16px}
+.page-content .list-intro h2 {font-size:22px;letter-spacing:-.045em}
+.page-content .table-wrap {overflow:auto;border:1px solid var(--ab-border);border-radius:13px}
+.page-content table {border-collapse:separate;border-spacing:0}
+.page-content table thead th {position:sticky;top:0;background:var(--ab-muted);color:var(--ab-muted-foreground)}
+.page-content table tbody tr:hover {background:color-mix(in srgb,#35d6a0 5%,transparent)}
+.page-content input,.page-content select,.page-content textarea {border-radius:9px}
+@media(max-width:720px) {
+ .aegis-analytics-stage,.aegis-section-bento {padding:10px;border-radius:16px}
+ .aegis-analytics-meta,.aegis-section-heading {align-items:flex-start;flex-direction:column}
+ .aegis-section-heading>span {align-self:flex-start}
+}
