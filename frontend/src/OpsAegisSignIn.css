@@ -126,3 +126,88 @@
     font-size: 9px;
   }
 }
+
+
+/* Liquid-sculpture landing hero sign-in dialog */
+.oa-login-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  overflow-y: auto;
+  background: rgba(12, 13, 14, .42);
+  -webkit-backdrop-filter: blur(12px) saturate(.82);
+  backdrop-filter: blur(12px) saturate(.82);
+  animation: oa-overlay-in .2s ease-out;
+}
+.oa-login-dialog {
+  position: relative;
+  width: min(100%, 490px);
+  max-height: min(92dvh, 760px);
+  overflow-y: auto;
+  border: 1px solid rgba(255,255,255,.58);
+  border-radius: 24px;
+  background: rgba(250, 248, 244, .94);
+  box-shadow: 0 28px 100px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.82);
+  animation: oa-dialog-in .24s cubic-bezier(.2,.7,.2,1);
+}
+.oa-login-close {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(30,30,30,.14);
+  border-radius: 50%;
+  color: #252525;
+  background: rgba(255,255,255,.68);
+  font-size: 22px;
+  line-height: 1;
+}
+.oa-login-close:hover { background: #fff; }
+.oa-auth.oa-auth-modal {
+  position: relative;
+  inset: auto;
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  border-radius: inherit;
+  background: transparent;
+}
+.oa-auth-modal .oa-auth-main {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 34px clamp(22px, 5vw, 42px) 30px;
+}
+.oa-auth-modal .oa-auth-header,
+.oa-auth-modal .oa-auth-footer,
+.oa-auth-modal .oa-auth-aside { display: none; }
+.oa-auth-modal .oa-auth-content {
+  display: block;
+  min-height: 0;
+  overflow: visible;
+  padding: 16px 0 0;
+}
+.oa-auth-modal .oa-auth-card { width: 100%; max-width: 410px; margin: 0 auto; }
+.oa-auth-modal .oa-auth-tabs { margin: 0 42px 24px 0; }
+.oa-auth-modal .oa-auth-card h1 { font-size: 32px; }
+.oa-auth-modal .oa-auth-note { margin-bottom: 0; }
+.oa-auth-modal .oa-submit { margin-top: 12px; }
+@keyframes oa-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes oa-dialog-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 480px) {
+  .oa-login-overlay { padding: 12px; }
+  .oa-login-dialog { max-height: 94dvh; border-radius: 18px; }
+  .oa-auth-modal .oa-auth-main { padding: 28px 20px 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .oa-login-overlay, .oa-login-dialog { animation: none; }
+}
