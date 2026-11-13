@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Asset, Finding, Incident, OperationsReport, OperationsTrends } from "../api";
+import type { Asset, Finding, Incident, OperationsReport, OperationsTrends } from "../../api";
 import { getOperationsReport, getOperationsTrends } from "../api";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
@@ -98,7 +98,7 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
       <article className="so-card so-kpi">
         <div className="so-card-heading"><span>COLLECTION ACTIVITY</span><span className="so-muted">30-DAY WINDOW</span></div>
         <div className="so-kpi-row"><strong>{number(totals.runs)}</strong><span className="so-status">{totals.runs ? Math.round(totals.succeeded/totals.runs*100) + "% succeeded" : "No runs"}</span></div>
-        <p>{number(totals.succeeded)} successful · {number(totals.failed)} failed collection runs</p>
+        <p>{number(totals.succeeded)} successful · {number(totals.failed)} failed · {number(assets.length)} monitored assets</p>
         <div className="so-collection-bars" aria-label="Successful and failed collection runs">
           {(trends?.points ?? []).map((p)=><div key={p.start} title={`${dateLabel(p.start)}: ${p.collection_succeeded} successful, ${p.collection_failed} failed`}><i style={{height:Math.max(3,p.collection_succeeded/Math.max(1,totals.runs)*100)+"%"}}/><b style={{height:Math.max(2,p.collection_failed/Math.max(1,totals.runs)*100)+"%"}}/></div>)}
         </div>
