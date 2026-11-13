@@ -3,7 +3,6 @@ import type { Asset, Finding, Incident } from "../../api";
 
 type Props={view:string;assets:Asset[];findings:Finding[];incidents:Incident[]};
 const palette=["#7cff5b","#8b3dff","#ffb800","#ff5a1f","#22d3ee","#7b8494"];
-const severityOrder=["critical","high","medium","low","informational","unknown"];
 const label=(s:string)=>s.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
 const dayKey=(date:Date)=>date.toISOString().slice(0,10);
 const inWindow=(value:string,days:number)=>{const t=new Date(value).getTime();return Number.isFinite(t)&&Date.now()-t<=days*86400000;};
