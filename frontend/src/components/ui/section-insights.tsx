@@ -16,9 +16,12 @@ export function SectionInsights({view,assets,findings,incidents}:Props){
   findings.map(x=>({name:x.title,group:x.severity||"unknown",date:x.first_seen_at}));
  const rawGroups=new Map<string,number>();
  sectionRows.forEach(r=>rawGroups.set(r.group,(rawGroups.get(r.group)||0)+1));
- const keys=[...rawGroups.keys()].sort((a,b)=>(rawGroups.get(b)||0)-(rawGroups.get(a)||0)).slice(0,8);
+ const ranked=[...rawGroups.keys()].sort((a,b)=>(rawGroups.get(b)||0)-(rawGroups.get(a)||0));
+ const keys=ranked.slice(0,7);
+ if(ranked.length>7) keys.push("other");
+ const normalizedRows=sectionRows.map(r=>({...r,group:keys.includes(r.group)?r.group:"other"}));
  const groups=keys.map((key,i)=>({id:key,name:label(key),color:palette[i%palette.length],ink:i===0||i===1||i===3?"light" as const:"dark" as const}));
- const records=sectionRows.map(r=>({name:r.name,group:r.group,values:[inWindow(r.date,7)?1:0,inWindow(r.date,30)?1:0,1]}));
+ const records=normalizedRows.map(r=>({name:r.name,group:r.group,values:[inWindow(r.date,7)?1:0,inWindow(r.date,30)?1:0,1]}));
  const weekly=sectionRows.filter(r=>inWindow(r.date,7)).length;
  const monthly=sectionRows.filter(r=>inWindow(r.date,30)).length;
  const days=countByDay(sectionRows.map(r=>({date:r.date})));
