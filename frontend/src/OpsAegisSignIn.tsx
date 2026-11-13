@@ -53,10 +53,10 @@ export function OpsAegisSignIn({ onLogin, theme }: OpsAegisSignInProps) {
         brand="OpsAegis"
         navLinks={[{ label: "Platform", href: "#platform" }, { label: "Security", href: "#security" }, { label: "Intelligence", href: "#intelligence" }, { label: "About", href: "#about" }]}
         navCta={{ label: "Contact", href: "mailto:security@opsaegis.local" }}
-        eyebrow="SECURITY OPERATIONS — BUILT FOR RESILIENCE"
-        headline={"Clarity in\nevery signal."}
-        headlineAccent="every signal."
-        body="See threats sooner. Respond with confidence. Keep every operation in control."
+        eyebrow={theme === "dark" ? "AI-NATIVE OPS PLATFORM" : "SECURITY OPERATIONS — BUILT FOR RESILIENCE"}
+        headline={theme === "dark" ? "Unified Ops.\nUnstoppable Impact." : "Clarity in\nevery signal."}
+        headlineAccent={theme === "dark" ? "Unstoppable Impact." : "every signal."}
+        body={theme === "dark" ? "From real-time visibility to intelligent automation, OpsAegis helps modern operations teams anticipate, adapt, and get ahead.\n\nOpsAegis brings people, processes, and data together so teams can move faster, stay secure, and deliver extraordinary outcomes." : "See threats sooner. Respond with confidence. Keep every operation in control."}
         primaryCta={{ label: "Login Now", href: "#login" }}
         secondaryCta={undefined}
         backdropText="OPSAEGIS"
@@ -64,8 +64,9 @@ export function OpsAegisSignIn({ onLogin, theme }: OpsAegisSignInProps) {
         theme={theme === "light" ? "light" : "dark"}
         background="#F0EEEA"
         darkBackground="#111110"
-        imageBackground="#EAE9E7"
-        sculptureScale={1.02}
+        imageBackground={theme === "dark" ? "#111110" : "#EAE9E7"}
+        sculptureScale={theme === "dark" ? 1.08 : 1.02}
+        accentColor={theme === "dark" ? "#D9B98F" : undefined}
         onPrimaryCtaClick={() => setShowAuth(true)}
       />
       {showAuth && <div className="oa-login-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuth(false); }}>
