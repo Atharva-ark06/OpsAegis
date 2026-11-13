@@ -54,7 +54,7 @@ export function OpsAegisSignIn({ onLogin }: OpsAegisSignInProps) {
         navLinks={[{ label: "Platform", href: "#platform" }, { label: "Security", href: "#security" }, { label: "Intelligence", href: "#intelligence" }, { label: "About", href: "#about" }]}
         navCta={{ label: "Contact", href: "mailto:security@opsaegis.local" }}
         eyebrow="SECURITY OPERATIONS — BUILT FOR RESILIENCE"
-        headline={"Clarity in\\nevery signal."}
+        headline={"Clarity in\nevery signal."}
         headlineAccent="every signal."
         body="See threats sooner. Respond with confidence. Keep every operation in control."
         primaryCta={{ label: "Login Now", href: "#login" }}
