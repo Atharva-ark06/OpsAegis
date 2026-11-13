@@ -1043,6 +1043,7 @@ export interface SculptureHeroProps {
   headlineAccent?: string
   body?: string
   primaryCta?: SculptureHeroLink
+  onPrimaryCtaClick?: () => void
   secondaryCta?: SculptureHeroLink
   hint?: string
   hintTouch?: string
@@ -1115,7 +1116,7 @@ const DEFAULTS = {
   mobileDarkSrc: "https://cdn.21st.dev/assets/mirror/9a/9a82cb59be1bfde59855b79d7a565e487155a89f4d52eac74dcc10e267b2b6d1.webp",
   imageAlt: "Abstract sculpture of interwoven metallic filaments and particles",
   imageBackground: "#EAE9E7",
-  brand: "Forma®",
+  brand: "OpsAegis",
   navLinks: [
     { label: "Work", href: "#" },
     { label: "Studio", href: "#" },
@@ -1341,6 +1342,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
     headlineAccent = DEFAULTS.headlineAccent,
     body = DEFAULTS.body,
     primaryCta = DEFAULTS.primaryCta,
+    onPrimaryCtaClick,
     secondaryCta = DEFAULTS.secondaryCta,
     hint = DEFAULTS.hint,
     hintTouch = DEFAULTS.hintTouch,
@@ -1713,7 +1715,7 @@ export default function SculptureHero(props: SculptureHeroProps) {
           {body ? <p className="sh-body">{body}</p> : null}
           <div className="sh-ctas">
             {primaryCta && primaryCta.label ? (
-              <a className="sh-btn" href={primaryCta.href}>
+              <a className="sh-btn" href={onPrimaryCtaClick ? "#login" : primaryCta.href} onClick={onPrimaryCtaClick ? (event) => { event.preventDefault(); onPrimaryCtaClick() } : undefined}>
                 {primaryCta.label}
                 <Arrow />
               </a>
