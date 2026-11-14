@@ -439,7 +439,24 @@ function Treemap({ data, period, mono, tip }: { data: AnalyticsBentoProps["categ
   const rects = W ? squarify(items, 0, 0, W + G, H + G) : [];
   return (
     <div ref={ref} className="relative mt-1.5 h-[250px] sm:h-[280px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
-      {!rects.length && <div className="grid h-full place-items-center text-xs text-muted-foreground">No records in this period.</div>}
+      {!rects.length && (
+        <div className="relative grid h-full place-items-center overflow-hidden rounded-[20px] border border-dashed border-border bg-gradient-to-br from-muted/70 via-card to-muted/40 px-5 py-6 text-center">
+          <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-[var(--oa-cyan)]/70 to-transparent" />
+          <div className="flex max-w-sm flex-col items-center gap-3">
+            <div className="grid size-14 place-items-center rounded-2xl border border-border bg-background/80 text-[var(--oa-cyan)] shadow-sm">
+              <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                <path d="M4 18.5V5.5m0 13h16M7.5 15l3.2-3.4 2.5 2 4.8-5.1" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="18" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-sm font-bold tracking-[-0.02em] text-foreground">No recorded workspace activity</div>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">This period has no audit events yet. Activity will appear here as teams use OpsAegis.</p>
+            </div>
+            <span className="rounded-full border border-border bg-background/80 px-3 py-1 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground">AWAITING EVENTS</span>
+          </div>
+        </div>
+      )}
       {rects.map((r) => {
         const g = data.groups.find((x) => x.id === r.group)!;
         const w = r.w - G, h = r.h - G, share = ((r.v / total) * 100).toFixed(2).replace(/\.?0+$/, "") + "%";
@@ -709,15 +726,15 @@ export function AnalyticsBento({
           </div>
           <Treemap data={categories} period={period} mono={monoFamily} tip={tip} />
           {categories.table && (
-            <table className="mt-[18px] w-full border-collapse text-sm">
+            <table className="mt-[18px] w-full border-collapse text-[14px] sm:text-[15px]">
               <thead>
-                <tr>{categories.table.columns.map((h, i) => <th key={h} className={`pb-2 text-xs font-medium tracking-[-0.01em] text-muted-foreground ${i ? "text-right" : "text-left"}`}>{h}</th>)}</tr>
+                <tr>{categories.table.columns.map((h, i) => <th key={h} className={`pb-2.5 text-[12px] font-bold tracking-[0.04em] text-foreground/85 sm:text-[13px] ${i ? "text-right" : "text-left"}`}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {categories.table.rows.map((r) => (
-                  <tr key={r.label} className="border-t border-border">
-                    <td className="py-[11px] text-left tracking-[-0.01em] text-muted-foreground">{r.label}</td>
-                    {r.values.map((v, i) => <td key={i} className="py-[11px] text-right" style={mono}>{v}</td>)}
+                  <tr key={r.label} className="border-t border-border/80">
+                    <td className="py-3 text-left font-semibold tracking-[-0.01em] text-foreground">{r.label}</td>
+                    {r.values.map((v, i) => <td key={i} className="py-3 text-right font-bold text-foreground" style={mono}>{v}</td>)}
                   </tr>
                 ))}
               </tbody>
