@@ -263,13 +263,10 @@ def get_overview_activity(
         daily[cursor] = {"date": cursor.date().isoformat(), "total": 0, "by_section": {key: 0 for key in sections}}
         cursor += timedelta(days=1)
     monthly = {}
-    month_cursor = datetime(end.year, end.month, 1, tzinfo=timezone.utc)
-    for offset in range(23, -1, -1):
-        month_index = month_cursor.month - offset
-        year = month_cursor.year + (month_index - 1) // 12
-        month = (month_index - 1) % 12 + 1
-        key = f"{year:04d}-{month:02d}"
-        monthly[key] = {"month": key, "label": datetime(year, month, 1).strftime("%b"), "total": 0}
+    for year in (end.year - 1, end.year):
+        for month in range(1, 13):
+            key = f"{year:04d}-{month:02d}"
+            monthly[key] = {"month": key, "label": datetime(year, month, 1).strftime("%b"), "total": 0}
 
     section_counts = {key: 0 for key in sections}
     recent = []
