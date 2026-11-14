@@ -211,6 +211,9 @@ def export_operations_report(
 ):
     start, end = _window(since, until)
     report = build_operations_report(db, start, end)
+    db.add(AuditLog(actor_user_id=actor.id, action="report.export", target="operations-report",
+                    detail=f"format:{format};window_start:{start.date().isoformat()};window_end:{end.date().isoformat()}"))
+    db.commit()
     if format == "json":
         return report
 
