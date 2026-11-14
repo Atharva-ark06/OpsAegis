@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import type { Asset, Finding, Incident, OverviewActivity } from "../../api";
 import { getOverviewActivity } from "../../api";
 
@@ -36,7 +36,7 @@ function Sparkline({ values, color = "var(--ov-cyan)" }: { values: number[]; col
   const max = Math.max(1, ...values);
   const path = pathFor(values, 440, 90, max);
   const area = path ? path + " L440 90 L0 90 Z" : "";
-  return <svg className="ov-sparkline" viewBox="0 0 440 90" preserveAspectRatio="none" role="img" aria-label="Activity trend">
+  return <svg className="ov-sparkline" viewBox="0 0 440 90" preserveAspectRatio="none" role="img" aria-label="Activity trend"><title>Daily persisted audit event count</title>
     <defs><linearGradient id="ov-spark-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
     {[22, 45, 68].map(y => <line key={y} x1="0" x2="440" y1={y} y2={y} className="ov-chart-gridline" />)}
     {area && <path d={area} fill="url(#ov-spark-fill)" />}
@@ -52,7 +52,7 @@ function MultiLineChart({ data }: { data: OverviewActivity["daily"] }) {
   return <div className="ov-lines-wrap">
     <svg className="ov-lines-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Daily activity by security section over the last 30 days">
       {[30, 65, 100, 135].map(y => <line key={y} x1="0" x2="600" y1={y} y2={y} className="ov-chart-gridline" />)}
-      {series.map((key, index) => <path key={key} d={pathFor(points.map(point => point.by_section[key] ?? 0), 600, 140, max)} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>)}
+      {series.map((key, index) => <path key={key} d={pathFor(points.map(point => point.by_section[key] ?? 0), 600, 140, max)} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"><title>{title(key)} activity trend</title></path>)}
     </svg>
     <div className="ov-chart-legend">{series.map((key, index) => <span key={key}><i style={{ background: colors[index] }}/>{title(key)}</span>)}</div>
   </div>;
@@ -78,12 +78,12 @@ function RadarChart({ monthly }: { monthly: OverviewActivity["monthly"] }) {
       return <g key={item.month}><line x1={center} y1={center} x2={x} y2={y} className="ov-radar-axis"/><text x={center + Math.cos(angle) * 132} y={center + Math.sin(angle) * 132 + 3} className="ov-radar-label" textAnchor="middle">{item.label}</text></g>;
     })}
     {polygon && <polygon points={polygon} className="ov-radar-area"/>}
-    {coords.map(([x,y],index) => <circle key={index} cx={x} cy={y} r="3" className="ov-radar-point"/>)}
+    {coords.map(([x,y],index) => <circle key={index} cx={x} cy={y} r="3" className="ov-radar-point"><title>{monthly[index]?.label}: {fmt(monthly[index]?.total ?? 0)} recorded events</title></circle>)}
     <circle cx={center} cy={center} r="14" className="ov-radar-core"/>
   </svg>;
 }
 
-function PanelHead({ eyebrow, heading, trailing }: { eyebrow?: string; heading: string; trailing?: React.ReactNode }) {
+function PanelHead({ eyebrow, heading, trailing }: { eyebrow?: string; heading: string; trailing?: ReactNode }) {
   return <div className="ov-panel-head"><div>{eyebrow && <small>{eyebrow}</small>}<h3>{heading}</h3></div>{trailing}</div>;
 }
 
@@ -163,7 +163,7 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
           </div>
         }/>
         <div className="ov-treemap">
-          {sectionTotals.filter(item => item.count > 0).sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as React.CSSProperties}>
+          {sectionTotals.filter(item => item.count > 0).sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
             <span>{item.label}</span><strong>{fmt(item.count)}</strong><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small>
           </div>)}
           {!sectionTotals.some(item => item.count > 0) && <div className="ov-no-activity">No audited activity in this period yet.</div>}
