@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, AlertTriangle, ArrowDownToLine, Bot, CheckCircle2, ChevronDown, ClipboardCheck, Database, GitBranch, Link2, Plus, RotateCcw, Shield, ShieldCheck, Trash2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Activity, AlertTriangle, ArrowDownToLine, Bot, CheckCircle2, ChevronDown, ClipboardCheck, Database, Link2, Plus, Shield, ShieldCheck, Trash2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 
 type StepKind = "trigger" | "agent" | "integration" | "review" | "delivery";
 type Step = { id: string; label: string; detail: string; kind: StepKind; tool?: string; x: number; y: number };
@@ -161,14 +161,14 @@ export function PlaybookWorkflowDesigner() {
     setEditing(null);
   }
 
-  function connectNodes(event: React.FormEvent) {
+  function connectNodes(event: FormEvent) {
     event.preventDefault();
     if (!canConnect(graph, source, target)) { setMessage("Choose two different nodes without an existing link or a cycle."); return; }
     commit({ ...graph, edges: [...graph.edges, { id: `edge-${++sequence.current}`, source, target }] }, "Connection added.");
     setSource(""); setTarget("");
   }
 
-  function saveStep(event: React.FormEvent) {
+  function saveStep(event: FormEvent) {
     event.preventDefault();
     if (!editing || !editing.label.trim()) return;
     commit({ ...graph, nodes: graph.nodes.map((node) => node.id === editing.id ? { ...node, label: editing.label.trim(), detail: editing.detail.trim(), tool: editing.tool.trim() || undefined, kind: editing.kind } : node) }, "Workflow step updated.");
@@ -211,7 +211,7 @@ export function PlaybookWorkflowDesigner() {
             <svg className="pwb-links" viewBox="0 0 1500 520" aria-hidden="true">{edges}</svg>
             {graph.nodes.map((node) => {
               const Icon = kindIcon[node.kind];
-              return <button type="button" key={node.id} className={`pwb-node ${node.kind} ${selected === node.id ? "selected" : ""}`} style={{ left: node.x, top: node.y }} onClick={() => { setSelected(node.id); setEditing(null); }} onPointerDown={(event) => { if ((event.target as HTMLElement).closest("button")) return; dragRef.current = { id: node.id, startX: event.clientX, startY: event.clientY, originX: node.x, originY: node.y }; }} aria-label={`${node.label}, ${kindLabel[node.kind]}`}>
+              return <button type="button" key={node.id} className={`pwb-node ${node.kind} ${selected === node.id ? "selected" : ""}`} style={{ left: node.x, top: node.y }} onClick={() => { setSelected(node.id); setEditing(null); }} onPointerDown={(event) => { if (event.button !== 0) return; dragRef.current = { id: node.id, startX: event.clientX, startY: event.clientY, originX: node.x, originY: node.y }; }} aria-label={`${node.label}, ${kindLabel[node.kind]}`}>
                 <span className="pwb-node-icon"><Icon size={18}/></span><span className="pwb-node-copy"><strong>{node.label}</strong><small>{kindLabel[node.kind]}</small></span><span className="pwb-node-description">{node.detail}</span>{node.tool && <span className="pwb-node-tool">{node.tool}</span>}
                 <i className="pwb-port left"/><i className="pwb-port right"/>
               </button>;
