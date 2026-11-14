@@ -25,10 +25,10 @@ export type AnalyticsBentoProps = React.JSX.IntrinsicElements["div"] & {
     value: number;
     delta: string;
     note?: React.ReactNode;
-    /** values per hour; first array is the current period, the rest are prior periods */
+    /** values per time bucket; first array is the current period, the rest are prior periods */
     desktop: number[][];
     mobile: number[][];
-    labels?: { desktop: string; mobile: string; prior: string; current: string };
+    labels?: { desktop: string; mobile: string; prior: string; current: string; points?: string[] };
   };
   categories: {
     title: string;
@@ -46,6 +46,7 @@ export type AnalyticsBentoProps = React.JSX.IntrinsicElements["div"] & {
       values: number[];
       stats: { label: string; value: number; delta: string; note: string }[];
       rows: { label: string; value: string }[];
+      rowsTitle?: string;
     }[];
   };
   /** Chart colors. Each can be any CSS color. */
@@ -172,17 +173,22 @@ function Tooltip({ mono, api }: { mono: string; api: TipRef }) {
 
 /* ---------------- shared bits ---------------- */
 
-const Arrow = () => (
-  <svg viewBox="0 0 12 12" className="size-[11px]" aria-hidden="true">
+const Arrow = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 12 12" className={`size-[11px] ${className}`} aria-hidden="true">
     <path d="M6 10.5V1.5M2 5.5l4-4 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-const Delta = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <span className={`inline-flex items-center gap-[3px] font-semibold tracking-[-0.02em] text-emerald-600 dark:text-emerald-400 ${className}`}>
-    <Arrow />
-    {children}
-  </span>
-);
+const Delta = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => {
+  const label = typeof children === "string" ? children : "";
+  const down = label.startsWith("↓");
+  const neutral = !label || label === "—" || label.startsWith("No ");
+  return (
+    <span className={`inline-flex items-center gap-[3px] font-semibold tracking-[-0.02em] text-muted-foreground ${className}`}>
+      {!neutral && <Arrow className={down ? "rotate-180" : ""} />}
+      {children}
+    </span>
+  );
+};
 const Card = ({ className = "", children, ...rest }: React.JSX.IntrinsicElements["section"]) => (
   <section className={`relative min-w-0 overflow-hidden rounded-[28px] border border-border bg-card p-5 text-card-foreground shadow-sm sm:p-6 ${className}`} {...rest}>
     {children}
@@ -245,7 +251,7 @@ function RevenueChart({ series, caption, prefix, colors, mono, tip }: { series: 
     const r = (e.currentTarget as SVGRectElement).ownerSVGElement!.getBoundingClientRect();
     const i = Math.max(0, Math.min(vals.length - 1, Math.round(((e.clientX - r.left - 14) / (W - 66)) * (vals.length - 1))));
     setHover(i);
-    tip.current?.show(r.left + P[i][0], r.top + P[i][1], { title: series[i].label, rows: [{ label: "Revenue", value: prefix + fmt(vals[i]), color: colors[1] }] });
+    tip.current?.show(r.left + P[i][0], r.top + P[i][1], { title: series[i].label, rows: [{ label: "Recorded events", value: prefix + fmt(vals[i]), color: colors[1] }] });
   };
 
   return (
@@ -298,9 +304,9 @@ function RevenueChart({ series, caption, prefix, colors, mono, tip }: { series: 
   );
 }
 
-/* ---------------- B: desktop vs mobile waves ---------------- */
+/* ---------------- B: detection vs incident activity waves ---------------- */
 
-function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: number[][]; mobile: number[][]; labels: { desktop: string; mobile: string; current: string }; colors: { desktop: [string, string]; mobile: [string, string] }; tip: TipRef }) {
+function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: number[][]; mobile: number[][]; labels: { desktop: string; mobile: string; current: string; prior: string; points?: string[] }; colors: { desktop: [string, string]; mobile: [string, string] }; tip: TipRef }) {
   const [ref, { w: W, h: H }] = useSize();
   const reduce = useReducedMotion();
   const id = React.useId().replace(/:/g, "");
@@ -341,10 +347,14 @@ function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: numb
     const i = Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left - pad - 6) / (W - 2 * pad - 12)) * (n - 1))));
     setHover(i);
     tip.current?.show(r.left + X(i), r.top + 12, {
-      title: `Day ${i + 1} · ${labels.current}`,
+      title: `${labels.points?.[i] ?? "Day " + (i + 1)} · ${labels.current}`,
       rows: [
         { label: labels.desktop, value: fmt(desktop[0][i]), color: colors.desktop[0] },
         { label: labels.mobile, value: fmt(mobile[0][i]), color: colors.mobile[1] },
+        ...(desktop[1] || mobile[1] ? [
+          { label: labels.prior + " · " + labels.desktop, value: fmt(desktop[1]?.[i] ?? 0) },
+          { label: labels.prior + " · " + labels.mobile, value: fmt(mobile[1]?.[i] ?? 0) },
+        ] : []),
       ],
     });
   };
@@ -352,7 +362,7 @@ function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: numb
   return (
     <div ref={ref} className="relative min-h-[140px] flex-1 overflow-hidden rounded-[18px] border border-border bg-muted/40 dark:bg-muted/30">
       {W > 0 && (
-        <svg width={W} height={H} className="block" role="img" aria-label={`${labels.desktop} and ${labels.mobile} by hour`}>
+        <svg width={W} height={H} className="block" role="img" aria-label={`${labels.desktop} and ${labels.mobile} by day`}>
           <defs>
             <linearGradient id={`${id}d`} x1="0" x2="1" y1="0" y2="0">
               <stop offset=".1" style={{ stopColor: colors.desktop[0] }} />
@@ -428,7 +438,7 @@ function Treemap({ data, period, mono, tip }: { data: AnalyticsBentoProps["categ
   const total = items.reduce((a, b) => a + b.v, 0) || 1;
   const rects = W ? squarify(items, 0, 0, W + G, H + G) : [];
   return (
-    <div ref={ref} className="relative mt-1.5 h-[300px] sm:h-[340px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
+    <div ref={ref} className="relative mt-1.5 h-[250px] sm:h-[280px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
       {!rects.length && <div className="grid h-full place-items-center text-xs text-muted-foreground">No records in this period.</div>}
       {rects.map((r) => {
         const g = data.groups.find((x) => x.id === r.group)!;
@@ -478,7 +488,7 @@ function Radar({ values, axis, year, color, prefix, mono, tip }: { values: numbe
   const line = React.useRef(null as SVGPathElement | null);
   const cur = React.useRef(null as number[] | null);
   const [hover, setHover] = React.useState(null as number | null);
-  const N = values.length, S = Math.min(w, 420), R = S / 2 - 34, C = S / 2;
+  const N = values.length, S = Math.min(w, 360), R = S / 2 - 32, C = S / 2;
   const ang = (i: number) => -Math.PI / 2 + (i / N) * Math.PI * 2;
 
   /* a low-order Fourier fit keeps the lobes round and even */
@@ -520,14 +530,14 @@ function Radar({ values, axis, year, color, prefix, mono, tip }: { values: numbe
     let a = Math.atan2(y, x) + Math.PI / 2; if (a < 0) a += Math.PI * 2;
     const i = Math.round((a / (Math.PI * 2)) * N) % N, p = point(values, i);
     setHover(i);
-    tip.current?.show(r.left + p[0], r.top + p[1], { title: `${axis[i]} ${year}`, rows: [{ label: "Sales", value: prefix + fmt(values[i]), color }] });
+    tip.current?.show(r.left + p[0], r.top + p[1], { title: `${axis[i]} ${year}`, rows: [{ label: "Security events", value: prefix + fmt(values[i]), color }] });
   };
   const hp = hover !== null ? point(values, hover) : null;
 
   return (
-    <div ref={ref} className="mx-auto mt-1.5 w-full max-w-[420px]" style={{ height: S || 300 }}>
+    <div ref={ref} className="mx-auto mt-1.5 w-full max-w-[360px]" style={{ height: S || 280 }}>
       {S > 0 && (
-        <svg width={S} height={S} className="mx-auto block" role="img" aria-label={`Sales by month, ${year}`}>
+        <svg width={S} height={S} className="mx-auto block" role="img" aria-label={`Security events by month, ${year}`}>
           {[0.33, 0.66, 1].map((k) => <circle key={k} cx={C} cy={C} r={R * k} fill="none" className="stroke-border" strokeWidth={1} />)}
           {axis.map((m, i) => (
             <g key={m}>
@@ -612,14 +622,14 @@ export function AnalyticsBento({
   React.useEffect(() => { const r = requestAnimationFrame(() => setShown(true)); return () => cancelAnimationFrame(r); }, []);
 
   const c = {
-    revenue: colors.revenue ?? ["var(--ab-rev-a)", "var(--ab-rev-b)"],
-    desktop: colors.desktop ?? ["#22D3EE", "#3c2cff"],
-    mobile: colors.mobile ?? ["#FFB800", "#FF3DA5"],
-    radar: colors.radar ?? "var(--ab-radar)",
+    revenue: colors.revenue ?? ["var(--oa-cyan)", "var(--oa-blue)"],
+    desktop: colors.desktop ?? ["var(--oa-blue)", "var(--oa-cyan)"],
+    mobile: colors.mobile ?? ["var(--oa-teal)", "var(--oa-amber)"],
+    radar: colors.radar ?? "var(--oa-teal)",
   } as const;
   const mono: React.CSSProperties = { fontFamily: monoFamily, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.04em" };
   const Y = seasonality.years[year];
-  const sl = { desktop: "Desktop", mobile: "Mobile", prior: "Prior weeks", current: "this week", ...sessions.labels };
+  const sl = { desktop: "Desktop", mobile: "Mobile", prior: "Previous period", current: "Current period", points: [], ...sessions.labels };
   const enter = (i: number) =>
     `transition-[opacity,transform] duration-1000 [transition-timing-function:cubic-bezier(.2,.9,.25,1)] motion-reduce:transition-none ${shown ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3.5"} ` +
     ["", "delay-75", "delay-150", "delay-200"][i];
@@ -632,8 +642,8 @@ export function AnalyticsBento({
     >
       <div className="grid grid-cols-12 gap-4">
         {/* revenue */}
-        <Card className={`col-span-12 flex flex-col lg:col-span-5 ${enter(0)}`} aria-label={revenue.label}>
-          <div className="flex flex-1 flex-col gap-5 sm:flex-row">
+        <Card className={`col-span-12 flex flex-col md:col-span-5 ${enter(0)}`} aria-label={revenue.label}>
+          <div className="flex flex-1 flex-col gap-4 xl:flex-row">
             <div className="shrink-0">
               <div className="text-[13px] tracking-[-0.01em] text-muted-foreground">{revenue.label}</div>
               <div className="mt-2.5 text-[38px] font-medium leading-none sm:text-[44px]" style={mono}>
@@ -647,7 +657,7 @@ export function AnalyticsBento({
         </Card>
 
         {/* sessions */}
-        <Card className={`col-span-12 flex flex-col lg:col-span-7 ${enter(1)}`} aria-label={sessions.label}>
+        <Card className={`col-span-12 flex flex-col md:col-span-7 ${enter(1)}`} aria-label={sessions.label}>
           <div className="flex flex-1 flex-col gap-5 sm:flex-row">
             <div className="shrink-0">
               <div className="text-[13px] tracking-[-0.01em] text-muted-foreground">{sessions.label}</div>
@@ -667,7 +677,7 @@ export function AnalyticsBento({
         </Card>
 
         {/* categories */}
-        <Card className={`col-span-12 lg:col-span-7 ${enter(2)}`} aria-label={categories.title}>
+        <Card className={`col-span-12 md:col-span-7 ${enter(2)}`} aria-label={categories.title}>
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <h2 className="m-0 text-[17px] font-semibold tracking-[-0.02em]">{categories.title}</h2>
             <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs tracking-[-0.01em] text-muted-foreground">
@@ -686,7 +696,7 @@ export function AnalyticsBento({
                 className="-m-2.5 rounded-[14px] p-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[-0.01em]">
-                  <i className={`size-1.5 rounded-full transition-colors ${i === period ? "bg-emerald-500 dark:bg-emerald-400" : "bg-muted-foreground/60"}`} />
+                  <i className="size-1.5 rounded-full transition-colors" style={{ background: i === period ? "var(--ab-ring)" : "var(--ab-muted-foreground)" }} />
                   {p.label}
                 </div>
                 <div className="mt-1.5 text-xl font-medium leading-none sm:text-[28px]" style={mono}>
@@ -716,7 +726,7 @@ export function AnalyticsBento({
         </Card>
 
         {/* seasonality */}
-        <Card className={`col-span-12 lg:col-span-5 ${enter(3)}`} aria-label={seasonality.title}>
+        <Card className={`col-span-12 md:col-span-5 ${enter(3)}`} aria-label={seasonality.title}>
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <h2 className="m-0 text-[17px] font-semibold tracking-[-0.02em]">{seasonality.title}</h2>
             <Segmented label="Year" items={seasonality.years.map((y) => y.label)} value={year} onChange={setYear} />
@@ -740,6 +750,7 @@ export function AnalyticsBento({
             ))}
           </div>
           <div className="mt-3.5">
+            {Y.rowsTitle && <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">{Y.rowsTitle}</div>}
             {Y.rows.map((r) => (
               <div key={r.label} className="flex justify-between border-t border-border py-[11px] text-sm">
                 <span className="tracking-[-0.01em] text-muted-foreground">{r.label}</span>
@@ -756,10 +767,7 @@ export function AnalyticsBento({
         </div>
       )}
       <Tooltip api={tip} mono={monoFamily} />
-      <style>{`
-.ab-root{--ab-radar:#12b863;--ab-rev-a:#12b863;--ab-rev-b:#12b863}
-.dark .ab-root{--ab-radar:#3BF08C;--ab-rev-a:#22D3EE;--ab-rev-b:#3BF08C}
-`}</style>
+
     </div>
   );
 }
