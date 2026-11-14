@@ -391,7 +391,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    if (loadState !== "ready") setLoadState("loading");
+    if (loadState === "idle") setLoadState("loading");
     setLoadErrors([]);
     const requests: Promise<unknown>[] = [
       getAssets(), getFindings(), getIncidents(),
