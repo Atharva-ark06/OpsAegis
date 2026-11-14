@@ -92,10 +92,11 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>(30);
+  const [selectedYear, setSelectedYear] = useState(new Date().getUTCFullYear());
 
   useEffect(() => {
     let active = true;
-    getOverviewActivity(365, 16).then(result => {
+    getOverviewActivity(730, 16).then(result => {
       if (active) { setActivity(result); setError(""); }
     }).catch(reason => {
       if (active) setError(reason instanceof Error ? reason.message : "Overview activity could not be loaded.");
@@ -114,8 +115,11 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
     count: sum(visibleDays.map(day => day.by_section[section.id] ?? 0)),
   })), [visibleDays]);
   const monthly = activity?.monthly ?? [];
-  const monthlyTotal = sum(monthly.map(item => item.total));
-  const monthlyAverage = monthly.length ? monthlyTotal / monthly.length : 0;
+  const yearOptions = [...new Set(monthly.map(item => Number(item.month.slice(0, 4))))].sort((a,b) => b-a);
+  const activeYear = yearOptions.includes(selectedYear) ? selectedYear : (yearOptions[0] ?? selectedYear);
+  const selectedMonths = monthly.filter(item => Number(item.month.slice(0, 4)) === activeYear);
+  const monthlyTotal = sum(selectedMonths.map(item => item.total));
+  const monthlyAverage = selectedMonths.length ? monthlyTotal / selectedMonths.length : 0;
   const threatLookups = sectionTotals.find(item => item.id === "threat-intel")?.count ?? 0;
   const unresolvedFindings = findings.filter(item => item.status !== "resolved").length;
   const activeIncidents = incidents.filter(item => ["open", "investigating", "contained"].includes(item.status)).length;
@@ -174,8 +178,8 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
       </section>
 
       <section className="ov-panel ov-panel-seasonality">
-        <PanelHead eyebrow="LONG-RANGE SIGNALS" heading="Activity rhythm" trailing={<span className="ov-subtle">12 MONTHS</span>} />
-        <div className="ov-radar-layout"><RadarChart monthly={monthly}/><div className="ov-radar-stats"><div><small>Monthly average</small><strong>{fmt(Math.round(monthlyAverage))}</strong><span>Audited events / month</span></div><div><small>12-month total</small><strong>{fmt(monthlyTotal)}</strong><span>Recorded activity</span></div></div></div>
+        <PanelHead eyebrow="LONG-RANGE SIGNALS" heading="Activity rhythm" trailing={<div className="ov-year-switch" aria-label="Activity year">{yearOptions.map(year => <button key={year} type="button" className={activeYear === year ? "active" : ""} aria-pressed={activeYear === year} onClick={() => setSelectedYear(year)}>{year}</button>)}</div>} />
+        <div className="ov-radar-layout"><RadarChart monthly={selectedMonths}/><div className="ov-radar-stats"><div><small>Monthly average</small><strong>{fmt(Math.round(monthlyAverage))}</strong><span>Audited events / month</span></div><div><small>Year total</small><strong>{fmt(monthlyTotal)}</strong><span>Recorded activity · {activeYear}</span></div></div></div>
         <div className="ov-recent-head"><span>RECENT ACTIVITY</span><span>{eventFeed.length} events</span></div>
         <div className="ov-recent-list">
           {eventFeed.slice(0,4).map(event => <div className="ov-event" key={event.id}><i className={"ov-event-dot " + event.section}/><div><strong>{event.summary}</strong><small>{title(event.section)}{event.record ? " · " + event.record : ""}</small></div><time>{clockLabel(event.occurred_at)}</time></div>)}
