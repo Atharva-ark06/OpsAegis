@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import {
   Detection, DetectionNotification, DetectionRule, DetectionScheduler, DetectionStatus,
   ScheduledDetectionRun, evaluateDetections, getDetections, getDetectionRules,
@@ -33,6 +34,7 @@ export function DetectionsPanel({ canOperate, isAdmin }: { canOperate: boolean; 
     setItems(detectionRows); setRules(ruleRows); setScheduler(schedule);
     setRuns(runRows); setNotifications(notificationRows);
   }
+  useLiveRefresh(() => refresh(), { intervalMs: 15000 });
   useEffect(() => {
     void refresh().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load detection operations."));
   }, []);
