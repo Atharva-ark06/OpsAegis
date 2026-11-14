@@ -1295,3 +1295,85 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 .overview-command-footnote{margin:0;color:var(--aegis-muted);font-size:10px;line-height:1.6}
 @media(max-width:900px){.overview-command-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.overview-command-heading{display:grid}.overview-command-state{justify-self:start}.overview-command-grid{grid-template-columns:1fr}.overview-command-metrics{gap:8px}.overview-command-metric{padding:13px}.overview-command-metric strong{font-size:24px}.overview-command-card{padding:14px}}
+
+
+/* OpsAegis section-specific workspace system — replaces legacy shared insight layouts */
+.section-page{display:grid;gap:20px;align-content:start;min-width:0}
+.section-page>.list-intro,.section-page .list-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin:0;padding:3px 0 17px;border-bottom:1px solid var(--aegis-border)}
+.section-page .list-intro h2{margin:5px 0 7px;color:var(--aegis-text);font-size:clamp(22px,2.4vw,30px);font-weight:760;letter-spacing:-.045em}
+.section-page .list-intro p:not(.eyebrow){max-width:760px;margin:0;color:var(--aegis-muted);font-size:12px;line-height:1.65}
+.section-page .panel{border:1px solid var(--aegis-border);border-radius:13px;background:linear-gradient(145deg,var(--aegis-panel),var(--aegis-panel-muted));box-shadow:0 12px 32px rgba(0,0,0,.10)}
+.section-page .panel-heading{gap:14px}
+.section-page .panel-heading h3,.section-page .panel-heading h4{letter-spacing:-.025em}
+.section-page .table-wrap,.section-page .vulnerability-table-wrap{overflow:auto;border:1px solid var(--aegis-border);border-radius:10px}
+.section-page table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
+.section-page th{position:sticky;top:0;z-index:1;padding:12px 13px;color:var(--aegis-muted);background:var(--aegis-panel-muted);font-size:9px;font-weight:800;letter-spacing:.11em;text-align:left;text-transform:uppercase;white-space:nowrap}
+.section-page td{padding:12px 13px;border-top:1px solid var(--aegis-border);color:var(--aegis-text);vertical-align:middle}
+.section-page tbody tr:hover td{background:rgba(88,157,205,.055)}
+.section-page input,.section-page select,.section-page textarea{min-height:38px;border:1px solid var(--aegis-border-strong);border-radius:8px;color:var(--aegis-text);background:var(--aegis-panel);font-size:11px}
+.section-page button{border-radius:8px}
+.section-page .primary-button,.section-page .secondary-button{min-height:36px;padding:8px 12px;font-size:10px;font-weight:750}
+.section-page .eyebrow{color:var(--aegis-accent);font-size:9px;font-weight:850;letter-spacing:.18em}
+.section-page .tag{border:1px solid var(--aegis-border-strong);border-radius:6px;background:var(--aegis-panel-muted);font-size:9px;font-weight:750}
+.section-page .empty-state{padding:28px 18px;border:1px dashed var(--aegis-border-strong);border-radius:11px;background:rgba(100,130,160,.035)}
+.section-page .error-banner,.section-page .success-banner,.section-page .inline-error{border-radius:9px;font-size:11px}
+.section-page-assets .asset-workspace{display:grid;gap:16px}
+.section-page-assets .asset-workspace .panel-heading{padding-bottom:12px;border-bottom:1px solid var(--aegis-border)}
+.section-page-assets .asset-workspace .asset-create-form,.section-page-assets .asset-workspace form{padding:16px;border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel)}
+.section-page-findings .data-panel,.section-page-findings .finding-workspace{display:grid;gap:15px}
+.section-page-findings .data-panel>.panel-heading{padding-bottom:12px;border-bottom:1px solid var(--aegis-border)}
+.section-page-findings .data-panel table td:nth-child(1){font-weight:700}
+.section-page-vulnerabilities .vulnerability-workspace{display:grid;gap:15px}
+.section-page-vulnerabilities .vulnerability-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.section-page-vulnerabilities .vulnerability-stat{min-height:102px;padding:17px;border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel)}
+.section-page-vulnerabilities .vulnerability-stat strong{display:block;margin-top:9px;color:var(--aegis-text);font-size:29px;font-weight:780;font-variant-numeric:tabular-nums}
+.section-page-vulnerabilities .vulnerability-stat small{color:var(--aegis-muted);font-size:9px;font-weight:800;letter-spacing:.12em}
+.section-page-vulnerabilities .vulnerability-filters{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(3,minmax(130px,1fr)) auto;gap:8px;padding:12px;border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel)}
+.section-page-vulnerabilities .vulnerability-cve{color:var(--aegis-accent);font-family:ui-monospace,monospace;font-weight:800}
+.section-page-vulnerabilities .vulnerability-detail{padding:18px;border:1px solid var(--aegis-border-strong);border-radius:12px;background:var(--aegis-panel)}
+.section-page-vulnerabilities .vulnerability-detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.section-page-vulnerabilities .vulnerability-detail-grid>div{padding:12px;border:1px solid var(--aegis-border);border-radius:8px;background:var(--aegis-panel-muted)}
+.section-page-detections .detection-workspace{display:grid;gap:15px;padding:0}
+.section-page-detections .detection-workspace>.panel{padding:17px}
+.section-page-detections .detection-rule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.section-page-detections .detection-rule-grid .engine-card{border:1px solid var(--aegis-border);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-detections .detection-workspace .nuclei-target-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end;gap:10px}
+.section-page-incidents .data-panel{display:grid;gap:15px}
+.section-page-incidents .data-panel>.panel-heading{padding-bottom:12px;border-bottom:1px solid var(--aegis-border)}
+.section-page-incidents .incident-timeline{margin-top:12px;padding:16px;border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel-muted)}
+.section-page-incidents .timeline-event{border:1px solid var(--aegis-border);border-radius:9px;background:var(--aegis-panel)}
+.section-page-integrations .integration-page{display:grid;gap:16px;padding:18px}
+.section-page-integrations .integration-page>.panel-heading{align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--aegis-border)}
+.section-page-integrations .integration-page .header-actions{display:flex;flex-wrap:wrap;gap:8px}
+.section-page-integrations .engine-card,.section-page-integrations .collection-schedule{border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel-muted)}
+.section-page-integrations .collection-panel,.section-page-integrations .nuclei-panel,.section-page-integrations .shannon-panel{padding:17px}
+.section-page-threat-intel .threat-intel-workspace{display:grid;gap:15px}
+.section-page-threat-intel .provider-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.section-page-threat-intel .provider-chip{min-width:0;padding:13px;border:1px solid var(--aegis-border);border-radius:9px;background:var(--aegis-panel);font-size:10px}
+.section-page-threat-intel .threat-intel-form{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(220px,1.7fr) auto;align-items:end;gap:10px;padding:16px;border:1px solid var(--aegis-border);border-radius:11px;background:var(--aegis-panel)}
+.section-page-threat-intel .ioc-combined-report{padding:17px}
+.section-page-threat-intel .ioc-provider-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.section-page-threat-intel .ioc-provider-result{min-width:0;padding:14px;border:1px solid var(--aegis-border);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-playbooks .playbooks-workspace{display:grid;gap:15px}
+.section-page-playbooks .playbooks-workspace>.panel{padding:17px}
+.section-page-playbooks .playbook-definition{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr);gap:12px;padding:15px 0;border-top:1px solid var(--aegis-border)}
+.section-page-playbooks .playbook-action-row,.section-page-playbooks .playbook-approval-card{padding:13px;border:1px solid var(--aegis-border);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-playbooks .playbook-preview-result{padding:15px;border:1px solid var(--aegis-border-strong);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-users .admin-users{display:grid;gap:15px;padding:18px}
+.section-page-users .admin-users>.panel-heading{padding-bottom:12px;border-bottom:1px solid var(--aegis-border)}
+.section-page-users .admin-users .nuclei-target-form{display:grid;grid-template-columns:1fr 1fr .7fr auto;align-items:end;gap:10px;padding:15px;border:1px solid var(--aegis-border);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-users .admin-users table select{min-width:110px}
+.section-page-reports .operations-panel{display:grid;gap:15px;padding:18px}
+.section-page-reports .trend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.section-page-reports .trend-chart{min-width:0;padding:15px;border:1px solid var(--aegis-border);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-reports .operations-report{display:grid;gap:13px}
+.section-page-reports .operations-report-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.section-page-reports .operations-report-stats article{padding:13px;border:1px solid var(--aegis-border);border-radius:9px;background:var(--aegis-panel-muted)}
+.section-page-settings .settings-workspace{display:grid;gap:15px;padding:18px}
+.section-page-settings .settings-account-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.section-page-settings .settings-account-grid article{display:grid;align-content:start;gap:9px;min-width:0;padding:17px;border:1px solid var(--aegis-border);border-radius:10px;background:var(--aegis-panel-muted)}
+.section-page-settings .settings-account-grid article>small{color:var(--aegis-muted);font-size:9px;font-weight:850;letter-spacing:.12em}
+.section-page-settings .settings-account-grid article>strong{overflow-wrap:anywhere;color:var(--aegis-text);font-size:14px}
+@media(max-width:1050px){.section-page-vulnerabilities .vulnerability-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.section-page-threat-intel .provider-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.section-page-reports .operations-report-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.section-page .list-intro{display:grid}.section-page-vulnerabilities .vulnerability-summary,.section-page-settings .settings-account-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-page-vulnerabilities .vulnerability-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-page-detections .detection-rule-grid,.section-page-threat-intel .ioc-provider-results,.section-page-reports .trend-grid{grid-template-columns:1fr}.section-page-detections .detection-workspace .nuclei-target-form,.section-page-users .admin-users .nuclei-target-form{grid-template-columns:repeat(2,minmax(0,1fr))}.section-page-threat-intel .threat-intel-form{grid-template-columns:1fr}}
+@media(max-width:480px){.section-page-vulnerabilities .vulnerability-summary,.section-page-settings .settings-account-grid,.section-page-users .admin-users .nuclei-target-form{grid-template-columns:1fr}.section-page-vulnerabilities .vulnerability-filters,.section-page-detections .detection-workspace .nuclei-target-form{grid-template-columns:1fr}.section-page-threat-intel .provider-strip{grid-template-columns:1fr}.section-page-playbooks .playbook-definition{grid-template-columns:1fr}}
