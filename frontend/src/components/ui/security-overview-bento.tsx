@@ -1,21 +1,24 @@
-import { useEffect, useState } from "react";
-import { AnalyticsBento } from "./analytics-bento";
+import { useEffect, useMemo, useState } from "react";
 import type { Asset, Finding, Incident, OperationsReport, OperationsTrends } from "../../api";
 import { getOperationsReport, getOperationsTrends } from "../../api";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
-const severityColors = [
-  { id: "critical", name: "Critical", color: "#ff5a5f", ink: "light" as const },
-  { id: "high", name: "High", color: "#ff7a45", ink: "light" as const },
-  { id: "medium", name: "Medium", color: "#ffb800", ink: "dark" as const },
-  { id: "low", name: "Low", color: "#7cff5b", ink: "dark" as const },
-  { id: "informational", name: "Informational", color: "#8b3dff", ink: "light" as const },
-  { id: "unknown", name: "Unknown", color: "#6b7280", ink: "light" as const },
-];
-const dateLabel = (value: string) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
-const dailyZeroSeries = (since: Date, until: Date) => [{ label: dateLabel(since.toISOString()), value: 0 }, { label: dateLabel(until.toISOString()), value: 0 }];
-
+const severities = ["critical", "high", "medium", "low", "informational", "unknown"];
+const label = (value: string) => value.replace(/_/g, " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+const formatDay = (value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function Metric({ title, value, detail, tone }: { title: string; value: number; detail: string; tone: string }) {
+  return <article className={"overview-command-metric " + tone}><span>{title}</span><strong>{value.toLocaleString()}</strong><small>{detail}</small></article>;
+}
+function Distribution({ title, values, total }: { title: string; values: [string, number][]; total: number }) {
+  return <section className="overview-command-card">
+    <div className="overview-command-card-head"><h3>{title}</h3><span>{total.toLocaleString()} records</span></div>
+    {values.map(([name, value]) => <div className="overview-distribution-row" key={name}>
+      <div><span><i className={"overview-severity-dot " + name} />{label(name)}</span><b>{value}</b></div>
+      <div className="overview-track"><i className={name} style={{ width: (total ? value / total * 100 : 0) + "%" }} /></div>
+    </div>)}
+    {!values.length && <p className="overview-empty">No records available from the API.</p>}
+  </section>;
+}
 export function SecurityOverviewBento({ assets, findings, incidents, refreshKey }: Props) {
   const [trends, setTrends] = useState<OperationsTrends | null>(null);
   const [report, setReport] = useState<OperationsReport | null>(null);
@@ -37,51 +40,51 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
     return () => { active = false; };
   }, [refreshKey]);
 
-  const points = trends?.points ?? [];
-  const dailyEvents = points.map((p) => ({ label: dateLabel(p.start), value: p.detections + p.incidents }));
-  const successSeries = points.map((p) => p.collection_succeeded);
-  const failureSeries = points.map((p) => p.collection_failed);
-  const eventTotal = sum(dailyEvents.map((p) => p.value));
-  const openFindings = findings.filter((f) => ["new", "triaged"].includes(f.status)).length;
-  const activeIncidents = incidents.filter((i) => ["open", "investigating", "contained"].includes(i.status)).length;
-  const weeklyFindings = findings.filter((f) => Date.now() - new Date(f.first_seen_at).getTime() <= 7 * 86400000).length;
-  const sourceCounts = new Map<string, number>();
-  findings.forEach((f) => sourceCounts.set(f.source_engine || "unknown", (sourceCounts.get(f.source_engine || "unknown") ?? 0) + 1));
-  const topSources = [...sourceCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const weekday = Array(7).fill(0) as number[];
-  points.forEach((p) => { weekday[new Date(p.start).getUTCDay()] += p.detections + p.incidents; });
-  const sourceRows = report?.collection.sources ?? [];
-  const activitySeries = dailyEvents.length >= 2 ? dailyEvents : dailyZeroSeries(new Date(Date.now()-86400000), new Date());
-  const collectionSuccess = successSeries.length >= 2 ? successSeries : [0, 0];
-  const collectionFailure = failureSeries.length >= 2 ? failureSeries : [0, 0];
-  const sessionsCount = sum(collectionSuccess) + sum(collectionFailure);
-  const trendNote = loading ? "Loading persisted telemetry…" : trends?.rows_limited ? "API result reached its row safety cap" : "Persisted events · UTC";
-  const years = [{ label: "30 days", values: weekday, stats: [
-    { label: "Active incidents", value: activeIncidents, delta: "LIVE", note: "current records" },
-    { label: "Open findings", value: openFindings, delta: "LIVE", note: "new + triaged" },
-  ], rows: topSources.map(([label,value])=>({label,value:value.toLocaleString()})) }];
-  const groups = severityColors;
-  const totals = [
-    { label: "7 days", total: weeklyFindings, delta: "API", compare: "Findings first seen in last 7 days" },
-    { label: "30 days", total: findings.filter((f)=>Date.now()-new Date(f.first_seen_at).getTime()<=30*86400000).length, delta: "API", compare: "Findings first seen in last 30 days" },
-    { label: "Loaded", total: findings.length, delta: "API", compare: "Records returned by authenticated API" },
-  ];
-  const items = findings.map((f)=>({name:f.title,group:f.severity||"unknown",values:[Date.now()-new Date(f.first_seen_at).getTime()<=7*86400000?1:0,Date.now()-new Date(f.first_seen_at).getTime()<=30*86400000?1:0,1]}));
-  return <div className="aegis-analytics-stage">
-    <div className="aegis-analytics-meta"><span><i/> SECURITY OPERATIONS · LIVE API DATA</span><span>{loading?"SYNCING":error?"DEGRADED":"30-DAY WINDOW"}{trends?.rows_limited?" · ROW LIMIT REACHED":""}</span></div>
-    {error && <div className="aegis-analytics-error" role="alert">{error}</div>}
-    <AnalyticsBento
-      className="mx-auto max-w-[1240px]"
-      currency=""
-      fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
-      monoFamily="'Geist Mono', ui-monospace, SFMono-Regular, monospace"
-      credit={false}
-      revenue={{label:"Security events",value:eventTotal,delta:"30D",note:"Persisted detections + incidents",caption:"Daily activity · last 30 days",series:activitySeries}}
-      sessions={{label:"Collection runs",value:sessionsCount,delta:"30D",note:trendNote,desktop:[collectionSuccess],mobile:[collectionFailure],labels:{desktop:"Successful",mobile:"Failed",prior:"",current:"daily collection"}}}
-      categories={{title:"Findings by severity",groups,periods:totals,items,table:{columns:["Source engine","Findings"],rows:topSources.map(([label,value])=>({label,values:[value.toLocaleString()]}))}}}
-      seasonality={{title:"Response rhythm",axis:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],years}}
-      colors={{revenue:["#22d3ee","#3bf08c"],desktop:["#22d3ee","#3c2cff"],mobile:["#ffb800","#ff3da5"],radar:"#3bf08c"}}
-    />
-    <div className="aegis-analytics-footnote">Charts and counts are derived from authenticated OpsAegis records. Collection sources configured: {report?.collection.sources_configured ?? 0} · Monitored assets: {assets.length} · Finding records loaded: {findings.length} · Incident records loaded: {incidents.length}. {trends?.limitations?.join(" ") || ""}</div>
-  </div>;
+  const severityRows = useMemo(() => severities.map((severity) =>
+    [severity, findings.filter((item) => item.severity === severity).length] as [string, number]
+  ).filter((row) => row[1] > 0), [findings]);
+  const statusRows = useMemo(() => ["new", "triaged", "accepted", "false_positive", "resolved"].map((status) =>
+    [status, findings.filter((item) => item.status === status).length] as [string, number]
+  ).filter((row) => row[1] > 0), [findings]);
+  const activeIncidents = incidents.filter((item) => ["open", "investigating", "contained"].includes(item.status));
+  const linkedAssetCounts = assets.map((asset) => ({
+    asset,
+    count: findings.filter((finding) => finding.asset_id === asset.id && ["new", "triaged", "accepted"].includes(finding.status)).length,
+  })).filter((row) => row.count > 0).sort((a,b) => b.count-a.count).slice(0,5);
+  const points = (trends?.points ?? []).slice(-14);
+  const maxActivity = Math.max(1, ...points.map((point) => point.detections + point.incidents));
+  const sourcesConfigured = report?.collection.sources_configured ?? 0;
+  const collectionState = loading ? "Syncing operational metrics…" : error ? "Analytics unavailable" : "Authenticated operational data";
+  return <section className="overview-command">
+    <div className="overview-command-heading"><div><small>SECURITY OPERATIONS · COMMAND CENTER</small><h2>Security posture at a glance</h2><p>One operational view across assets, findings, incidents and collection configuration.</p></div><span className="overview-command-state"><i />{collectionState}</span></div>
+    {error && <div className="error-banner" role="alert">{error}</div>}
+    <div className="overview-command-metrics">
+      <Metric title="Assets monitored" value={assets.length} detail="Registered asset records" tone="blue" />
+      <Metric title="Critical findings" value={findings.filter((item) => item.severity === "critical" && item.status !== "resolved").length} detail="Unresolved critical severity" tone="red" />
+      <Metric title="Active incidents" value={activeIncidents.length} detail="Open · investigating · contained" tone="orange" />
+      <Metric title="Sources configured" value={sourcesConfigured} detail="Reported by operations API" tone="green" />
+    </div>
+    <div className="overview-command-grid">
+      <Distribution title="Alert distribution" values={severityRows} total={findings.length} />
+      <Distribution title="Remediation status" values={statusRows} total={findings.length} />
+      <section className="overview-command-card overview-activity-card">
+        <div className="overview-command-card-head"><h3>Security activity</h3><span>Last 14 available days</span></div>
+        {points.length ? <div className="overview-activity-bars">{points.map((point) => {
+          const count = point.detections + point.incidents;
+          return <div key={point.start} title={formatDay(point.start) + ": " + count + " events"}>
+            <i style={{ height: Math.max(3, count / maxActivity * 100) + "%" }} />
+            <small>{new Date(point.start).toLocaleDateString(undefined, { day: "numeric" })}</small>
+          </div>;
+        })}</div> : <p className="overview-empty">{loading ? "Loading activity…" : "No persisted activity points were returned for this period."}</p>}
+        <div className="overview-activity-legend"><span><i className="detections" />Detections</span><span><i className="incidents" />Incidents</span></div>
+      </section>
+      <section className="overview-command-card overview-asset-risk-card">
+        <div className="overview-command-card-head"><h3>Assets with linked open findings</h3><span>{linkedAssetCounts.length} shown</span></div>
+        {linkedAssetCounts.length ? linkedAssetCounts.map(({asset,count}) => <div className="overview-asset-risk-row" key={asset.id}>
+          <div><strong>{asset.name}</strong><small>{label(asset.asset_type)} · {label(asset.environment || "unknown")}</small></div><b>{count}</b>
+        </div>) : <p className="overview-empty">No assets currently have linked open findings.</p>}
+      </section>
+    </div>
+    <p className="overview-command-footnote">Counts are derived from authenticated OpsAegis records. No synthetic risk score, MITRE mapping, mean response time or provider health is inferred when the backend does not supply it.</p>
+  </section>;
 }
