@@ -124,9 +124,15 @@ async function request<T>(path: string, options: RequestInit = {}, authenticated
     }
     throw new ApiError(message, response.status);
   }
-  if (response.status === 204) return undefined as T;
+  const method = (options.method || "GET").toUpperCase();
+  if (response.status === 204) {
+    if (method !== "GET" && typeof window !== "undefined") window.dispatchEvent(new Event("opsaegis:data-changed"));
+    return undefined as T;
+  }
   try {
-    return await response.json() as T;
+    const payload = await response.json() as T;
+    if (method !== "GET" && typeof window !== "undefined") window.dispatchEvent(new Event("opsaegis:data-changed"));
+    return payload;
   } catch {
     throw new ApiError("The OpsAegis API returned an invalid or empty JSON response.", response.status);
   }
