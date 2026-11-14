@@ -1,244 +1,247 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Asset, Finding, Incident, OverviewActivity } from "../../api";
 import { getOverviewActivity } from "../../api";
+import { AnalyticsBento, type AnalyticsBentoProps } from "./analytics-bento";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
-type Period = 7 | 30 | 365;
+type PeriodDays = 7 | 30 | 365;
+
 const SECTIONS = [
-  { id: "assets", label: "Assets", color: "var(--ov-blue)" },
-  { id: "findings", label: "Findings", color: "var(--ov-cyan)" },
-  { id: "vulnerabilities", label: "Vulnerabilities", color: "var(--ov-steel)" },
-  { id: "detections", label: "Detections", color: "var(--ov-teal)" },
-  { id: "incidents", label: "Incidents", color: "var(--ov-amber)" },
-  { id: "integrations", label: "Integrations", color: "var(--ov-blue-soft)" },
-  { id: "threat-intel", label: "Threat Intel", color: "var(--ov-blue)" },
-  { id: "playbooks", label: "Playbooks", color: "var(--ov-teal)" },
-  { id: "users", label: "Users & Roles", color: "var(--ov-steel)" },
-  { id: "reports", label: "Reports", color: "var(--ov-blue-soft)" },
-  { id: "settings", label: "Settings", color: "var(--ov-slate)" },
+  { id: "assets", label: "Assets", group: "inventory" },
+  { id: "findings", label: "Findings", group: "risk" },
+  { id: "vulnerabilities", label: "Vulnerabilities", group: "risk" },
+  { id: "detections", label: "Detections", group: "response" },
+  { id: "incidents", label: "Incidents", group: "response" },
+  { id: "integrations", label: "Integrations", group: "inventory" },
+  { id: "threat-intel", label: "Threat Intel", group: "intel" },
+  { id: "playbooks", label: "Playbooks", group: "response" },
+  { id: "users", label: "Users & Roles", group: "governance" },
+  { id: "reports", label: "Reports", group: "governance" },
+  { id: "settings", label: "Settings", group: "governance" },
 ] as const;
-const fmt = (n: number) => n.toLocaleString();
-const title = (value: string) => value.replace(/[-_.]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-const dateLabel = (value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-const clockLabel = (value: string) => new Date(value).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-const sum = (items: number[]) => items.reduce((total, value) => total + value, 0);
 
-function pathFor(values: number[], width: number, height: number, max: number) {
-  if (!values.length) return "";
-  return values.map((value, index) => {
-    const x = values.length === 1 ? width / 2 : index * width / (values.length - 1);
-    const y = height - (value / Math.max(1, max)) * (height - 8) - 4;
-    return (index === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
-  }).join(" ");
+const GROUPS = [
+  { id: "inventory", name: "Attack surface", color: "var(--oa-blue)", ink: "light" as const },
+  { id: "risk", name: "Risk & exposure", color: "var(--oa-cyan)", ink: "light" as const },
+  { id: "response", name: "Detection & response", color: "var(--oa-teal)", ink: "light" as const },
+  { id: "intel", name: "Threat intelligence", color: "var(--oa-amber)", ink: "light" as const },
+  { id: "governance", name: "Governance", color: "var(--oa-steel)", ink: "light" as const },
+];
+
+const fmt = (value: number) => Math.round(value).toLocaleString();
+const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+const dateLabel = (value: string) => new Date(value + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+const monthLabel = (value: string) => new Date(value + "-01T00:00:00Z").toLocaleDateString(undefined, { month: "short", timeZone: "UTC" });
+const timeLabel = (value: string) => new Date(value).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+function deltaLabel(current: number, previous: number) {
+  if (previous <= 0) return current > 0 ? "↑ New activity" : "—";
+  const change = ((current - previous) / previous) * 100;
+  return (change >= 0 ? "↑ " : "↓ ") + Math.abs(change).toFixed(1) + "%";
 }
 
-type ChartTipState = { x: number; y: number; title: string; rows: string[] } | null;
-
-function ChartTooltip({ tip }: { tip: ChartTipState }) {
-  if (!tip) return null;
-  return <div className="ov-chart-tooltip" style={{ left: tip.x, top: tip.y }} role="status" aria-live="polite">
-    <strong>{tip.title}</strong>
-    {tip.rows.map(row => <span key={row}>{row}</span>)}
-  </div>;
+function countSection(days: OverviewActivity["daily"], section: string) {
+  return sum(days.map(day => day.by_section[section] ?? 0));
 }
 
-function Sparkline({ values, labels, color = "var(--ov-cyan)" }: { values: number[]; labels: string[]; color?: string }) {
-  const [tip, setTip] = useState<ChartTipState>(null);
-  const max = Math.max(1, ...values);
-  const path = pathFor(values, 440, 90, max);
-  const area = path ? path + " L440 90 L0 90 Z" : "";
-  return <div className="ov-chart-frame">
-    <svg className="ov-sparkline" viewBox="0 0 440 90" preserveAspectRatio="none" role="img" aria-label="Activity trend"
-      onPointerMove={event => {
-        if (!values.length) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        const index = Math.max(0, Math.min(values.length - 1, Math.round(((event.clientX - rect.left) / Math.max(1, rect.width)) * (values.length - 1))));
-        setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top, title: labels[index] || "Activity", rows: [`Recorded events: ${fmt(values[index] ?? 0)}`] });
-      }}
-      onPointerLeave={() => setTip(null)}>
-      <title>Move the cursor across the chart to inspect each day's recorded events.</title>
-      <defs><linearGradient id="ov-spark-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-      {[22, 45, 68].map(y => <line key={y} x1="0" x2="440" y1={y} y2={y} className="ov-chart-gridline" />)}
-      {area && <path d={area} fill="url(#ov-spark-fill)" />}
-      {path && <path d={path} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>}
-    </svg>
-    <ChartTooltip tip={tip}/>
-  </div>;
+function makeZeroDays(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    date: new Date(Date.now() - (count - index - 1) * 86400000).toISOString().slice(0, 10),
+    total: 0,
+    by_section: {} as Record<string, number>,
+  }));
 }
 
-function MultiLineChart({ data }: { data: OverviewActivity["daily"] }) {
-  const [tip, setTip] = useState<ChartTipState>(null);
-  const series = ["threat-intel", "detections", "incidents", "findings"];
-  const colors = ["var(--ov-blue)", "var(--ov-teal)", "var(--ov-amber)", "var(--ov-cyan)"];
-  const points = data.slice(-30);
-  const max = Math.max(1, ...points.flatMap(point => series.map(key => point.by_section[key] ?? 0)));
-  return <div className="ov-lines-wrap">
-    <div className="ov-chart-frame">
-      <svg className="ov-lines-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Daily activity by security section over the last 30 days"
-        onPointerMove={event => {
-          if (!points.length) return;
-          const rect = event.currentTarget.getBoundingClientRect();
-          const index = Math.max(0, Math.min(points.length - 1, Math.round(((event.clientX - rect.left) / Math.max(1, rect.width)) * (points.length - 1))));
-          const point = points[index];
-          setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top, title: dateLabel(point.date), rows: series.map((key, i) => `${title(key)}: ${fmt(point.by_section[key] ?? 0)}`) });
-        }}
-        onPointerLeave={() => setTip(null)}>
-        <title>Move the cursor across the chart to compare daily activity by section.</title>
-        {[30, 65, 100, 135].map(y => <line key={y} x1="0" x2="600" y1={y} y2={y} className="ov-chart-gridline" />)}
-        {series.map((key, index) => <path key={key} d={pathFor(points.map(point => point.by_section[key] ?? 0), 600, 140, max)} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"><title>{title(key)} activity trend</title></path>)}
-      </svg>
-      <ChartTooltip tip={tip}/>
-    </div>
-    <div className="ov-chart-legend">{series.map((key, index) => <span key={key}><i style={{ background: colors[index] }}/>{title(key)}</span>)}</div>
-  </div>;
-}
-
-function RadarChart({ monthly }: { monthly: OverviewActivity["monthly"] }) {
-  const [tip, setTip] = useState<ChartTipState>(null);
-  const values = monthly.map(item => item.total);
-  const max = Math.max(1, ...values);
-  const center = 150;
-  const radius = 112;
-  const coords = values.map((value, index) => {
-    const angle = (Math.PI * 2 * index / 12) - Math.PI / 2;
-    const r = 22 + (value / max) * (radius - 22);
-    return [center + Math.cos(angle) * r, center + Math.sin(angle) * r] as const;
-  });
-  const polygon = coords.map(([x,y]) => x.toFixed(1) + "," + y.toFixed(1)).join(" ");
-  return <div className="ov-chart-frame ov-radar-frame">
-    <svg className="ov-radar" viewBox="0 0 300 300" role="img" aria-label="Monthly security activity pattern for the last 12 months"
-      onPointerMove={event => {
-        if (!monthly.length) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 300;
-        const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * 300;
-        let nearest = 0, distance = Number.POSITIVE_INFINITY;
-        coords.forEach(([px,py], index) => { const d = Math.hypot(px-x,py-y); if (d < distance) { distance=d; nearest=index; } });
-        const item = monthly[nearest];
-        setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top, title: item.label, rows: [`Recorded events: ${fmt(item.total)}`, `Month: ${item.month}`] });
-      }}
-      onPointerLeave={() => setTip(null)}>
-      <title>Move the cursor across the radar chart to inspect monthly event totals.</title>
-      {[28, 56, 84, 112].map(r => <circle key={r} cx={center} cy={center} r={r} className="ov-radar-ring" />)}
-      {monthly.map((item,index) => {
-        const angle = (Math.PI * 2 * index / 12) - Math.PI / 2;
-        const x = center + Math.cos(angle) * radius;
-        const y = center + Math.sin(angle) * radius;
-        return <g key={item.month}><line x1={center} y1={center} x2={x} y2={y} className="ov-radar-axis"/><text x={center + Math.cos(angle) * 132} y={center + Math.sin(angle) * 132 + 3} className="ov-radar-label" textAnchor="middle">{item.label}</text></g>;
-      })}
-      {polygon && <polygon points={polygon} className="ov-radar-area"/>}
-      {coords.map(([x,y],index) => <circle key={index} cx={x} cy={y} r="4" className="ov-radar-point"><title>{monthly[index]?.label}: {fmt(monthly[index]?.total ?? 0)} recorded events</title></circle>)}
-      <circle cx={center} cy={center} r="14" className="ov-radar-core"/>
-    </svg>
-    <ChartTooltip tip={tip}/>
-  </div>;
-}
-
-function PanelHead({ eyebrow, heading, trailing }: { eyebrow?: string; heading: string; trailing?: ReactNode }) {
-  return <div className="ov-panel-head"><div>{eyebrow && <small>{eyebrow}</small>}<h3>{heading}</h3></div>{trailing}</div>;
+function buildSeasonality(activity: OverviewActivity | null, incidents: Incident[], findings: Finding[]) {
+  const monthly = activity?.monthly ?? [];
+  const years = [...new Set(monthly.map(item => Number(item.month.slice(0, 4))))].sort((a, b) => b - a);
+  const yearList = years.length ? years : [new Date().getUTCFullYear()];
+  const activeIncidents = incidents.filter(item => ["open", "investigating", "contained"].includes(item.status)).length;
+  const openFindings = findings.filter(item => item.status !== "resolved").length;
+  return {
+    title: "Security activity rhythm",
+    axis: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    years: yearList.map(year => {
+      const values = Array.from({ length: 12 }, (_, index) => {
+        const key = year + "-" + String(index + 1).padStart(2, "0");
+        return monthly.find(item => item.month === key)?.total ?? 0;
+      });
+      const total = sum(values);
+      const peak = Math.max(0, ...values);
+      const peakIndex = values.indexOf(peak);
+      const rows = (activity?.recent ?? []).slice(0, 3).map(event => ({
+        label: event.summary,
+        value: timeLabel(event.occurred_at),
+      }));
+      if (!rows.length) rows.push({ label: "No recent recorded activity", value: "—" });
+      return {
+        label: String(year),
+        values,
+        stats: [
+          { label: "Active incidents", value: activeIncidents, delta: "—", note: "current open cases" },
+          { label: "Open findings", value: openFindings, delta: "—", note: "not yet resolved" },
+        ],
+        rows: [
+          { label: "Assets monitored", value: fmt(0) },
+          { label: "Peak activity month", value: peak ? monthLabel(year + "-" + String(peakIndex + 1).padStart(2, "0")) + " · " + fmt(peak) : "No events" },
+          ...rows,
+        ],
+      };
+    }),
+  };
 }
 
 export function SecurityOverviewBento({ assets, findings, incidents, refreshKey }: Props) {
   const [activity, setActivity] = useState<OverviewActivity | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<Period>(30);
-  const [selectedYear, setSelectedYear] = useState(new Date().getUTCFullYear());
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     getOverviewActivity(730, 16).then(result => {
-      if (active) { setActivity(result); setError(""); }
+      if (!active) return;
+      setActivity(result);
+      setError("");
+      setUpdatedAt(new Date().toISOString());
     }).catch(reason => {
       if (active) setError(reason instanceof Error ? reason.message : "Overview activity could not be loaded.");
-    }).finally(() => { if (active) setLoading(false); });
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
     return () => { active = false; };
   }, [refreshKey]);
 
-  const daily = activity?.daily ?? [];
-  const visibleDays = daily.slice(-period);
-  const previousDays = daily.slice(-period * 2, -period);
-  const currentTotal = sum(visibleDays.map(item => item.total));
-  const previousTotal = sum(previousDays.map(item => item.total));
-  const change = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : null;
+  const daily = activity?.daily?.length ? activity.daily : makeZeroDays(730);
+  const last30 = daily.slice(-30);
+  const previous30 = daily.slice(-60, -30);
+  const total30 = sum(last30.map(day => day.total));
+  const previousTotal30 = sum(previous30.map(day => day.total));
+  const signalNow = countSection(last30, "detections") + countSection(last30, "incidents");
+  const signalPrevious = countSection(previous30, "detections") + countSection(previous30, "incidents");
   const sectionTotals = useMemo(() => SECTIONS.map(section => ({
     ...section,
-    count: sum(visibleDays.map(day => day.by_section[section.id] ?? 0)),
-  })), [visibleDays]);
-  const monthly = activity?.monthly ?? [];
-  const yearOptions = [...new Set(monthly.map(item => Number(item.month.slice(0, 4))))].sort((a,b) => b-a);
-  const activeYear = yearOptions.includes(selectedYear) ? selectedYear : (yearOptions[0] ?? selectedYear);
-  const selectedMonths = monthly.filter(item => Number(item.month.slice(0, 4)) === activeYear);
-  const monthlyTotal = sum(selectedMonths.map(item => item.total));
-  const monthsElapsed = activeYear === new Date().getUTCFullYear() ? new Date().getUTCMonth() + 1 : 12;
-  const monthlyAverage = monthsElapsed ? monthlyTotal / monthsElapsed : 0;
-  const threatLookups = sectionTotals.find(item => item.id === "threat-intel")?.count ?? 0;
-  const unresolvedFindings = findings.filter(item => item.status !== "resolved").length;
-  const activeIncidents = incidents.filter(item => ["open", "investigating", "contained"].includes(item.status)).length;
-  const eventFeed = activity?.recent ?? [];
+    values: ([7, 30, 365] as PeriodDays[]).map(days => countSection(daily.slice(-days), section.id)),
+  })), [daily]);
+  const periodTotals = ([7, 30, 365] as PeriodDays[]).map((days, index) => {
+    const current = daily.slice(-days);
+    const previous = daily.slice(-days * 2, -days);
+    const currentTotal = sum(current.map(day => day.total));
+    const previousTotal = sum(previous.map(day => day.total));
+    return {
+      label: index === 0 ? "7 days" : index === 1 ? "30 days" : "365 days",
+      total: currentTotal,
+      delta: deltaLabel(currentTotal, previousTotal),
+      compare: "vs previous " + days + " days",
+    };
+  });
 
-  return <section className="overview-bento">
-    <header className="ov-heading">
-      <div><span className="ov-kicker">OPSAEGIS / SECURITY OPERATIONS</span><h2>Overview</h2><p>Your security posture, activity and response signals in one view.</p></div>
-      <div className="ov-live-indicator"><i />{loading ? "SYNCING" : error ? "DATA DELAYED" : "LIVE DATA"}<span>15s refresh</span></div>
-    </header>
+  const topSections = [...sectionTotals].sort((a, b) => b.values[1] - a.values[1]).slice(0, 5);
+  const recent = activity?.recent ?? [];
+  const seasonality = buildSeasonality(activity, incidents, findings);
+  seasonality.years = seasonality.years.map(year => ({
+    ...year,
+    rows: [
+      { label: "Assets monitored", value: fmt(assets.length) },
+      ...year.rows.slice(1),
+    ],
+  }));
 
-    {error && <div className="error-banner" role="alert">Live activity feed unavailable: {error}. Existing section records remain visible where loaded.</div>}
+  const categories: AnalyticsBentoProps["categories"] = {
+    title: "Workspace activity breakdown",
+    groups: GROUPS,
+    periods: periodTotals,
+    items: sectionTotals.map(section => ({
+      name: section.label,
+      group: section.group,
+      values: section.values,
+    })),
+    table: {
+      columns: ["Workspace", "7D", "30D", "365D"],
+      rows: topSections.map(section => ({
+        label: section.label,
+        values: section.values.map(fmt),
+      })),
+    },
+  };
 
-    <div className="ov-bento-grid">
-      <section className="ov-panel ov-panel-activity">
-        <div className="ov-hero-metric">
-          <div><span className="ov-label">Recorded security activity</span><strong>{fmt(currentTotal)}</strong><small>Audit events · last {period} days</small></div>
-          <div className={"ov-change " + (change !== null && change < 0 ? "down" : "")}>{change === null ? "—" : (change >= 0 ? "↑ " : "↓ ") + Math.abs(change).toFixed(1) + "%"}<small>vs previous period</small></div>
-        </div>
-        <div className="ov-spark-meta"><span>ACTIVITY TREND</span><span>{visibleDays.length ? dateLabel(visibleDays[0].date) + " — " + dateLabel(visibleDays[visibleDays.length - 1].date) : "No activity data"}</span></div>
-        <Sparkline values={visibleDays.map(item => item.total)} labels={visibleDays.map(item => dateLabel(item.date))} />
-        <div className="ov-quick-stats">
-          <div><span>Assets</span><strong>{fmt(assets.length)}</strong></div>
-          <div><span>Open findings</span><strong>{fmt(unresolvedFindings)}</strong></div>
-          <div><span>Active incidents</span><strong>{fmt(activeIncidents)}</strong></div>
-          <div><span>Threat lookups</span><strong>{fmt(threatLookups)}</strong></div>
-        </div>
-      </section>
+  const currentYear = new Date().getUTCFullYear();
+  const activitySeries = last30.map(day => ({ label: dateLabel(day.date), value: day.total }));
+  const sessions: AnalyticsBentoProps["sessions"] = {
+    label: "Detection & incident signals",
+    value: signalNow,
+    delta: deltaLabel(signalNow, signalPrevious),
+    note: "Recorded detection and incident actions · last 30 days",
+    desktop: [
+      last30.map(day => day.by_section.detections ?? 0),
+      previous30.map(day => day.by_section.detections ?? 0),
+    ],
+    mobile: [
+      last30.map(day => day.by_section.incidents ?? 0),
+      previous30.map(day => day.by_section.incidents ?? 0),
+    ],
+    labels: {
+      desktop: "Detections",
+      mobile: "Incidents",
+      prior: "Previous 30 days",
+      current: "Daily activity",
+      points: last30.map(day => dateLabel(day.date)),
+    },
+  };
 
-      <section className="ov-panel ov-panel-sessions">
-        <PanelHead eyebrow="SOURCE SIGNALS" heading="Activity by section" trailing={<span className="ov-subtle">30 DAYS</span>} />
-        <MultiLineChart data={daily} />
-        <div className="ov-section-summary">
-          {["threat-intel","detections","incidents"].map(id => {
-            const section = sectionTotals.find(item => item.id === id)!;
-            return <div key={id}><i style={{ background: section.color }}/><span>{section.label}</span><b>{fmt(section.count)}</b></div>;
-          })}
-        </div>
-      </section>
+  const revenue: AnalyticsBentoProps["revenue"] = {
+    label: "Recorded security activity",
+    value: total30,
+    delta: deltaLabel(total30, previousTotal30),
+    note: "Authenticated audit events across all workspaces",
+    caption: "DAILY EVENTS · LAST 30 DAYS",
+    series: activitySeries.length ? activitySeries : [{ label: "No data", value: 0 }],
+  };
 
-      <section className="ov-panel ov-panel-category">
-        <PanelHead eyebrow="WORKSPACE BREAKDOWN" heading="Activity by category" trailing={
-          <div className="ov-period-switch" aria-label="Activity period">
-            {([7,30,365] as Period[]).map(value => <button key={value} type="button" className={period === value ? "active" : ""} aria-pressed={period === value} onClick={() => setPeriod(value)}>{value === 7 ? "Week" : value === 30 ? "Month" : "Year"}</button>)}
-          </div>
-        }/>
-        <div className="ov-treemap">
-          {sectionTotals.slice().sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} data-empty={item.count === 0} title={`${item.label}: ${fmt(item.count)} events · ${currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}% of selected activity`} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
-            <span>{item.label}</span><strong>{fmt(item.count)}</strong><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small>
-          </div>)}
-        </div>
-        <div className="ov-category-table">
-          <div><span>Section</span><span>Events</span><span>Share</span></div>
-          {sectionTotals.slice().sort((a,b) => b.count-a.count).slice(0,5).map(item => <div key={item.id}><span><i style={{background:item.color}}/>{item.label}</span><b>{fmt(item.count)}</b><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small></div>)}
-        </div>
-      </section>
+  const liveColors: NonNullable<AnalyticsBentoProps["colors"]> = {
+    revenue: ["var(--oa-cyan)", "var(--oa-blue)"],
+    desktop: ["var(--oa-blue)", "var(--oa-cyan)"],
+    mobile: ["var(--oa-teal)", "var(--oa-amber)"],
+    radar: "var(--oa-teal)",
+  };
 
-      <section className="ov-panel ov-panel-seasonality">
-        <PanelHead eyebrow="LONG-RANGE SIGNALS" heading="Activity rhythm" trailing={<div className="ov-year-switch" aria-label="Activity year">{yearOptions.map(year => <button key={year} type="button" className={activeYear === year ? "active" : ""} aria-pressed={activeYear === year} onClick={() => setSelectedYear(year)}>{year}</button>)}</div>} />
-        <div className="ov-radar-layout"><RadarChart monthly={selectedMonths}/><div className="ov-radar-stats"><div><small>Monthly average</small><strong>{fmt(Math.round(monthlyAverage))}</strong><span>Audited events / month</span></div><div><small>Year total</small><strong>{fmt(monthlyTotal)}</strong><span>Recorded activity · {activeYear}</span></div></div></div>
-        <div className="ov-recent-head"><span>RECENT ACTIVITY</span><span>{eventFeed.length} events</span></div>
-        <div className="ov-recent-list">
-          {eventFeed.slice(0,4).map(event => <div className="ov-event" key={event.id}><i className={"ov-event-dot " + event.section}/><div><strong>{event.summary}</strong><small>{title(event.section)}{event.record ? " · " + event.record : ""}</small></div><time>{clockLabel(event.occurred_at)}</time></div>)}
-          {!eventFeed.length && <p className="ov-no-activity">{loading ? "Loading recent events…" : "No recorded actions in the selected window."}</p>}
+  return (
+    <section className="ops-analytics-overview">
+      <header className="ops-analytics-heading">
+        <div className="ops-analytics-title">
+          <span className="ops-analytics-kicker">OPSAEGIS / SECURITY OPERATIONS</span>
+          <h2>Security command center</h2>
+          <p>Live operational signals, exposure and response activity across every workspace.</p>
         </div>
-      </section>
-    </div>
-    <footer className="ov-footnote">Metrics are calculated from authenticated OpsAegis records and audit events. Read-only page visits are not counted as security activity.{activity?.rows_limited ? " Activity history reached the 10,000-record query limit." : ""}</footer>
-  </section>;
+        <div className="ops-analytics-status" role="status">
+          <span className={"ops-analytics-status-dot" + (error ? " is-error" : "")} />
+          <span>{loading ? "SYNCING" : error ? "DATA DELAYED" : "LIVE DATA"}</span>
+          <i />
+          <small>{updatedAt ? "Updated " + timeLabel(updatedAt) : "15s refresh"}</small>
+        </div>
+      </header>
+
+      {error && <div className="error-banner" role="alert">Live activity feed unavailable: {error}. Previously loaded workspace records are retained.</div>}
+
+      <div className="ops-analytics-bento">
+        <AnalyticsBento
+          currency=""
+          revenue={revenue}
+          sessions={sessions}
+          categories={categories}
+          seasonality={seasonality}
+          colors={liveColors}
+          credit={false}
+          className="ops-analytics-component"
+        />
+      </div>
+
+      <footer className="ops-analytics-footnote">
+        <span>LIVE DATA SOURCE</span>
+        Authenticated OpsAegis records and persisted audit events · automatic refresh every 15 seconds and after successful actions.
+        {activity?.rows_limited ? " Activity history reached the backend query limit." : ""}
+        {recent.length ? " Latest event: " + recent[0].summary + "." : " No recent activity has been recorded."}
+      </footer>
+    </section>
+  );
 }
