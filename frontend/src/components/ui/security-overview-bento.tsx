@@ -5,16 +5,16 @@ import { getOverviewActivity } from "../../api";
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
 type Period = 7 | 30 | 365;
 const SECTIONS = [
-  { id: "assets", label: "Assets", color: "var(--ov-violet)" },
-  { id: "findings", label: "Findings", color: "var(--ov-blue)" },
-  { id: "vulnerabilities", label: "Vulnerabilities", color: "var(--ov-orange)" },
-  { id: "detections", label: "Detections", color: "var(--ov-cyan)" },
-  { id: "incidents", label: "Incidents", color: "var(--ov-red)" },
-  { id: "integrations", label: "Integrations", color: "var(--ov-green)" },
-  { id: "threat-intel", label: "Threat Intel", color: "var(--ov-lime)" },
-  { id: "playbooks", label: "Playbooks", color: "var(--ov-purple)" },
-  { id: "users", label: "Users & Roles", color: "var(--ov-pink)" },
-  { id: "reports", label: "Reports", color: "var(--ov-yellow)" },
+  { id: "assets", label: "Assets", color: "var(--ov-blue)" },
+  { id: "findings", label: "Findings", color: "var(--ov-cyan)" },
+  { id: "vulnerabilities", label: "Vulnerabilities", color: "var(--ov-steel)" },
+  { id: "detections", label: "Detections", color: "var(--ov-teal)" },
+  { id: "incidents", label: "Incidents", color: "var(--ov-amber)" },
+  { id: "integrations", label: "Integrations", color: "var(--ov-blue-soft)" },
+  { id: "threat-intel", label: "Threat Intel", color: "var(--ov-blue)" },
+  { id: "playbooks", label: "Playbooks", color: "var(--ov-teal)" },
+  { id: "users", label: "Users & Roles", color: "var(--ov-steel)" },
+  { id: "reports", label: "Reports", color: "var(--ov-blue-soft)" },
   { id: "settings", label: "Settings", color: "var(--ov-slate)" },
 ] as const;
 const fmt = (n: number) => n.toLocaleString();
@@ -32,33 +32,69 @@ function pathFor(values: number[], width: number, height: number, max: number) {
   }).join(" ");
 }
 
-function Sparkline({ values, color = "var(--ov-cyan)" }: { values: number[]; color?: string }) {
+type ChartTipState = { x: number; y: number; title: string; rows: string[] } | null;
+
+function ChartTooltip({ tip }: { tip: ChartTipState }) {
+  if (!tip) return null;
+  return <div className="ov-chart-tooltip" style={{ left: tip.x, top: tip.y }} role="status" aria-live="polite">
+    <strong>{tip.title}</strong>
+    {tip.rows.map(row => <span key={row}>{row}</span>)}
+  </div>;
+}
+
+function Sparkline({ values, labels, color = "var(--ov-cyan)" }: { values: number[]; labels: string[]; color?: string }) {
+  const [tip, setTip] = useState<ChartTipState>(null);
   const max = Math.max(1, ...values);
   const path = pathFor(values, 440, 90, max);
   const area = path ? path + " L440 90 L0 90 Z" : "";
-  return <svg className="ov-sparkline" viewBox="0 0 440 90" preserveAspectRatio="none" role="img" aria-label="Activity trend"><title>Daily persisted audit event count</title>
-    <defs><linearGradient id="ov-spark-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-    {[22, 45, 68].map(y => <line key={y} x1="0" x2="440" y1={y} y2={y} className="ov-chart-gridline" />)}
-    {area && <path d={area} fill="url(#ov-spark-fill)" />}
-    {path && <path d={path} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>}
-  </svg>;
+  return <div className="ov-chart-frame">
+    <svg className="ov-sparkline" viewBox="0 0 440 90" preserveAspectRatio="none" role="img" aria-label="Activity trend"
+      onPointerMove={event => {
+        if (!values.length) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const index = Math.max(0, Math.min(values.length - 1, Math.round(((event.clientX - rect.left) / Math.max(1, rect.width)) * (values.length - 1))));
+        setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top, title: labels[index] || "Activity", rows: [`Recorded events: ${fmt(values[index] ?? 0)}`] });
+      }}
+      onPointerLeave={() => setTip(null)}>
+      <title>Move the cursor across the chart to inspect each day's recorded events.</title>
+      <defs><linearGradient id="ov-spark-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
+      {[22, 45, 68].map(y => <line key={y} x1="0" x2="440" y1={y} y2={y} className="ov-chart-gridline" />)}
+      {area && <path d={area} fill="url(#ov-spark-fill)" />}
+      {path && <path d={path} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>}
+    </svg>
+    <ChartTooltip tip={tip}/>
+  </div>;
 }
 
 function MultiLineChart({ data }: { data: OverviewActivity["daily"] }) {
+  const [tip, setTip] = useState<ChartTipState>(null);
   const series = ["threat-intel", "detections", "incidents", "findings"];
-  const colors = ["var(--ov-lime)", "var(--ov-cyan)", "var(--ov-red)", "var(--ov-violet)"];
+  const colors = ["var(--ov-blue)", "var(--ov-teal)", "var(--ov-amber)", "var(--ov-cyan)"];
   const points = data.slice(-30);
   const max = Math.max(1, ...points.flatMap(point => series.map(key => point.by_section[key] ?? 0)));
   return <div className="ov-lines-wrap">
-    <svg className="ov-lines-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Daily activity by security section over the last 30 days">
-      {[30, 65, 100, 135].map(y => <line key={y} x1="0" x2="600" y1={y} y2={y} className="ov-chart-gridline" />)}
-      {series.map((key, index) => <path key={key} d={pathFor(points.map(point => point.by_section[key] ?? 0), 600, 140, max)} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"><title>{title(key)} activity trend</title></path>)}
-    </svg>
+    <div className="ov-chart-frame">
+      <svg className="ov-lines-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Daily activity by security section over the last 30 days"
+        onPointerMove={event => {
+          if (!points.length) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const index = Math.max(0, Math.min(points.length - 1, Math.round(((event.clientX - rect.left) / Math.max(1, rect.width)) * (points.length - 1))));
+          const point = points[index];
+          setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top, title: dateLabel(point.date), rows: series.map((key, i) => `${title(key)}: ${fmt(point.by_section[key] ?? 0)}`) });
+        }}
+        onPointerLeave={() => setTip(null)}>
+        <title>Move the cursor across the chart to compare daily activity by section.</title>
+        {[30, 65, 100, 135].map(y => <line key={y} x1="0" x2="600" y1={y} y2={y} className="ov-chart-gridline" />)}
+        {series.map((key, index) => <path key={key} d={pathFor(points.map(point => point.by_section[key] ?? 0), 600, 140, max)} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"><title>{title(key)} activity trend</title></path>)}
+      </svg>
+      <ChartTooltip tip={tip}/>
+    </div>
     <div className="ov-chart-legend">{series.map((key, index) => <span key={key}><i style={{ background: colors[index] }}/>{title(key)}</span>)}</div>
   </div>;
 }
 
 function RadarChart({ monthly }: { monthly: OverviewActivity["monthly"] }) {
+  const [tip, setTip] = useState<ChartTipState>(null);
   const values = monthly.map(item => item.total);
   const max = Math.max(1, ...values);
   const center = 150;
@@ -69,18 +105,33 @@ function RadarChart({ monthly }: { monthly: OverviewActivity["monthly"] }) {
     return [center + Math.cos(angle) * r, center + Math.sin(angle) * r] as const;
   });
   const polygon = coords.map(([x,y]) => x.toFixed(1) + "," + y.toFixed(1)).join(" ");
-  return <svg className="ov-radar" viewBox="0 0 300 300" role="img" aria-label="Monthly security activity pattern for the last 12 months">
-    {[28, 56, 84, 112].map(r => <circle key={r} cx={center} cy={center} r={r} className="ov-radar-ring" />)}
-    {monthly.map((item,index) => {
-      const angle = (Math.PI * 2 * index / 12) - Math.PI / 2;
-      const x = center + Math.cos(angle) * radius;
-      const y = center + Math.sin(angle) * radius;
-      return <g key={item.month}><line x1={center} y1={center} x2={x} y2={y} className="ov-radar-axis"/><text x={center + Math.cos(angle) * 132} y={center + Math.sin(angle) * 132 + 3} className="ov-radar-label" textAnchor="middle">{item.label}</text></g>;
-    })}
-    {polygon && <polygon points={polygon} className="ov-radar-area"/>}
-    {coords.map(([x,y],index) => <circle key={index} cx={x} cy={y} r="3" className="ov-radar-point"><title>{monthly[index]?.label}: {fmt(monthly[index]?.total ?? 0)} recorded events</title></circle>)}
-    <circle cx={center} cy={center} r="14" className="ov-radar-core"/>
-  </svg>;
+  return <div className="ov-chart-frame ov-radar-frame">
+    <svg className="ov-radar" viewBox="0 0 300 300" role="img" aria-label="Monthly security activity pattern for the last 12 months"
+      onPointerMove={event => {
+        if (!monthly.length) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 300;
+        const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * 300;
+        let nearest = 0, distance = Number.POSITIVE_INFINITY;
+        coords.forEach(([px,py], index) => { const d = Math.hypot(px-x,py-y); if (d < distance) { distance=d; nearest=index; } });
+        const item = monthly[nearest];
+        setTip({ x: event.clientX - rect.left, y: event.clientY - rect.top, title: item.label, rows: [`Recorded events: ${fmt(item.total)}`, `Month: ${item.month}`] });
+      }}
+      onPointerLeave={() => setTip(null)}>
+      <title>Move the cursor across the radar chart to inspect monthly event totals.</title>
+      {[28, 56, 84, 112].map(r => <circle key={r} cx={center} cy={center} r={r} className="ov-radar-ring" />)}
+      {monthly.map((item,index) => {
+        const angle = (Math.PI * 2 * index / 12) - Math.PI / 2;
+        const x = center + Math.cos(angle) * radius;
+        const y = center + Math.sin(angle) * radius;
+        return <g key={item.month}><line x1={center} y1={center} x2={x} y2={y} className="ov-radar-axis"/><text x={center + Math.cos(angle) * 132} y={center + Math.sin(angle) * 132 + 3} className="ov-radar-label" textAnchor="middle">{item.label}</text></g>;
+      })}
+      {polygon && <polygon points={polygon} className="ov-radar-area"/>}
+      {coords.map(([x,y],index) => <circle key={index} cx={x} cy={y} r="4" className="ov-radar-point"><title>{monthly[index]?.label}: {fmt(monthly[index]?.total ?? 0)} recorded events</title></circle>)}
+      <circle cx={center} cy={center} r="14" className="ov-radar-core"/>
+    </svg>
+    <ChartTooltip tip={tip}/>
+  </div>;
 }
 
 function PanelHead({ eyebrow, heading, trailing }: { eyebrow?: string; heading: string; trailing?: ReactNode }) {
@@ -141,7 +192,7 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
           <div className={"ov-change " + (change !== null && change < 0 ? "down" : "")}>{change === null ? "—" : (change >= 0 ? "↑ " : "↓ ") + Math.abs(change).toFixed(1) + "%"}<small>vs previous period</small></div>
         </div>
         <div className="ov-spark-meta"><span>ACTIVITY TREND</span><span>{visibleDays.length ? dateLabel(visibleDays[0].date) + " — " + dateLabel(visibleDays[visibleDays.length - 1].date) : "No activity data"}</span></div>
-        <Sparkline values={visibleDays.map(item => item.total)} />
+        <Sparkline values={visibleDays.map(item => item.total)} labels={visibleDays.map(item => dateLabel(item.date))} />
         <div className="ov-quick-stats">
           <div><span>Assets</span><strong>{fmt(assets.length)}</strong></div>
           <div><span>Open findings</span><strong>{fmt(unresolvedFindings)}</strong></div>
@@ -168,7 +219,7 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
           </div>
         }/>
         <div className="ov-treemap">
-          {sectionTotals.slice().sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} data-empty={item.count === 0} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
+          {sectionTotals.slice().sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} data-empty={item.count === 0} title={`${item.label}: ${fmt(item.count)} events · ${currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}% of selected activity`} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
             <span>{item.label}</span><strong>{fmt(item.count)}</strong><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small>
           </div>)}
         </div>
