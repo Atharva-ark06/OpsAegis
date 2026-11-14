@@ -696,7 +696,7 @@ export function AnalyticsBento({
                 className="-m-2.5 rounded-[14px] p-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[-0.01em]">
-                  <i className={`size-1.5 rounded-full transition-colors ${i === period ? "bg-emerald-500 dark:bg-emerald-400" : "bg-muted-foreground/60"}`} />
+                  <i className="size-1.5 rounded-full transition-colors" style={{ background: i === period ? "var(--ab-ring)" : "var(--ab-muted-foreground)" }} />
                   {p.label}
                 </div>
                 <div className="mt-1.5 text-xl font-medium leading-none sm:text-[28px]" style={mono}>
