@@ -119,7 +119,8 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
   const activeYear = yearOptions.includes(selectedYear) ? selectedYear : (yearOptions[0] ?? selectedYear);
   const selectedMonths = monthly.filter(item => Number(item.month.slice(0, 4)) === activeYear);
   const monthlyTotal = sum(selectedMonths.map(item => item.total));
-  const monthlyAverage = selectedMonths.length ? monthlyTotal / selectedMonths.length : 0;
+  const monthsElapsed = activeYear === new Date().getUTCFullYear() ? new Date().getUTCMonth() + 1 : 12;
+  const monthlyAverage = monthsElapsed ? monthlyTotal / monthsElapsed : 0;
   const threatLookups = sectionTotals.find(item => item.id === "threat-intel")?.count ?? 0;
   const unresolvedFindings = findings.filter(item => item.status !== "resolved").length;
   const activeIncidents = incidents.filter(item => ["open", "investigating", "contained"].includes(item.status)).length;
