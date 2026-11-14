@@ -87,7 +87,11 @@ function ProviderResult({name,result}:{name:string;result:ThreatIntelIOC["provid
 }
 export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const [providers,setProviders]=useState<ThreatIntelProviders|null>(null);
- const [items,setItems]=useState<ThreatIntelIOC[]>([]);\n const [findings,setFindings]=useState<Finding[]>([]);\n const [incidents,setIncidents]=useState<Incident[]>([]);\n const [contextLoading,setContextLoading]=useState(true);\n const [contextError,setContextError]=useState("");
+ const [items,setItems]=useState<ThreatIntelIOC[]>([]);
+ const [findings,setFindings]=useState<Finding[]>([]);
+ const [incidents,setIncidents]=useState<Incident[]>([]);
+ const [contextLoading,setContextLoading]=useState(true);
+ const [contextError,setContextError]=useState("");
  const [kind,setKind]=useState<IOCType>("ip");
  const [value,setValue]=useState("");
  const [busy,setBusy]=useState(false);
@@ -95,11 +99,17 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const [message,setMessage]=useState("");
  const [selected,setSelected]=useState<ThreatIntelIOC|null>(null);
  async function refresh(){
-  const results=await Promise.allSettled([getThreatIntelProviders(),getThreatIntelIOCs()]);
+  setContextLoading(true);
+  const results=await Promise.allSettled([getThreatIntelProviders(),getThreatIntelIOCs(),getFindings(),getIncidents()]);
   if(results[0].status==="fulfilled")setProviders(results[0].value);
   if(results[1].status==="fulfilled")setItems(results[1].value);
+  if(results[2].status==="fulfilled")setFindings(results[2].value);
+  if(results[3].status==="fulfilled")setIncidents(results[3].value);
   const failed=results.find(result=>result.status==="rejected");
+  const contextFailed=results.slice(2).find(result=>result.status==="rejected");
+  setContextError(contextFailed?.status==="rejected"?(contextFailed.reason instanceof Error?contextFailed.reason.message:"Unable to load security activity records."):"");
   if(failed?.status==="rejected")setError(failed.reason instanceof Error?failed.reason.message:"Unable to load threat intelligence records.");
+  setContextLoading(false);
  }
  useEffect(()=>{void refresh();},[]);
  async function enrich(event:FormEvent<HTMLFormElement>,indicatorType:IOCType=kind,indicatorValue=value,force=false){
@@ -115,7 +125,8 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const abuse=selected?.provider_results.abuseipdb;
  const providerConflict=Boolean(vt?.status==="ok"&&abuse?.status==="ok"&&vt.verdict!==abuse.verdict);
  return <section className="threat-intel-workspace">
-  <div className="ti-workspace-intro"><div><p className="eyebrow">INDICATOR REPUTATION & CONTEXT</p><h2>Threat intelligence workspace</h2><p>Investigate indicators, understand source coverage and review authenticated security activity.</p></div></div>\n  <ThreatIntelContext findings={findings} incidents={incidents} iocs={items} loading={contextLoading} error={contextError}/>
+  <div className="ti-workspace-intro"><div><p className="eyebrow">INDICATOR REPUTATION & CONTEXT</p><h2>Threat intelligence workspace</h2><p>Investigate indicators, understand source coverage and review authenticated security activity.</p></div></div>
+  <ThreatIntelContext findings={findings} incidents={incidents} iocs={items} loading={contextLoading} error={contextError}/>
   {error&&<div className="error-banner" role="alert">{error}</div>}
   {message&&<div className="success-banner" role="status">{message}</div>}
   <div className="provider-strip">
