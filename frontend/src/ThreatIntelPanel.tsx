@@ -100,7 +100,6 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const [message,setMessage]=useState("");
  const [selected,setSelected]=useState<ThreatIntelIOC|null>(null);
  async function refresh(){
-  setContextLoading(true);
   const results=await Promise.allSettled([getThreatIntelProviders(),getThreatIntelIOCs(),getFindings(),getIncidents()]);
   if(results[0].status==="fulfilled")setProviders(results[0].value);
   if(results[1].status==="fulfilled")setItems(results[1].value);
