@@ -1566,7 +1566,7 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 .ov-event{display:grid;grid-template-columns:7px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--aegis-border)}
 .ov-event:first-child{border-top:0}
 .ov-event-dot{width:6px;height:6px;border-radius:50%;background:var(--ov-slate)}
-.ov-event-dot.threat-intel{background:var(--ov-lime)}.ov-event-dot.incidents{background:var(--ov-red)}.ov-event-dot.detections{background:var(--ov-cyan)}.ov-event-dot.findings{background:var(--ov-violet)}
+.ov-event-dot.threat-intel{background:var(--ov-blue)}.ov-event-dot.incidents{background:var(--ov-amber)}.ov-event-dot.detections{background:var(--ov-teal)}.ov-event-dot.findings{background:var(--ov-cyan)}
 .ov-event>div{display:grid;gap:2px;min-width:0}
 .ov-event strong{overflow:hidden;color:var(--aegis-text);font-size:9px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
 .ov-event small{overflow:hidden;color:var(--aegis-muted);font-size:8px;text-overflow:ellipsis;white-space:nowrap}
