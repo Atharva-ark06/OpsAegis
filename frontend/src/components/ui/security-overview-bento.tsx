@@ -163,10 +163,9 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
           </div>
         }/>
         <div className="ov-treemap">
-          {sectionTotals.filter(item => item.count > 0).sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
+          {sectionTotals.slice().sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} data-empty={item.count === 0} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
             <span>{item.label}</span><strong>{fmt(item.count)}</strong><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small>
           </div>)}
-          {!sectionTotals.some(item => item.count > 0) && <div className="ov-no-activity">No audited activity in this period yet.</div>}
         </div>
         <div className="ov-category-table">
           <div><span>Section</span><span>Events</span><span>Share</span></div>
