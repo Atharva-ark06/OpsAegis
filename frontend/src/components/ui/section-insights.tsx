@@ -1,68 +1,122 @@
-import { AnalyticsBento } from "./analytics-bento";
 import type { Asset, Finding, Incident } from "../../api";
 
-type Props={view:string;assets:Asset[];findings:Finding[];incidents:Incident[]};
-const palette=["#7cff5b","#8b3dff","#ffb800","#ff5a1f","#22d3ee","#7b8494"];
-const label=(s:string)=>s.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
-const dayKey=(date:Date)=>date.toISOString().slice(0,10);
-const inWindow=(value:string,days:number)=>{const t=new Date(value).getTime();return Number.isFinite(t)&&Date.now()-t<=days*86400000;};
-const countByDay=(rows:{date:string}[],days=30)=>Array.from({length:days},(_,i)=>{const d=new Date();d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()-(days-1-i));const key=dayKey(d);return {label:d.toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"UTC"}),value:rows.filter(r=>dayKey(new Date(r.date))===key).length};});
-export function SectionInsights({view,assets,findings,incidents}:Props){
- const now=Date.now();
- const sectionRows=view==="assets"?assets.map(x=>({name:x.name,group:x.environment||"unknown",date:x.created_at})):
-  view==="incidents"||view==="playbooks"?incidents.map(x=>({name:x.title,group:x.severity||"unknown",date:x.created_at})):
-  view==="integrations"||view==="threat-intel"?findings.map(x=>({name:x.title,group:x.source_engine||"unknown",date:x.first_seen_at})):
-  findings.map(x=>({name:x.title,group:x.severity||"unknown",date:x.first_seen_at}));
- const rawGroups=new Map<string,number>();
- sectionRows.forEach(r=>rawGroups.set(r.group,(rawGroups.get(r.group)||0)+1));
- const ranked=[...rawGroups.keys()].sort((a,b)=>(rawGroups.get(b)||0)-(rawGroups.get(a)||0));
- const keys=ranked.slice(0,7);
- if(ranked.length>7) keys.push("other");
- const normalizedRows=sectionRows.map(r=>({...r,group:keys.includes(r.group)?r.group:"other"}));
- const groups=keys.map((key,i)=>({id:key,name:label(key),color:palette[i%palette.length],ink:i===0||i===1||i===3?"light" as const:"dark" as const}));
- const records=normalizedRows.map(r=>({name:r.name,group:r.group,values:[inWindow(r.date,7)?1:0,inWindow(r.date,30)?1:0,1]}));
- const weekly=sectionRows.filter(r=>inWindow(r.date,7)).length;
- const monthly=sectionRows.filter(r=>inWindow(r.date,30)).length;
- const days=countByDay(sectionRows.map(r=>({date:r.date})));
- const detectionDays=countByDay(findings.map(x=>({date:x.first_seen_at}))).map(x=>x.value);
- const incidentDays=countByDay(incidents.map(x=>({date:x.created_at}))).map(x=>x.value);
- const active=incidents.filter(x=>["open","investigating","contained"].includes(x.status)).length;
- const open=findings.filter(x=>["new","triaged"].includes(x.status)).length;
- const weekday=Array(7).fill(0) as number[];
- findings.forEach(x=>{const d=new Date(x.first_seen_at);if(Number.isFinite(d.getTime())&&now-d.getTime()<=30*86400000)weekday[d.getUTCDay()]++;});
- incidents.forEach(x=>{const d=new Date(x.created_at);if(Number.isFinite(d.getTime())&&now-d.getTime()<=30*86400000)weekday[d.getUTCDay()]++;});
- const heading:Record<string,[string,string,string]>={
- assets:["ATTACK SURFACE","Asset inventory","Registered assets and environment distribution from the asset API."],
- findings:["RISK EXPOSURE","Finding intelligence","Severity, source distribution and first-seen activity from normalized findings."],
- vulnerabilities:["VULNERABILITY EXPOSURE","Vulnerability intelligence","Risk distribution across findings returned by the vulnerability workflow."],
- detections:["DETECTION OPERATIONS","Detection activity","Detection and incident signals aggregated from persisted security records."],
- incidents:["INCIDENT RESPONSE","Incident lifecycle","Incident volume, severity and response status from the incident API."],
- integrations:["COLLECTION FABRIC","Integration coverage","Source coverage and finding activity from connected security engines."],
- "threat-intel":["THREAT CONTEXT","Threat intelligence","Threat-source distribution and security records available to the workspace."],
- playbooks:["RESPONSE AUTOMATION","Response governance","Incident response workload and risk context for playbook operations."],
- reports:["OPERATIONAL REPORTING","Security reporting","Record volumes and trends from authenticated operational datasets."],
- users:["ACCESS GOVERNANCE","Workspace access context","Security workload context alongside the existing administrator-managed user register."],
- settings:["WORKSPACE CONFIGURATION","Workspace health context","Security inventory and response context; account permissions remain server-enforced."]
- };
- const [eyebrow,title,description]=heading[view]||heading.reports;
- const sourceGroups=keys.slice(0,3).map(k=>({label:label(k),value:String(rawGroups.get(k)||0)}));
- const tableRows=sourceGroups.map(r=>({label:r.label,values:[r.value]}));
- const sessionsTotal=detectionDays.reduce((a,b)=>a+b,0)+incidentDays.reduce((a,b)=>a+b,0);
- const eventSeries=days.length>=2?days:[{label:"No data",value:0},{label:"No data",value:0}];
- const dSeries=detectionDays.length>=2?detectionDays:[0,0],iSeries=incidentDays.length>=2?incidentDays:[0,0];
- return <section className="aegis-section-bento">
-  <div className="aegis-section-heading"><div><small>{eyebrow}</small><h2>{title}</h2><p>{description}</p></div><span><i/> LIVE API CONTEXT</span></div>
-  <AnalyticsBento
-   className="mx-auto max-w-[1240px]"
-   currency=""
-   fontFamily="Inter, ui-sans-serif, system-ui, sans-serif"
-   monoFamily="'Geist Mono', ui-monospace, SFMono-Regular, monospace"
-   credit={false}
-   revenue={{label:view==="assets"?"Registered assets":view==="incidents"?"Incidents":"Records in section",value:sectionRows.length,delta:"API",note:"Current authenticated record set",caption:"First-seen / created activity · 30 days",series:eventSeries}}
-   sessions={{label:"Security event streams",value:sessionsTotal,delta:"30D",note:"Persisted findings + incident records",desktop:[dSeries],mobile:[iSeries],labels:{desktop:"Findings",mobile:"Incidents",prior:"",current:"daily activity"}}}
-   categories={{title:view==="assets"?"Assets by environment":view==="incidents"?"Incidents by severity":view==="integrations"||view==="threat-intel"?"Findings by source":"Records by classification",groups:groups.length?groups:[{id:"none",name:"No records",color:"#6b7280"}],periods:[{label:"Weekly",total:weekly,delta:"API",compare:"Records created / first seen in 7 days"},{label:"Monthly",total:monthly,delta:"API",compare:"Records created / first seen in 30 days"},{label:"Loaded",total:sectionRows.length,delta:"API",compare:"Current authenticated API response"}],items:records,table:{columns:["Category","Records"],rows:tableRows}}}
-   seasonality={{title:"Security activity rhythm",axis:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],years:[{label:"30 days",values:weekday,stats:[{label:"Active incidents",value:active,delta:"LIVE",note:"current incident records"},{label:"Open findings",value:open,delta:"LIVE",note:"new + triaged"}],rows:sourceGroups.map(r=>({label:r.label,value:r.value}))}]}}
-   colors={{revenue:["#22d3ee","#3bf08c"],desktop:["#22d3ee","#3c2cff"],mobile:["#ffb800","#ff3da5"],radar:"#3bf08c"}}
-  />
- </section>;
+type Props = { view: string; assets: Asset[]; findings: Finding[]; incidents: Incident[] };
+const label = (value: string) => value.replace(/_/g, " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+const activeFinding = (item: Finding) => ["new", "triaged", "accepted"].includes(item.status);
+const activeIncident = (item: Incident) => ["open", "investigating", "contained"].includes(item.status);
+const dateLabel = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Date unavailable" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+function Metric({ label: title, value, note, tone = "blue" }: { label: string; value: number; note: string; tone?: string }) {
+  return <article className={"section-metric tone-" + tone}><span>{title}</span><strong>{value.toLocaleString()}</strong><small>{note}</small></article>;
+}
+function BarList({ title, rows }: { title: string; rows: [string, number][] }) {
+  const max = Math.max(1, ...rows.map((row) => row[1]));
+  return <section className="section-chart-card">
+    <div className="section-card-heading"><h3>{title}</h3><span>{rows.reduce((sum, row) => sum + row[1], 0)} total</span></div>
+    {rows.length ? <div className="section-bars">{rows.map(([name, value]) => <div className="section-bar-row" key={name}>
+      <div><span>{label(name)}</span><strong>{value}</strong></div>
+      <i><b style={{ width: (value / max * 100) + "%" }} /></i>
+    </div>)}</div> : <p className="section-empty-note">No records returned by the API.</p>}
+  </section>;
+}
+export function SectionInsights({ view, assets, findings, incidents }: Props) {
+  if (view === "assets") {
+    const exposed = assets.filter((asset) => findings.some((finding) => finding.asset_id === asset.id && activeFinding(finding)));
+    const byType = new Map<string, number>();
+    const byEnvironment = new Map<string, number>();
+    assets.forEach((asset) => {
+      byType.set(asset.asset_type || "unknown", (byType.get(asset.asset_type || "unknown") || 0) + 1);
+      byEnvironment.set(asset.environment || "unknown", (byEnvironment.get(asset.environment || "unknown") || 0) + 1);
+    });
+    const assetRows = assets.slice(0, 6).map((asset) => ({
+      ...asset,
+      linked: findings.filter((finding) => finding.asset_id === asset.id && activeFinding(finding)).length,
+    }));
+    return <section className="section-workspace section-assets">
+      <div className="section-workspace-heading"><div><small>ATTACK SURFACE · INVENTORY INTELLIGENCE</small><h2>Know what is exposed.</h2><p>Asset inventory and linked open findings from the authenticated OpsAegis APIs.</p></div><span className="section-live-label">API INVENTORY</span></div>
+      <div className="section-metric-grid">
+        <Metric label="Registered assets" value={assets.length} note="Records returned" />
+        <Metric label="Assets with open findings" value={exposed.length} note="Linked by asset ID" tone="orange" />
+        <Metric label="Production assets" value={assets.filter((asset) => asset.environment === "production").length} note="Environment metadata" tone="purple" />
+        <Metric label="Agent status reported" value={assets.filter((asset) => Boolean(asset.agent_status)).length} note="Status supplied by source" tone="green" />
+      </div>
+      <div className="section-two-column">
+        <BarList title="Inventory by environment" rows={[...byEnvironment.entries()].sort((a,b)=>b[1]-a[1])} />
+        <BarList title="Asset classes" rows={[...byType.entries()].sort((a,b)=>b[1]-a[1])} />
+      </div>
+      <section className="section-chart-card section-asset-preview">
+        <div className="section-card-heading"><h3>Assets requiring attention</h3><span>Top 6 · linked open findings</span></div>
+        {assetRows.length ? <div className="section-asset-list">{assetRows.sort((a,b)=>b.linked-a.linked).map((asset) => <article key={asset.id}>
+          <span className="section-asset-symbol">{label(asset.asset_type).slice(0,2).toUpperCase()}</span>
+          <div><strong>{asset.name}</strong><small>{label(asset.asset_type)} · {label(asset.environment || "unknown")} · {asset.ip_address || "No IP reported"}</small></div>
+          <span className={asset.linked ? "section-count-alert" : "section-count-neutral"}>{asset.linked} open</span>
+        </article>)}</div> : <p className="section-empty-note">No assets have been registered yet.</p>}
+      </section>
+    </section>;
+  }
+  if (view === "findings") {
+    const severityOrder = ["critical", "high", "medium", "low", "informational", "unknown"];
+    const severityCounts = severityOrder.map((severity) => [severity, findings.filter((item) => item.severity === severity).length] as [string, number]).filter((row) => row[1] > 0);
+    const statusCounts = ["new", "triaged", "accepted", "false_positive", "resolved"].map((status) => [status, findings.filter((item) => item.status === status).length] as [string, number]).filter((row) => row[1] > 0);
+    const sourceCounts = new Map<string, number>();
+    findings.forEach((item) => sourceCounts.set(item.source_engine || "unknown", (sourceCounts.get(item.source_engine || "unknown") || 0) + 1));
+    const queue = [...findings].sort((a,b) => {
+      const rank = (value: string) => severityOrder.indexOf(value);
+      return rank(a.severity) - rank(b.severity) || new Date(b.last_seen_at).getTime() - new Date(a.last_seen_at).getTime();
+    }).slice(0, 7);
+    return <section className="section-workspace section-findings">
+      <div className="section-workspace-heading"><div><small>SECURITY ISSUE REGISTER · TRIAGE QUEUE</small><h2>Prioritise what needs fixing.</h2><p>Findings are broader security issues. CVE-specific exploitability is managed in Vulnerabilities.</p></div><span className="section-live-label">NORMALIZED FINDINGS</span></div>
+      <div className="section-metric-grid">
+        <Metric label="Total findings" value={findings.length} note="Authenticated API records" />
+        <Metric label="Critical / high" value={findings.filter((item) => ["critical", "high"].includes(item.severity)).length} note="Severity classification" tone="red" />
+        <Metric label="Open / triage" value={findings.filter((item) => ["new", "triaged"].includes(item.status)).length} note="Awaiting analyst workflow" tone="orange" />
+        <Metric label="Resolved" value={findings.filter((item) => item.status === "resolved").length} note="Marked resolved" tone="green" />
+      </div>
+      <div className="section-two-column">
+        <BarList title="Severity distribution" rows={severityCounts} />
+        <BarList title="Workflow status" rows={statusCounts} />
+      </div>
+      <section className="section-chart-card">
+        <div className="section-card-heading"><h3>Prioritised findings</h3><span>Highest severity first · latest activity</span></div>
+        {queue.length ? <div className="section-finding-list">{queue.map((item) => <article key={item.id}>
+          <div className={"section-severity-mark severity-" + item.severity} />
+          <div className="section-finding-main"><strong>{item.title}</strong><small>{label(item.source_engine)} · {item.asset_id ? "Asset #" + item.asset_id : "Asset not linked"} · Last seen {dateLabel(item.last_seen_at)}</small></div>
+          <span className={"severity severity-" + item.severity}>{label(item.severity)}</span>
+          <span className="section-status-label">{label(item.status)}</span>
+        </article>)}</div> : <p className="section-empty-note">No findings have been recorded.</p>}
+        <div className="section-source-foot"><span>Sources represented</span>{[...sourceCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4).map(([source,count])=><span key={source}>{label(source)} <b>{count}</b></span>)}</div>
+      </section>
+    </section>;
+  }
+  if (view === "incidents") {
+    const active = incidents.filter(activeIncident);
+    const critical = incidents.filter((item) => item.severity === "critical" && activeIncident(item));
+    const statusCounts = ["open", "investigating", "contained", "resolved", "closed"].map((status) => [status, incidents.filter((item) => item.status === status).length] as [string, number]).filter((row) => row[1] > 0);
+    const severityCounts = ["critical", "high", "medium", "low"].map((severity) => [severity, incidents.filter((item) => item.severity === severity).length] as [string, number]).filter((row) => row[1] > 0);
+    const latest = [...incidents].sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).slice(0,6);
+    return <section className="section-workspace section-incidents">
+      <div className="section-workspace-heading"><div><small>INCIDENT COMMAND · INVESTIGATION LIFECYCLE</small><h2>Investigate. Contain. Resolve.</h2><p>Incident cases are separate from raw detections and retain their own ownership, notes and response state.</p></div><span className="section-live-label">CASE REGISTER</span></div>
+      <div className="section-metric-grid">
+        <Metric label="Active cases" value={active.length} note="Open, investigating, contained" tone="orange" />
+        <Metric label="Critical active" value={critical.length} note="Requires immediate review" tone="red" />
+        <Metric label="Resolved / closed" value={incidents.filter((item) => ["resolved", "closed"].includes(item.status)).length} note="Completed cases" tone="green" />
+        <Metric label="All incidents" value={incidents.length} note="Authenticated API records" />
+      </div>
+      <div className="section-two-column section-incident-columns">
+        <BarList title="Incident lifecycle" rows={statusCounts} />
+        <BarList title="Severity profile" rows={severityCounts} />
+      </div>
+      <section className="section-chart-card section-incident-timeline">
+        <div className="section-card-heading"><h3>Investigation activity</h3><span>Newest cases first</span></div>
+        {latest.length ? <div className="section-timeline">{latest.map((item) => <article key={item.id}>
+          <span className={"section-timeline-dot severity-" + item.severity} />
+          <div><strong>{item.title}</strong><small>{dateLabel(item.created_at)} · {label(item.status)} · {label(item.severity)}</small></div>
+          <span className="section-status-label">{item.id ? "INC-" + item.id : "Incident"}</span>
+        </article>)}</div> : <p className="section-empty-note">No incident cases have been created.</p>}
+      </section>
+    </section>;
+  }
+  return null;
 }
