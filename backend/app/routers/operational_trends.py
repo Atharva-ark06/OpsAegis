@@ -209,3 +209,123 @@ def get_operational_trends(
             "Only the first resolved/closed transition per incident in this window is counted.",
         ],
     }
+
+@router.get("/activity")
+def get_overview_activity(
+    days: int = Query(default=365, ge=30, le=365),
+    limit: int = Query(default=16, ge=1, le=50),
+    db: Session = Depends(get_db),
+    actor: User = Depends(get_current_user),
+) -> dict:
+    """Return privacy-minimized, persisted audit activity for the Overview dashboard."""
+    end = utc_now()
+    start = end - timedelta(days=days)
+    rows = db.scalars(
+        select(AuditLog)
+        .where(AuditLog.created_at >= start, AuditLog.created_at < end)
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .limit(10000)
+    ).all()
+
+    sections = (
+        "assets", "findings", "vulnerabilities", "detections", "incidents",
+        "integrations", "threat-intel", "playbooks", "users", "reports", "settings",
+    )
+
+    def section_for(action: str) -> str | None:
+        if action == "demo.dataset.seed":
+            return None
+        prefix = action.split(".", 1)[0].lower()
+        if prefix == "threat_intel":
+            return "threat-intel"
+        if prefix in {"asset", "finding", "vulnerability", "detection", "incident", "playbook"}:
+            return {"asset": "assets", "finding": "findings", "vulnerability": "vulnerabilities",
+                    "detection": "detections", "incident": "incidents", "playbook": "playbooks"}[prefix]
+        if prefix in {"collection", "integration"}:
+            return "integrations"
+        if prefix in {"user", "auth"}:
+            return "users"
+        if prefix in {"operations", "report"}:
+            return "reports"
+        if prefix == "settings":
+            return "settings"
+        return None
+
+    def floor_day(value: datetime) -> datetime:
+        value = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+
+    daily = {}
+    cursor = floor_day(start)
+    while cursor < end:
+        daily[cursor] = {"date": cursor.date().isoformat(), "total": 0, "by_section": {key: 0 for key in sections}}
+        cursor += timedelta(days=1)
+    monthly = {}
+    month_cursor = datetime(end.year, end.month, 1, tzinfo=timezone.utc)
+    for offset in range(11, -1, -1):
+        month_index = month_cursor.month - offset
+        year = month_cursor.year + (month_index - 1) // 12
+        month = (month_index - 1) % 12 + 1
+        key = f"{year:04d}-{month:02d}"
+        monthly[key] = {"month": key, "label": datetime(year, month, 1).strftime("%b"), "total": 0}
+
+    section_counts = {key: 0 for key in sections}
+    recent = []
+    for row in rows:
+        section = section_for(row.action)
+        if section is None:
+            continue
+        timestamp = row.created_at.replace(tzinfo=timezone.utc) if row.created_at.tzinfo is None else row.created_at.astimezone(timezone.utc)
+        section_counts[section] += 1
+        bucket = daily.get(floor_day(timestamp))
+        if bucket is not None:
+            bucket["total"] += 1
+            bucket["by_section"][section] += 1
+        month_key = timestamp.strftime("%Y-%m")
+        if month_key in monthly:
+            monthly[month_key]["total"] += 1
+        if len(recent) < limit:
+            action_labels = {
+                "threat_intel.enrich": "Threat intelligence lookup completed",
+                "threat_intel.enrich.cached": "Threat intelligence cached lookup",
+                "finding.status.update": "Finding status updated",
+                "incident.create": "Incident created",
+                "incident.update": "Incident updated",
+                "asset.create": "Asset registered",
+                "vulnerability.nvd.enrich": "Vulnerability intelligence enriched",
+                "vulnerability.nvd.cached": "Vulnerability cache returned",
+                "collection.run.request": "Collection run requested",
+                "collection.run.complete": "Collection run completed",
+                "playbook.dry_run": "Playbook dry run completed",
+                "playbook.approval_requested": "Playbook approval requested",
+            }
+            summary = action_labels.get(row.action, row.action.replace(".", " ").replace("_", " ").capitalize())
+            target_match = __import__("re").search(r"^(asset|finding|vulnerability|incident|ioc|playbook_approval):(\d+)$", row.target or "")
+            recent.append({
+                "id": row.id,
+                "section": section,
+                "action": row.action,
+                "summary": summary,
+                "record": (target_match.group(1).replace("_", " ").title() + " #" + target_match.group(2)) if target_match else None,
+                "actor": "System" if row.actor_user_id is None else "Operator",
+                "occurred_at": timestamp.isoformat(),
+            })
+
+    daily_points = list(daily.values())
+    return {
+        "window": {"since": start.isoformat(), "until": end.isoformat(), "timezone": "UTC"},
+        "days": days,
+        "total_events": sum(section_counts.values()),
+        "section_counts": section_counts,
+        "daily": daily_points,
+        "monthly": list(monthly.values()),
+        "recent": recent,
+        "rows_limited": len(rows) == 10000,
+        "limitations": [
+            "Activity counts are based on persisted audit records, not page views or unrecorded read-only actions.",
+            "The event feed intentionally omits raw IP addresses, URLs, audit details, and operator email addresses.",
+            "Sections with no audit events in this window are shown as zero; this does not mean their data stores are empty.",
+            "Audit history is bounded to 10,000 records per request.",
+        ],
+    }
+
