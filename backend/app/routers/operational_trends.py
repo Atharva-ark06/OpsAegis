@@ -245,7 +245,9 @@ def get_overview_activity(
             return "integrations"
         if prefix in {"user", "auth"}:
             return "users"
-        if prefix in {"operations", "report"}:
+        if prefix == "operations":
+            return "settings"
+        if prefix == "report":
             return "reports"
         if prefix == "settings":
             return "settings"
