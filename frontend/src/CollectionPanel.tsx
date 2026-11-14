@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import {
   CollectionRun, CollectionSchedule, getCollectionRuns, getCollectionSchedules,
   requestCollectionRun, updateCollectionSchedule,
@@ -22,6 +23,8 @@ export function CollectionPanel({ canOperate, isAdmin }: { canOperate: boolean; 
     setSchedules(nextSchedules);
     setRuns(nextRuns);
   }, []);
+
+  useLiveRefresh(() => refresh(), { intervalMs: 15000 });
 
   useEffect(() => {
     let active = true;
