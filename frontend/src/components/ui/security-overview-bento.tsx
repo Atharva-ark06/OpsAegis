@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Asset, Finding, Incident, OverviewActivity } from "../../api";
 import { getOverviewActivity } from "../../api";
 import { AnalyticsBento, type AnalyticsBentoProps } from "./analytics-bento";
+import { BlurredStagger } from "./blurred-stagger-text";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
 type PeriodDays = 7 | 30 | 365;
@@ -139,7 +140,10 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
     };
   });
 
-  const topSections = [...sectionTotals].sort((a, b) => b.values[1] - a.values[1]).slice(0, 5);
+  const tableOrder = ["users", "detections", "threat-intel", "integrations", "settings"];
+  const topSections = tableOrder
+    .map(id => sectionTotals.find(section => section.id === id))
+    .filter((section): section is (typeof sectionTotals)[number] => Boolean(section));
   const recent = activity?.recent ?? [];
   const seasonality = buildSeasonality(activity, incidents, findings);
   seasonality.years = seasonality.years.map(year => ({
@@ -212,7 +216,7 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
       <header className="ops-analytics-heading">
         <div className="ops-analytics-title">
           <span className="ops-analytics-kicker">OPSAEGIS / SECURITY OPERATIONS</span>
-          <h2>Security command center</h2>
+          <BlurredStagger as="h2" text="Security command center" className="ops-analytics-heading-text" />
           <p>Live operational signals, exposure and response activity across every workspace.</p>
         </div>
         <div className="ops-analytics-status" role="status">
