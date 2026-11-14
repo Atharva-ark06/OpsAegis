@@ -171,7 +171,7 @@ export function PlaybookWorkflowDesigner() {
   function saveStep(event: FormEvent) {
     event.preventDefault();
     if (!editing || !editing.label.trim()) return;
-    commit({ ...graph, nodes: graph.nodes.map((node) => node.id === editing.id ? { ...node, label: editing.label.trim(), detail: editing.detail.trim(), tool: editing.tool.trim() || undefined, kind: editing.kind } : node) }, "Workflow step updated.");
+    commit({ ...graph, nodes: graph.nodes.map((node) => node.id === editing.id ? { ...node, label: editing.label.trim(), detail: editing.detail.trim(), tool: editing.tool?.trim() || undefined, kind: editing.kind } : node) }, "Workflow step updated.");
     setEditing(null);
   }
 
