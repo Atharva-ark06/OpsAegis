@@ -128,7 +128,7 @@ def seed_demo(db) -> dict[str, int]:
     for index, (external_id, name, kind, environment, ip, os_name) in enumerate(ASSET_FIXTURES):
         item = Asset(name=f"{PREFIX} {name}", asset_type=kind, environment=environment,
                      source_engine=SOURCE, external_id=external_id, ip_address=ip,
-                     os_name=os_name, agent_status="demo-online" if index % 4 else "demo-stale",
+                     os_name=os_name, agent_status="online" if index % 4 else "offline",
                      last_seen_at=NOW - timedelta(hours=(index * 5) % 72),
                      created_at=NOW - timedelta(days=(index * 3) % 40))
         db.add(item)
