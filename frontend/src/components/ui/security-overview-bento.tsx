@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Asset, Finding, Incident, OverviewActivity } from "../../api";
 import { getOverviewActivity } from "../../api";
 import { AnalyticsBento, type AnalyticsBentoProps } from "./analytics-bento";
+import { BlurredStagger } from "./blurred-stagger-text";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
 type PeriodDays = 7 | 30 | 365;
@@ -215,7 +216,7 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
       <header className="ops-analytics-heading">
         <div className="ops-analytics-title">
           <span className="ops-analytics-kicker">OPSAEGIS / SECURITY OPERATIONS</span>
-          <h2>Security command center</h2>
+          <BlurredStagger as="h2" text="Security command center" className="ops-analytics-heading-text" />
           <p>Live operational signals, exposure and response activity across every workspace.</p>
         </div>
         <div className="ops-analytics-status" role="status">
