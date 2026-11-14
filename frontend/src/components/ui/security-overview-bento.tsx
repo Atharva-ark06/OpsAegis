@@ -69,7 +69,8 @@ function buildSeasonality(activity: OverviewActivity | null, incidents: Incident
       const total = sum(values);
       const peak = Math.max(0, ...values);
       const peakIndex = values.indexOf(peak);
-      const rows = (activity?.recent ?? []).slice(0, 3).map(event => ({
+      const threatIntelLookups = countSection((activity?.daily ?? []).slice(-30), "threat-intel");
+      const rows = (activity?.recent ?? []).slice(0, 2).map(event => ({
         label: event.summary,
         value: timeLabel(event.occurred_at),
       }));
@@ -84,6 +85,7 @@ function buildSeasonality(activity: OverviewActivity | null, incidents: Incident
         ],
         rows: [
           { label: "Assets monitored", value: fmt(0) },
+          { label: "Threat Intel lookups · 30D", value: fmt(threatIntelLookups) },
           { label: "Peak activity month", value: peak ? monthLabel(year + "-" + String(peakIndex + 1).padStart(2, "0")) + " · " + fmt(peak) : "No events" },
           ...rows,
         ],
