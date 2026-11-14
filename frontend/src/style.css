@@ -1516,12 +1516,13 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 }
 :root[data-theme="dark"]{
   --ab-background:#0b1421;
-  --ab-foreground:#eaf1f8;
-  --ab-card:#111d2b;
-  --ab-muted:#162437;
-  --ab-muted-foreground:#91a4b9;
-  --ab-border:#26384d;
-  --ab-popover:#17283b;
+  /* Light ice-blue analytics surfaces in dark mode, with dark readable copy. */
+  --ab-foreground:#172b40;
+  --ab-card:#eaf2f8;
+  --ab-muted:#dce9f3;
+  --ab-muted-foreground:#526a80;
+  --ab-border:#c5d7e6;
+  --ab-popover:#f5f9fc;
   --ab-ring:#63b6f4;
   --oa-blue:#245f89;
   --oa-cyan:#1b7188;
