@@ -113,11 +113,10 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
     ...section,
     count: sum(visibleDays.map(day => day.by_section[section.id] ?? 0)),
   })), [visibleDays]);
-  const maxSection = Math.max(1, ...sectionTotals.map(item => item.count));
   const monthly = activity?.monthly ?? [];
   const monthlyTotal = sum(monthly.map(item => item.total));
   const monthlyAverage = monthly.length ? monthlyTotal / monthly.length : 0;
-  const threatLookups = activity?.section_counts["threat-intel"] ?? 0;
+  const threatLookups = sectionTotals.find(item => item.id === "threat-intel")?.count ?? 0;
   const unresolvedFindings = findings.filter(item => item.status !== "resolved").length;
   const activeIncidents = incidents.filter(item => ["open", "investigating", "contained"].includes(item.status)).length;
   const eventFeed = activity?.recent ?? [];
