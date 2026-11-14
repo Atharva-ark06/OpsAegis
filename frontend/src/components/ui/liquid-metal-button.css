@@ -146,11 +146,18 @@
 .liquid-metal-button-navigation .liquid-metal-button-rim.is-hovered {
   box-shadow:0 0 0 1px rgba(151,211,255,.52),0 0 16px rgba(86,177,239,.32),0 0 28px rgba(86,177,239,.16),0 8px 20px rgba(0,0,0,.18);
 }
+/* Match the dashboard Refresh control while preserving the liquid-metal rim. */
 .liquid-metal-button-navigation .liquid-metal-button-inner {
   width:calc(100% - 4px);
   border-radius:9px;
-  background:linear-gradient(180deg,rgba(24,38,54,.94),rgba(8,17,29,.97));
+  background:var(--aegis-panel, #171717);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  transition:background .18s ease, box-shadow .18s ease;
 }
+.liquid-metal-button-navigation:hover .liquid-metal-button-inner {
+  background:var(--aegis-hover, #202020);
+}
+
 .liquid-metal-button-navigation-content {
   justify-content:flex-start;
   gap:12px;
@@ -205,7 +212,8 @@
   box-shadow:0 0 0 1px rgba(120,199,255,.68),0 0 12px rgba(99,182,244,.42),0 0 24px rgba(99,182,244,.24),0 8px 20px rgba(0,0,0,.16);
 }
 .liquid-metal-button-navigation.is-active .liquid-metal-button-inner {
-  background:linear-gradient(180deg,rgba(27,59,84,.96),rgba(10,30,49,.98));
+  background:var(--aegis-active, var(--aegis-panel, #171717));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 0 1px color-mix(in srgb,var(--aegis-accent) 12%,transparent);
 }
 .liquid-metal-button-navigation.is-active .liquid-metal-button-navigation-content {
   color:#d8efff;
