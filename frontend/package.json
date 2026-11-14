@@ -15,7 +15,8 @@
     "lucide-react": "^1.71.0",
     "@paper-design/shaders": "0.0.82",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "@xyflow/react": "^12.12.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
