@@ -1,7 +1,4 @@
-"use client";
-
 import * as React from "react";
-import { motion, useReducedMotion } from "motion/react";
 
 type HeadingLevel = "h1" | "h2";
 
@@ -14,37 +11,19 @@ export function BlurredStagger({
   className?: string;
   as?: HeadingLevel;
 }) {
-  const reduceMotion = useReducedMotion();
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: reduceMotion ? 0 : 0.012 },
-    },
-  };
-  const letterAnimation = {
-    hidden: { opacity: 0, filter: "blur(8px)", y: reduceMotion ? 0 : 3 },
-    show: {
-      opacity: 1,
-      filter: "blur(0px)",
-      y: 0,
-      transition: { duration: reduceMotion ? 0 : 0.28, ease: "easeOut" as const },
-    },
-  };
-  const Heading = as === "h2" ? motion.h2 : motion.h1;
+  const Heading = as;
 
   return (
-    <Heading
-      variants={container}
-      initial={reduceMotion ? false : "hidden"}
-      animate="show"
-      aria-label={text}
-      className={className}
-    >
+    <Heading aria-label={text} className={className}>
       {text.split("").map((char, index) => (
-        <motion.span key={index} variants={letterAnimation} aria-hidden="true">
-          {char === " " ? "\u00A0" : char}
-        </motion.span>
+        <span
+          key={index}
+          className="ops-blurred-stagger-char"
+          style={{ animationDelay: `${index * 12}ms` }}
+          aria-hidden="true"
+        >
+          {char === " " ? "\\u00A0" : char}
+        </span>
       ))}
     </Heading>
   );
