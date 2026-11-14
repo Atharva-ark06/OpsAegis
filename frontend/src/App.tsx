@@ -504,6 +504,7 @@ function App() {
     onSearchChange={setQuery}
     headerActions={<>
       <ThemeToggle mode={resolvedTheme} onModeChange={handleThemeChange} responsive />
+      <span className="aegis-live-status" title="Authenticated workspace data refreshes every 15 seconds and after successful API mutations"><i aria-hidden="true"/>AUTO-REFRESH · 15S</span>
       <span className="aegis-role-chip">{titleCase(user.role)}</span>
       <button className="aegis-refresh" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button>
     </>}
