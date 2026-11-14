@@ -438,23 +438,20 @@ function Treemap({ data, period, mono, tip }: { data: AnalyticsBentoProps["categ
   const total = items.reduce((a, b) => a + b.v, 0) || 1;
   const rects = W ? squarify(items, 0, 0, W + G, H + G) : [];
   return (
-    <div ref={ref} className="relative mt-1.5 h-[250px] sm:h-[280px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
+    <div ref={ref} className={`relative mt-1.5 ${rects.length ? "h-[250px] sm:h-[280px]" : "h-[76px]"}`} role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
       {!rects.length && (
-        <div className="relative grid h-full place-items-center overflow-hidden rounded-[20px] border border-dashed border-border bg-gradient-to-br from-muted/70 via-card to-muted/40 px-5 py-6 text-center">
-          <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-[var(--oa-cyan)]/70 to-transparent" />
-          <div className="flex max-w-sm flex-col items-center gap-3">
-            <div className="grid size-14 place-items-center rounded-2xl border border-border bg-background/80 text-[var(--oa-cyan)] shadow-sm">
-              <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                <path d="M4 18.5V5.5m0 13h16M7.5 15l3.2-3.4 2.5 2 4.8-5.1" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="18" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-sm font-bold tracking-[-0.02em] text-foreground">No recorded workspace activity</div>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">This period has no audit events yet. Activity will appear here as teams use OpsAegis.</p>
-            </div>
-            <span className="rounded-full border border-border bg-background/80 px-3 py-1 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground">AWAITING EVENTS</span>
+        <div className="flex h-full items-center gap-3 rounded-xl border border-border/80 bg-muted/35 px-4 py-3 text-left">
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-card text-[var(--oa-cyan)]">
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M4 18.5V5.5m0 13h16M7.5 15l3.2-3.4 2.5 2 4.8-5.1" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="18" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
           </div>
+          <div className="min-w-0">
+            <div className="text-[13px] font-extrabold tracking-[-0.01em] text-foreground">No activity recorded for this period</div>
+            <p className="mt-0.5 text-xs font-medium leading-relaxed text-foreground/70">The breakdown will populate automatically as workspace events are recorded.</p>
+          </div>
+          <span className="ml-auto hidden shrink-0 rounded-md border border-border bg-card px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-foreground/70 sm:inline-flex">NO EVENTS</span>
         </div>
       )}
       {rects.map((r) => {
@@ -696,8 +693,8 @@ export function AnalyticsBento({
         {/* categories */}
         <Card className={`col-span-12 md:col-span-7 ${enter(2)}`} aria-label={categories.title}>
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-            <h2 className="m-0 text-[17px] font-semibold tracking-[-0.02em]">{categories.title}</h2>
-            <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs tracking-[-0.01em] text-muted-foreground">
+            <h2 className="m-0 text-[20px] font-extrabold tracking-[-0.035em] text-foreground sm:text-[22px]">{categories.title}</h2>
+            <div className="flex flex-wrap gap-x-3.5 gap-y-2 text-[12px] font-bold tracking-[-0.01em] text-foreground/85">
               {categories.groups.map((g) => (
                 <span key={g.id} className="inline-flex items-center gap-1.5"><i className="size-2 rounded-[2px]" style={{ background: g.color }} />{g.name}</span>
               ))}
@@ -710,17 +707,17 @@ export function AnalyticsBento({
                 type="button"
                 aria-pressed={i === period}
                 onClick={() => setPeriod(i)}
-                className="-m-2.5 rounded-[14px] p-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-w-0 rounded-xl border border-border/80 bg-muted/35 px-3 py-3 text-left shadow-sm outline-none transition-colors hover:border-[var(--oa-cyan)]/50 hover:bg-muted/65 focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[-0.01em]">
+                <div className="flex items-center gap-1.5 text-[13px] font-extrabold tracking-[-0.01em] text-foreground">
                   <i className="size-1.5 rounded-full transition-colors" style={{ background: i === period ? "var(--ab-ring)" : "var(--ab-muted-foreground)" }} />
                   {p.label}
                 </div>
-                <div className="mt-1.5 text-xl font-medium leading-none sm:text-[28px]" style={mono}>
+                <div className="mt-2 text-[25px] font-extrabold leading-none tracking-[-0.045em] text-foreground sm:text-[30px]" style={mono}>
                   <CountUp value={p.total} prefix={currency} />
-                  <Delta className="ml-1.5 hidden align-[4px] text-xs sm:inline-flex">{p.delta}</Delta>
+                  <Delta className="ml-1.5 align-[4px] text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400">{p.delta}</Delta>
                 </div>
-                <div className="mt-1.5 hidden text-xs tracking-[-0.01em] text-muted-foreground/80 sm:block">{p.compare}</div>
+                <div className="mt-2 text-[11px] font-semibold tracking-[-0.005em] text-foreground/65">{p.compare}</div>
               </button>
             ))}
           </div>
@@ -728,13 +725,13 @@ export function AnalyticsBento({
           {categories.table && (
             <table className="mt-[18px] w-full border-collapse text-[14px] sm:text-[15px]">
               <thead>
-                <tr>{categories.table.columns.map((h, i) => <th key={h} className={`pb-2.5 text-[12px] font-bold tracking-[0.04em] text-foreground/85 sm:text-[13px] ${i ? "text-right" : "text-left"}`}>{h}</th>)}</tr>
+                <tr>{categories.table.columns.map((h, i) => <th key={h} className={`pb-3 text-[12px] font-extrabold tracking-[0.06em] text-foreground sm:text-[13px] ${i ? "text-right" : "text-left"}`}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {categories.table.rows.map((r) => (
-                  <tr key={r.label} className="border-t border-border/80">
-                    <td className="py-3 text-left font-semibold tracking-[-0.01em] text-foreground">{r.label}</td>
-                    {r.values.map((v, i) => <td key={i} className="py-3 text-right font-bold text-foreground" style={mono}>{v}</td>)}
+                  <tr key={r.label} className="border-t border-border/80 transition-colors hover:bg-muted/35">
+                    <td className="py-3.5 text-left text-[14px] font-bold tracking-[-0.01em] text-foreground sm:text-[15px]">{r.label}</td>
+                    {r.values.map((v, i) => <td key={i} className="py-3.5 text-right text-[14px] font-extrabold text-foreground sm:text-[15px]" style={mono}>{v}</td>)}
                   </tr>
                 ))}
               </tbody>
