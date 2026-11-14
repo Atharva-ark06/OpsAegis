@@ -9,6 +9,7 @@ import {
   type ReactFlowInstance, type NodeChange, type EdgeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { MetallicButton } from "./metallic-button";
 
 export type WorkflowKind = "trigger" | "agent" | "integration" | "review" | "delivery";
 export interface WorkflowAction extends Record< string, unknown> {
@@ -270,7 +271,7 @@ export default function WorkflowBlueprint({ initialGraph, apps, title = "Workflo
     <header className="wb-header">
       <span className="wb-mark" aria-hidden="true">+</span>
       <div className="wb-heading"><h2>{title}</h2><span>Build canvas</span></div>
-      <div className="wb-header-actions"><button type="button" onClick={() => add({ ...agentTemplate, label: agentTemplate?.label ?? "New AI agent", detail: agentTemplate?.detail ?? "Describe what this agent does.", kind: "agent" }, true)} disabled={graph.nodes.length >= 20}>+ Add agent</button><button type="button" onClick={() => { const previous = history[history.length - 1]; if (previous) { changed.current = true; setGraph(previous); setHistory(h => h.slice(0, -1)); setSelected(""); setEditing(null); setMessage("Last edit undone."); } }} disabled={!history.length}>Undo edit</button><button type="button" className="wb-primary" onClick={download}>Export JSON <span aria-hidden="true">↗</span></button></div>
+      <div className="wb-header-actions"><MetallicButton type="button" className="wb-metallic-action" onClick={() => add({ ...agentTemplate, label: agentTemplate?.label ?? "New AI agent", detail: agentTemplate?.detail ?? "Describe what this agent does.", kind: "agent" }, true)} disabled={graph.nodes.length >= 20}>+ Add agent</MetallicButton><button type="button" onClick={() => { const previous = history[history.length - 1]; if (previous) { changed.current = true; setGraph(previous); setHistory(h => h.slice(0, -1)); setSelected(""); setEditing(null); setMessage("Last edit undone."); } }} disabled={!history.length}>Undo edit</button><MetallicButton type="button" className="wb-metallic-action" onClick={download}>Export JSON <span aria-hidden="true">↗</span></MetallicButton></div>
     </header>
     <div className="wb-workspace">
       <div className="wb-canvas-column">
@@ -300,7 +301,7 @@ export default function WorkflowBlueprint({ initialGraph, apps, title = "Workflo
             <label>Step name<input ref={editLabelRef} required maxLength={60} value={editing.label} onChange={event => setEditing({ ...editing, label: event.target.value })} /></label>
             <label>What it does<textarea maxLength={160} rows={2} value={editing.detail} onChange={event => setEditing({ ...editing, detail: event.target.value })} /></label>
             <label>Tool (optional)<input maxLength={40} value={editing.tool} onChange={event => setEditing({ ...editing, tool: event.target.value })} /></label>
-            <div><button type="submit" className="wb-primary">Save step</button><button type="button" onClick={() => { setEditing(null); editButtonRef.current?.focus(); }}>Cancel</button></div>
+            <div><MetallicButton type="submit" className="wb-metallic-action">Save step</MetallicButton><button type="button" onClick={() => { setEditing(null); editButtonRef.current?.focus(); }}>Cancel</button></div>
           </form>}
           <form className="wb-connect" onSubmit={e => { e.preventDefault(); connect({ source, target }); }}>
             <label>From<select value={source} onChange={e => setSource(e.target.value)}><option value="">Choose source</option>{graph.nodes.map(n => <option key={n.id} value={n.id}>{n.data.label}</option>)}</select></label>
@@ -332,5 +333,25 @@ const styles = String.raw`
 .wb-header-actions{flex-wrap:wrap}.wb-node{border-color:color-mix(in srgb,var(--wb-node-accent,var(--wb-primary)) 68%,var(--wb-border));box-shadow:0 14px 32px -20px color-mix(in srgb,var(--wb-fg) 32%,transparent),0 0 26px -21px var(--wb-node-accent,var(--wb-primary))}.wb-node[data-kind=agent]{--wb-node-accent:var(--color-chart-2,var(--wb-primary))}.wb-node[data-kind=integration],.wb-node[data-kind=review]{--wb-node-accent:var(--color-chart-3,var(--wb-primary))}.wb-glyph img{width:23px;height:23px;object-fit:contain}.wb-app-mark img{width:18px;height:18px;object-fit:contain}.wb-step-form{display:grid;gap:12px;margin-top:14px;padding:14px;border:1px solid var(--wb-border);border-radius:10px;background:var(--wb-bg)}.wb-step-form label{display:grid;gap:5px;color:var(--wb-muted)}.wb-step-form input,.wb-step-form textarea{width:100%;min-width:0;min-height:40px;padding:9px 10px;border:1px solid var(--wb-border);border-radius:8px;background:var(--wb-card);color:var(--wb-fg);font:inherit;resize:vertical}.wb-step-form :is(input,textarea):focus-visible{outline:3px solid var(--wb-primary);outline-offset:2px}.wb-step-form>div{display:flex;gap:8px;flex-wrap:wrap}
 @container(max-width:1050px){.wb-workspace{grid-template-columns:1fr}.wb-stack{border-left:0;border-top:1px solid var(--wb-border);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}.wb-stack-heading,.wb-stack>p{grid-column:1/-1}.wb-stack>p{margin:0}.wb-app{margin:0}.wb-canvas{height:410px}}
 @container(max-width:480px){.wb-header{padding:14px;flex-wrap:wrap}.wb-header-actions{width:100%;justify-content:flex-end}.wb-header-actions button{flex:1}.wb-canvas{height:360px}.wb-status{flex-wrap:wrap;padding:10px 14px;gap:4px}.wb-editor{padding:14px}.wb-edit-row{display:grid;grid-template-columns:1fr}.wb-edit-row select{width:100%}.wb-connect{flex-wrap:wrap}.wb-connect label{flex:1 1 40%}.wb-connect>span{display:none}.wb-connect button{width:100%}.wb-stack{grid-template-columns:1fr}.wb-stack-heading,.wb-stack>p{grid-column:auto}.wb-details li{align-items:start}.wb-heading h2{font-size:15px}}
+
+/* Keep the shared OpsAegis metallic CTA legible inside the workflow canvas. */
+.wb-root .metallic-button.wb-metallic-action{
+  min-width:0;
+  min-height:40px;
+  height:40px;
+  padding:1.5px;
+  border:0;
+  border-radius:999px;
+  color:#fff;
+  background:conic-gradient(from var(--metallic-angle),#50545a,#f8fbff 12%,#8b929b 22%,#e9d6a9 27%,#fdfefe 32%,#737a83 48%,#d9dde2 65%,#52575f 78%,#fff 88%,#50545a);
+  box-shadow:0 6px 16px rgba(0,0,0,.2),inset 0 1px 1px rgba(255,255,255,.42);
+  animation:metallic-rim-turn 5s linear infinite;
+}
+.wb-root .metallic-button.wb-metallic-action:hover:not(:disabled){background:conic-gradient(from var(--metallic-angle),#50545a,#f8fbff 12%,#8b929b 22%,#e9d6a9 27%,#fdfefe 32%,#737a83 48%,#d9dde2 65%,#52575f 78%,#fff 88%,#50545a);filter:brightness(1.12);transform:translateY(-1px)}
+.wb-root .metallic-button.wb-metallic-action .metallic-button-face{min-height:37px;padding:0 18px;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 48%)}
+.wb-root .metallic-button.wb-metallic-action .metallic-button-content{display:inline-flex;align-items:center;justify-content:center;gap:8px;color:#fff;font:600 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;text-shadow:0 1px 2px rgba(0,0,0,.7);white-space:nowrap}
+.wb-root .metallic-button.wb-metallic-action:disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.25)}
+@media(prefers-reduced-motion:reduce){.wb-root .metallic-button.wb-metallic-action{animation:none;transition:none}}
+
 @media(prefers-reduced-motion:reduce){.wb-root .wb-edge-pulse{animation:none}}
 `
