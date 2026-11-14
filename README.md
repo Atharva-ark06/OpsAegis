@@ -18,6 +18,7 @@
 - [Capabilities](#capabilities)
 - [Architecture](#architecture)
 - [Local development](#quick-start--local-development)
+- [Synthetic demo data](docs/SYNTHETIC_DEMO_DATA.md)
 - [Production deployment](#production-deployment)
 - [Configuration and secrets](#configuration-and-secrets)
 - [Development and verification](#development-and-verification)
@@ -212,6 +213,7 @@ To report a security issue, contact the repository maintainer through a private 
 | [Security model](docs/SECURITY_MODEL.md) | Authentication, authorization and safe-operation principles |
 | [Frontend guide](docs/FRONTEND_GUIDE.md) | Dashboard structure and UI conventions |
 | [Frontend deployment](docs/FRONTEND_DEPLOYMENT.md) | Production assets and same-origin API proxy |
+| [Synthetic demo data](docs/SYNTHETIC_DEMO_DATA.md) | Safe, opt-in synthetic dataset for local/staging demos |
 | [Role permissions](docs/ROLE_PERMISSIONS.md) | Operator roles and protected workflows |
 | [Database migrations](docs/DB_MIGRATIONS.md) | Alembic workflow and schema-change checks |
 | [Worker operations](docs/WORKER_OPERATIONS.md) | Queues, leases, heartbeats and recovery |
