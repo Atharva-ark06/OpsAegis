@@ -1544,9 +1544,9 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 .ops-analytics-bento{min-width:0}
 .ops-analytics-component{min-width:0}
 .ops-analytics-component>div:first-child{gap:13px}
-.ops-analytics-component section{border-radius:21px!important;border-color:var(--ab-border)!important;background:linear-gradient(145deg,color-mix(in srgb,var(--ab-card) 96%,var(--ab-ring) 4%),var(--ab-card))!important;box-shadow:0 14px 36px #0000000a,0 1px 0 #ffffff08 inset!important}
+.ops-analytics-component section{position:relative;border-radius:21px!important;border-color:var(--ab-border)!important;background:radial-gradient(ellipse at 94% 0%,color-mix(in srgb,var(--ab-ring) 8%,transparent),transparent 42%),linear-gradient(145deg,color-mix(in srgb,var(--ab-card) 96%,var(--ab-ring) 4%),var(--ab-card))!important;box-shadow:0 14px 36px #0000000a,0 1px 0 #ffffff08 inset!important;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
 :root[data-theme="light"] .ops-analytics-component section{box-shadow:0 12px 30px #17324d0a,0 1px 0 #ffffff inset!important}
-.ops-analytics-component section:hover{border-color:color-mix(in srgb,var(--ab-ring) 35%,var(--ab-border))!important}
+.ops-analytics-component section:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--ab-ring) 42%,var(--ab-border))!important;box-shadow:0 18px 42px #00000012,0 1px 0 #ffffff0b inset!important}
 .ops-analytics-component .bg-muted\/40,.ops-analytics-component .dark\:bg-muted\/30{background:color-mix(in srgb,var(--ab-muted) 82%,transparent)!important}
 .ops-analytics-component .border-border{border-color:var(--ab-border)}
 .ops-analytics-component .stroke-border{stroke:var(--ab-border)}
@@ -1577,5 +1577,5 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 }
 @media(prefers-reduced-motion:reduce){
  .ops-analytics-status-dot{animation:none}
- .ops-analytics-component section{transition:none!important}
+ .ops-analytics-component section{transition:none!important;transform:none!important}
 }
