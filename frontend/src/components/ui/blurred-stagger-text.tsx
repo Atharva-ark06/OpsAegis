@@ -22,7 +22,7 @@ export function BlurredStagger({
           style={{ animationDelay: `${index * 12}ms` }}
           aria-hidden="true"
         >
-          {char === " " ? "\\u00A0" : char}
+          {char === " " ? String.fromCharCode(160) : char}
         </span>
       ))}
     </Heading>
