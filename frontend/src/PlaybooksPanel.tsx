@@ -113,6 +113,7 @@ export function PlaybooksPanel({incidents,user}: {incidents:Incident[];user:User
   }
 
   return <div className="playbooks-workspace">
+    <PlaybookWorkflowDesigner />
     {error && <div className="inline-error" role="alert">{error}</div>}
     {message && <div className="success-banner" role="status">{message}</div>}
     <section className="panel playbook-catalogue">
