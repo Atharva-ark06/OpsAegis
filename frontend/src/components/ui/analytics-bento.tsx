@@ -25,7 +25,7 @@ export type AnalyticsBentoProps = React.JSX.IntrinsicElements["div"] & {
     value: number;
     delta: string;
     note?: React.ReactNode;
-    /** values per hour; first array is the current period, the rest are prior periods */
+    /** values per time bucket; first array is the current period, the rest are prior periods */
     desktop: number[][];
     mobile: number[][];
     labels?: { desktop: string; mobile: string; prior: string; current: string; points?: string[] };
@@ -438,7 +438,7 @@ function Treemap({ data, period, mono, tip }: { data: AnalyticsBentoProps["categ
   const total = items.reduce((a, b) => a + b.v, 0) || 1;
   const rects = W ? squarify(items, 0, 0, W + G, H + G) : [];
   return (
-    <div ref={ref} className="relative mt-1.5 h-[300px] sm:h-[340px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
+    <div ref={ref} className="relative mt-1.5 h-[250px] sm:h-[280px]" role="img" aria-label={`${data.title}, ${data.periods[period]?.label}`}>
       {!rects.length && <div className="grid h-full place-items-center text-xs text-muted-foreground">No records in this period.</div>}
       {rects.map((r) => {
         const g = data.groups.find((x) => x.id === r.group)!;
@@ -488,7 +488,7 @@ function Radar({ values, axis, year, color, prefix, mono, tip }: { values: numbe
   const line = React.useRef(null as SVGPathElement | null);
   const cur = React.useRef(null as number[] | null);
   const [hover, setHover] = React.useState(null as number | null);
-  const N = values.length, S = Math.min(w, 420), R = S / 2 - 34, C = S / 2;
+  const N = values.length, S = Math.min(w, 360), R = S / 2 - 32, C = S / 2;
   const ang = (i: number) => -Math.PI / 2 + (i / N) * Math.PI * 2;
 
   /* a low-order Fourier fit keeps the lobes round and even */
@@ -535,7 +535,7 @@ function Radar({ values, axis, year, color, prefix, mono, tip }: { values: numbe
   const hp = hover !== null ? point(values, hover) : null;
 
   return (
-    <div ref={ref} className="mx-auto mt-1.5 w-full max-w-[420px]" style={{ height: S || 300 }}>
+    <div ref={ref} className="mx-auto mt-1.5 w-full max-w-[360px]" style={{ height: S || 280 }}>
       {S > 0 && (
         <svg width={S} height={S} className="mx-auto block" role="img" aria-label={`Security events by month, ${year}`}>
           {[0.33, 0.66, 1].map((k) => <circle key={k} cx={C} cy={C} r={R * k} fill="none" className="stroke-border" strokeWidth={1} />)}
@@ -642,8 +642,8 @@ export function AnalyticsBento({
     >
       <div className="grid grid-cols-12 gap-4">
         {/* revenue */}
-        <Card className={`col-span-12 flex flex-col lg:col-span-5 ${enter(0)}`} aria-label={revenue.label}>
-          <div className="flex flex-1 flex-col gap-5 sm:flex-row">
+        <Card className={`col-span-12 flex flex-col md:col-span-5 ${enter(0)}`} aria-label={revenue.label}>
+          <div className="flex flex-1 flex-col gap-4 xl:flex-row">
             <div className="shrink-0">
               <div className="text-[13px] tracking-[-0.01em] text-muted-foreground">{revenue.label}</div>
               <div className="mt-2.5 text-[38px] font-medium leading-none sm:text-[44px]" style={mono}>
@@ -657,7 +657,7 @@ export function AnalyticsBento({
         </Card>
 
         {/* sessions */}
-        <Card className={`col-span-12 flex flex-col lg:col-span-7 ${enter(1)}`} aria-label={sessions.label}>
+        <Card className={`col-span-12 flex flex-col md:col-span-7 ${enter(1)}`} aria-label={sessions.label}>
           <div className="flex flex-1 flex-col gap-5 sm:flex-row">
             <div className="shrink-0">
               <div className="text-[13px] tracking-[-0.01em] text-muted-foreground">{sessions.label}</div>
@@ -677,7 +677,7 @@ export function AnalyticsBento({
         </Card>
 
         {/* categories */}
-        <Card className={`col-span-12 lg:col-span-7 ${enter(2)}`} aria-label={categories.title}>
+        <Card className={`col-span-12 md:col-span-7 ${enter(2)}`} aria-label={categories.title}>
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <h2 className="m-0 text-[17px] font-semibold tracking-[-0.02em]">{categories.title}</h2>
             <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs tracking-[-0.01em] text-muted-foreground">
@@ -726,7 +726,7 @@ export function AnalyticsBento({
         </Card>
 
         {/* seasonality */}
-        <Card className={`col-span-12 lg:col-span-5 ${enter(3)}`} aria-label={seasonality.title}>
+        <Card className={`col-span-12 md:col-span-5 ${enter(3)}`} aria-label={seasonality.title}>
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <h2 className="m-0 text-[17px] font-semibold tracking-[-0.02em]">{seasonality.title}</h2>
             <Segmented label="Year" items={seasonality.years.map((y) => y.label)} value={year} onChange={setYear} />
