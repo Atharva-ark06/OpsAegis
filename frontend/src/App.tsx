@@ -391,7 +391,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    setLoadState("loading");
+    if (loadState !== "ready") setLoadState("loading");
     setLoadErrors([]);
     const requests: Promise<unknown>[] = [
       getAssets(), getFindings(), getIncidents(),
@@ -423,6 +423,8 @@ function App() {
     });
     return () => { active = false; };
   }, [user, refreshKey, canOperate]);
+
+  useLiveRefresh(() => setRefreshKey((value) => value + 1), { enabled: Boolean(user), intervalMs: 15000 });
 
   async function handleLogin(email: string, password: string) {
     const result = await loginRequest(email, password);
