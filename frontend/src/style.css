@@ -1452,3 +1452,33 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 @media(max-width:760px){.section-page-threat-intel .ti-context-grid{grid-template-columns:1fr}.section-page-threat-intel .threat-intel-form{grid-template-columns:1fr 1fr}.section-page-threat-intel .threat-intel-form>button{width:100%;min-height:40px}}
 @media(max-width:520px){.section-page-threat-intel .ti-context-heading{align-items:flex-start;flex-direction:column}.section-page-threat-intel .ti-context-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.section-page-threat-intel .ti-context-metrics article{min-height:112px;padding:11px}.section-page-threat-intel .ti-context-metrics strong{font-size:23px}.section-page-threat-intel .ti-period-stats{grid-template-columns:1fr}.section-page-threat-intel .ti-period-stats>div{grid-template-columns:1fr auto;align-items:center}.section-page-threat-intel .ti-period-stats span{grid-column:1/-1}.section-page-threat-intel .provider-strip,.section-page-threat-intel .threat-intel-form{grid-template-columns:1fr}.section-page-threat-intel .ioc-provider-results{grid-template-columns:1fr}.section-page-threat-intel .ioc-combined-report{padding:12px}.section-page-threat-intel .ti-workspace-intro{display:grid}}
 @media print{.section-page-threat-intel .ioc-provider-results{grid-template-columns:1fr 1fr}.section-page-threat-intel .ioc-provider-result,.section-page-threat-intel .ti-context-card{break-inside:avoid;box-shadow:none}.section-page-threat-intel .threat-intel-form,.section-page-threat-intel .provider-strip button{display:none!important}}
+
+
+/* Workspace-wide responsive and live-data affordances. */
+.aegis-live-status{display:inline-flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--aegis-border);border-radius:7px;color:var(--aegis-muted);background:var(--aegis-panel);font-size:9px;font-weight:800;letter-spacing:.07em;white-space:nowrap}
+.aegis-live-status i{width:6px;height:6px;border-radius:50%;background:#48b98c;box-shadow:0 0 8px #48b98c66}
+.page-content,.section-page,.section-page>*{min-width:0;max-width:100%}
+.page-content>*{min-width:0;max-width:100%}
+.page-content .panel,.section-page .panel,.page-content article,.section-page article{min-width:0}
+.table-wrap,.ioc-table-wrap,.vulnerability-table-wrap,.execution-ledger-list,.timeline-attachments,.collection-history{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-wrap table,.ioc-table-wrap table,.vulnerability-table-wrap table{min-width:650px}
+.section-page input,.section-page select,.section-page textarea,.page-content input,.page-content select,.page-content textarea{max-width:100%;min-width:0}
+.section-page form,.page-content form{min-width:0}
+.section-page .panel-heading,.page-content .panel-heading{min-width:0;flex-wrap:wrap}
+.section-page .panel-heading>div,.page-content .panel-heading>div{min-width:0}
+.section-page p,.page-content p,.section-page small,.page-content small{overflow-wrap:anywhere}
+@media(max-width:760px){
+ .aegis-live-status{font-size:8px;padding:6px 7px}
+ .section-page .panel,.page-content .panel{padding:14px}
+ .section-page .header-actions,.page-content .header-actions{display:flex;flex-wrap:wrap;gap:8px}
+ .section-page button,.page-content button{max-width:100%}
+ .section-page .table-wrap,.page-content .table-wrap{margin-inline:-2px}
+}
+@media(max-width:520px){
+ .aegis-live-status{display:none}
+ .section-page .panel,.page-content .panel{padding:11px;border-radius:10px}
+ .section-page .panel-heading,.page-content .panel-heading{align-items:flex-start}
+ .section-page .panel-heading .header-actions,.page-content .panel-heading .header-actions{width:100%}
+ .section-page .panel-heading .header-actions button,.page-content .panel-heading .header-actions button{flex:1 1 100%}
+ .section-page .table-wrap table,.page-content .table-wrap table{min-width:620px}
+}
