@@ -77,6 +77,7 @@ function buildSeasonality(activity: OverviewActivity | null, incidents: Incident
       return {
         label: String(year),
         values,
+        rowsTitle: "Live posture & recent signals",
         stats: [
           { label: "Active incidents", value: activeIncidents, delta: "—", note: "current open cases" },
           { label: "Open findings", value: openFindings, delta: "—", note: "not yet resolved" },
@@ -165,7 +166,6 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
     },
   };
 
-  const currentYear = new Date().getUTCFullYear();
   const activitySeries = last30.map(day => ({ label: dateLabel(day.date), value: day.total }));
   const sessions: AnalyticsBentoProps["sessions"] = {
     label: "Detection & incident signals",
