@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import type { ChangeEvent, FormEvent } from "react";
 import {
   addIncidentNote, downloadIncidentAttachment, downloadIncidentEvidence,
@@ -36,6 +37,8 @@ export function IncidentTimeline({ incidentId, canOperate }: { incidentId: numbe
       setAttachments([]);
     }
   }
+
+  useLiveRefresh(() => refresh(), { intervalMs: 15000 });
 
   useEffect(() => {
     let active = true;

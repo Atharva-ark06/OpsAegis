@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import type { FormEvent } from "react";
 import { AdminUser, User, UserRole, createAdminUser, getAdminUsers, updateAdminUser } from "./api";
 
@@ -11,6 +12,7 @@ export function AdminUsers({ currentUser }: { currentUser: User }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   async function refresh() { setUsers(await getAdminUsers()); }
+  useLiveRefresh(() => refresh(), { intervalMs: 30000 });
   useEffect(() => { void refresh().catch((e: unknown) => setError(e instanceof Error ? e.message : "Unable to load users.")); }, []);
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setNotice("");

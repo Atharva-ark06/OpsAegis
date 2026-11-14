@@ -1,5 +1,6 @@
 import { FormEvent,useEffect,useState } from "react";
-import { ApiError,IOCType,ThreatIntelIOC,ThreatIntelProviders,enrichThreatIndicator,getThreatIntelIOCs,getThreatIntelProviders } from "./api";
+import { useLiveRefresh } from "./live-refresh";
+import { ApiError,Finding,Incident,IOCType,ThreatIntelIOC,ThreatIntelProviders,enrichThreatIndicator,getFindings,getIncidents,getThreatIntelIOCs,getThreatIntelProviders } from "./api";
 
 function dateLabel(value:string|null):string {
  if(!value)return "Not enriched";
@@ -13,6 +14,50 @@ function valueLabel(value:unknown):string {
  if(typeof value==="object")return JSON.stringify(value);
  return String(value);
 }
+
+function ThreatIntelContext({findings,incidents,iocs,loading,error}:{findings:Finding[];incidents:Incident[];iocs:ThreatIntelIOC[];loading:boolean;error:string}) {
+ const now=Date.now();
+ const monthStart=now-30*86400000;
+ const weekStart=now-7*86400000;
+ const records=[
+  ...findings.map(item=>({date:item.first_seen_at||item.last_seen_at,source:item.source_engine||"Unknown source"})),
+  ...incidents.map(item=>({date:item.created_at,source:"Incident response"})),
+ ];
+ const validRecords=records.filter(item=>Number.isFinite(new Date(item.date).getTime()));
+ const weekly=validRecords.filter(item=>new Date(item.date).getTime()>=weekStart).length;
+ const monthly=validRecords.filter(item=>new Date(item.date).getTime()>=monthStart).length;
+ const activeIncidents=incidents.filter(item=>["open","investigating","contained"].includes(item.status)).length;
+ const openFindings=findings.filter(item=>["new","triaged"].includes(item.status)).length;
+ const sources=Object.entries(findings.reduce<Record<string,number>>((counts,item)=>{const key=item.source_engine||"Unknown source";counts[key]=(counts[key]||0)+1;return counts;},{})).sort((a,b)=>b[1]-a[1]);
+ const weekdays=Array.from({length:7},()=>0);
+ validRecords.filter(item=>new Date(item.date).getTime()>=monthStart).forEach(item=>weekdays[new Date(item.date).getDay()]++);
+ const maxWeekday=Math.max(1,...weekdays);
+ const maxSource=Math.max(1,...sources.map(([,count])=>count));
+ const weekdayLabels=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+ return <section className="ti-context" aria-label="Threat intelligence API context">
+  <div className="ti-context-heading"><div><p className="eyebrow">LIVE API CONTEXT</p><h3>Threat intelligence</h3><p>Threat-source distribution and security records available to the workspace.</p></div><span className="ti-context-state"><i/>Authenticated API data</span></div>
+  {error&&<p className="ti-context-error" role="status">Some context data could not be loaded: {error}</p>}
+  <div className="ti-context-metrics">
+   <article><small>RECORDS IN SECTION</small><strong>{loading?"—":validRecords.length.toLocaleString()}</strong><span>Current authenticated record set</span><em>First-seen / created activity · 30 days</em></article>
+   <article><small>SECURITY EVENT STREAMS</small><strong>{loading?"—":validRecords.length.toLocaleString()}</strong><span>Persisted findings + incident records</span><em>30-day activity window</em></article>
+   <article><small>ACTIVE INCIDENTS</small><strong>{loading?"—":activeIncidents.toLocaleString()}</strong><span>Current incident records</span><em>Live API</em></article>
+   <article><small>OPEN FINDINGS</small><strong>{loading?"—":openFindings.toLocaleString()}</strong><span>New + triaged findings</span><em>Live API</em></article>
+  </div>
+  <div className="ti-context-grid">
+   <article className="ti-context-card ti-source-card"><div className="ti-card-heading"><div><h4>Findings by source</h4><p>Distribution from persisted finding records</p></div><span>{findings.length} API</span></div>
+    {loading?<p className="ti-context-empty">Loading source records…</p>:sources.length===0?<p className="ti-context-empty">No records</p>:<div className="ti-source-list">{sources.map(([source,count])=><div className="ti-source-row" key={source}><div><span>{source}</span><strong>{count}</strong></div><div className="ti-source-track"><i style={{width:(count/maxSource*100)+"%"}}/></div></div>)}</div>}
+   </article>
+   <article className="ti-context-card ti-period-card"><div className="ti-card-heading"><div><h4>Record activity</h4><p>Created / first-seen records by time window</p></div><span>API</span></div>
+    <div className="ti-period-stats"><div><small>Weekly</small><strong>{loading?"—":weekly.toLocaleString()}</strong><span>Records in 7 days</span></div><div><small>Monthly</small><strong>{loading?"—":monthly.toLocaleString()}</strong><span>Records in 30 days</span></div><div><small>Loaded</small><strong>{loading?"—":validRecords.length.toLocaleString()}</strong><span>Current API response</span></div></div>
+   </article>
+   <article className="ti-context-card ti-rhythm-card"><div className="ti-card-heading"><div><h4>Security activity rhythm</h4><p>First-seen findings and incident creation by weekday</p></div><span>30 days</span></div>
+    {loading?<p className="ti-context-empty">Loading activity…</p>:validRecords.length===0?<p className="ti-context-empty">No records in this period.</p>:<div className="ti-weekday-chart" role="img" aria-label="Security records by weekday for the last 30 days">{weekdays.map((count,index)=><div className="ti-weekday-column" key={weekdayLabels[index]}><strong>{count}</strong><i style={{height:Math.max(4,count/maxWeekday*88)+"px"}}/><small>{weekdayLabels[index]}</small></div>)}</div>}
+   </article>
+   <article className="ti-context-card ti-ioc-card"><div className="ti-card-heading"><div><h4>IOC intelligence</h4><p>Persisted provider enrichment history</p></div><span>{iocs.length} API</span></div><div className="ti-ioc-summary"><strong>{iocs.length.toLocaleString()}</strong><span>Indicators enriched</span><small>VirusTotal · AbuseIPDB · CrowdSec CTI where configured</small></div></article>
+  </div>
+ </section>;
+}
+
 function ProviderResult({name,result}:{name:string;result:ThreatIntelIOC["provider_results"]["virustotal"]}) {
  const details=result.details||{};
  const analysis=details.analysis as Record<string,unknown>|undefined;
@@ -44,6 +89,10 @@ function ProviderResult({name,result}:{name:string;result:ThreatIntelIOC["provid
 export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const [providers,setProviders]=useState<ThreatIntelProviders|null>(null);
  const [items,setItems]=useState<ThreatIntelIOC[]>([]);
+ const [findings,setFindings]=useState<Finding[]>([]);
+ const [incidents,setIncidents]=useState<Incident[]>([]);
+ const [contextLoading,setContextLoading]=useState(true);
+ const [contextError,setContextError]=useState("");
  const [kind,setKind]=useState<IOCType>("ip");
  const [value,setValue]=useState("");
  const [busy,setBusy]=useState(false);
@@ -51,11 +100,16 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const [message,setMessage]=useState("");
  const [selected,setSelected]=useState<ThreatIntelIOC|null>(null);
  async function refresh(){
-  const results=await Promise.allSettled([getThreatIntelProviders(),getThreatIntelIOCs()]);
+  const results=await Promise.allSettled([getThreatIntelProviders(),getThreatIntelIOCs(),getFindings(),getIncidents()]);
   if(results[0].status==="fulfilled")setProviders(results[0].value);
   if(results[1].status==="fulfilled")setItems(results[1].value);
+  if(results[2].status==="fulfilled")setFindings(results[2].value);
+  if(results[3].status==="fulfilled")setIncidents(results[3].value);
   const failed=results.find(result=>result.status==="rejected");
+  const contextFailed=results.slice(2).find(result=>result.status==="rejected");
+  setContextError(contextFailed?.status==="rejected"?(contextFailed.reason instanceof Error?contextFailed.reason.message:"Unable to load security activity records."):"");
   if(failed?.status==="rejected")setError(failed.reason instanceof Error?failed.reason.message:"Unable to load threat intelligence records.");
+  setContextLoading(false);
  }
  useEffect(()=>{void refresh();},[]);
  async function enrich(event:FormEvent<HTMLFormElement>,indicatorType:IOCType=kind,indicatorValue=value,force=false){
@@ -71,7 +125,8 @@ export function ThreatIntelPanel({canOperate}:{canOperate:boolean}) {
  const abuse=selected?.provider_results.abuseipdb;
  const providerConflict=Boolean(vt?.status==="ok"&&abuse?.status==="ok"&&vt.verdict!==abuse.verdict);
  return <section className="threat-intel-workspace">
-  <div className="list-intro"><div><p className="eyebrow">INDICATOR REPUTATION & CONTEXT</p><h2>Threat intelligence workspace</h2><p>Run read-only IOC lookups and review a combined, source-attributed investigation report.</p></div></div>
+  <div className="ti-workspace-intro"><div><p className="eyebrow">INDICATOR REPUTATION & CONTEXT</p><h2>Threat intelligence workspace</h2><p>Investigate indicators, understand source coverage and review authenticated security activity.</p></div></div>
+  <ThreatIntelContext findings={findings} incidents={incidents} iocs={items} loading={contextLoading} error={contextError}/>
   {error&&<div className="error-banner" role="alert">{error}</div>}
   {message&&<div className="success-banner" role="status">{message}</div>}
   <div className="provider-strip">

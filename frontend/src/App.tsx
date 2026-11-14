@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import { OpsAegisSignIn } from "./OpsAegisSignIn";
 import { AdminUsers } from "./AdminUsers";
 import { ShannonPanel } from "./ShannonPanel";
@@ -390,7 +391,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    setLoadState("loading");
+    if (loadState === "idle") setLoadState("loading");
     setLoadErrors([]);
     const requests: Promise<unknown>[] = [
       getAssets(), getFindings(), getIncidents(),
@@ -422,6 +423,8 @@ function App() {
     });
     return () => { active = false; };
   }, [user, refreshKey, canOperate]);
+
+  useLiveRefresh(() => setRefreshKey((value) => value + 1), { enabled: Boolean(user), intervalMs: 15000 });
 
   async function handleLogin(email: string, password: string) {
     const result = await loginRequest(email, password);
@@ -501,6 +504,7 @@ function App() {
     onSearchChange={setQuery}
     headerActions={<>
       <ThemeToggle mode={resolvedTheme} onModeChange={handleThemeChange} responsive />
+      <span className="aegis-live-status" title="Authenticated workspace data refreshes every 15 seconds and after successful API mutations"><i aria-hidden="true"/>AUTO-REFRESH · 15S</span>
       <span className="aegis-role-chip">{titleCase(user.role)}</span>
       <button className="aegis-refresh" onClick={() => setRefreshKey((value) => value + 1)} disabled={loadState === "loading"}><span aria-hidden="true">↻</span> Refresh</button>
     </>}

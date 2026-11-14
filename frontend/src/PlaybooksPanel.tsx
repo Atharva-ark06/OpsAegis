@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import {
   createPlaybookApproval, decidePlaybookApproval, getPlaybookActions,
   getPlaybookApprovals, getPlaybooks, previewPlaybook,
@@ -45,6 +46,11 @@ export function PlaybooksPanel({incidents,user}: {incidents:Incident[];user:User
     const result = await getPlaybookApprovals(nextFilter);
     setApprovals(result.items);
   }
+
+  useLiveRefresh(async () => {
+    const [catalogue, actionResult, approvalResult] = await Promise.all([getPlaybooks(), getPlaybookActions("incident-investigation"), getPlaybookApprovals(filter)]);
+    setPlaybooks(catalogue.items); setActions(actionResult.items); setApprovals(approvalResult.items);
+  }, { intervalMs: 15000 });
 
   useEffect(() => {
     let active = true;

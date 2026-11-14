@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import {
   ShannonHealth, ShannonTarget, ShannonScan, getShannonHealth, getShannonTargets,
   getShannonScans, registerShannonTarget, startShannonScan, syncShannonScan,
@@ -32,6 +33,7 @@ export function ShannonPanel({ canOperate, isAdmin }: { canOperate: boolean; isA
   }
 
   useEffect(() => { if (canOperate) void refresh(); }, [canOperate]);
+  useLiveRefresh(() => refresh(), { enabled: canOperate, intervalMs: 15000 });
 
   async function addTarget(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
