@@ -139,7 +139,10 @@ export function SecurityOverviewBento({ assets, findings, incidents, refreshKey 
     };
   });
 
-  const topSections = [...sectionTotals].sort((a, b) => b.values[1] - a.values[1]).slice(0, 5);
+  const tableOrder = ["users", "detections", "threat-intel", "integrations", "settings"];
+  const topSections = tableOrder
+    .map(id => sectionTotals.find(section => section.id === id))
+    .filter((section): section is (typeof sectionTotals)[number] => Boolean(section));
   const recent = activity?.recent ?? [];
   const seasonality = buildSeasonality(activity, incidents, findings);
   seasonality.years = seasonality.years.map(year => ({
