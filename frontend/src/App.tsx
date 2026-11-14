@@ -484,6 +484,7 @@ function App() {
     }
   }
 
+  const pageTitle = navigation.find((item) => item.id === view)?.label || "Overview";
   const filteredFindingCount = useMemo(() => findings.filter((item) => item.status === "new").length, [findings]);
 
   if (postLoginTransition && user) return <PrismFluxLoader size={64} speed={5} textSize={28} />;
