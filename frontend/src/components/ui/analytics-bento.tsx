@@ -304,7 +304,7 @@ function RevenueChart({ series, caption, prefix, colors, mono, tip }: { series: 
   );
 }
 
-/* ---------------- B: desktop vs mobile waves ---------------- */
+/* ---------------- B: detection vs incident activity waves ---------------- */
 
 function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: number[][]; mobile: number[][]; labels: { desktop: string; mobile: string; current: string; prior: string; points?: string[] }; colors: { desktop: [string, string]; mobile: [string, string] }; tip: TipRef }) {
   const [ref, { w: W, h: H }] = useSize();
@@ -347,10 +347,14 @@ function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: numb
     const i = Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left - pad - 6) / (W - 2 * pad - 12)) * (n - 1))));
     setHover(i);
     tip.current?.show(r.left + X(i), r.top + 12, {
-      title: `Day ${i + 1} · ${labels.current}`,
+      title: `${labels.points?.[i] ?? "Day " + (i + 1)} · ${labels.current}`,
       rows: [
         { label: labels.desktop, value: fmt(desktop[0][i]), color: colors.desktop[0] },
         { label: labels.mobile, value: fmt(mobile[0][i]), color: colors.mobile[1] },
+        ...(desktop[1] || mobile[1] ? [
+          { label: labels.prior + " · " + labels.desktop, value: fmt(desktop[1]?.[i] ?? 0) },
+          { label: labels.prior + " · " + labels.mobile, value: fmt(mobile[1]?.[i] ?? 0) },
+        ] : []),
       ],
     });
   };
@@ -358,7 +362,7 @@ function SessionsChart({ desktop, mobile, labels, colors, tip }: { desktop: numb
   return (
     <div ref={ref} className="relative min-h-[140px] flex-1 overflow-hidden rounded-[18px] border border-border bg-muted/40 dark:bg-muted/30">
       {W > 0 && (
-        <svg width={W} height={H} className="block" role="img" aria-label={`${labels.desktop} and ${labels.mobile} by hour`}>
+        <svg width={W} height={H} className="block" role="img" aria-label={`${labels.desktop} and ${labels.mobile} by day`}>
           <defs>
             <linearGradient id={`${id}d`} x1="0" x2="1" y1="0" y2="0">
               <stop offset=".1" style={{ stopColor: colors.desktop[0] }} />
