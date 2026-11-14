@@ -514,20 +514,8 @@ function App() {
       {collectionMessage && <div className="success-banner" role="status">{collectionMessage}</div>}
       {collectionError && <div className="error-banner" role="alert">{collectionError}</div>}
 
-      {view === "overview" && <div className="page-content">
-        
+      {view === "overview" && <div className="page-content overview-page">
         <SecurityOverviewBento assets={assets} findings={findings} incidents={incidents} refreshKey={refreshKey} />
-        <OperationsPanel isAdmin={user.role === "admin"} refreshKey={refreshKey} />
-        {canOperate && <ExecutionLedgerPanel refreshKey={refreshKey} />}
-        <section className="overview-grid">
-          <article className="panel"><div className="panel-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h3>Recent findings</h3></div><button className="text-button" onClick={() => setView("findings")}>View all <span>→</span></button></div>
-            {findings.length ? <div className="activity-list">{findings.slice(0, 5).map((item) => <div className="activity-row" key={item.id}><span className={"activity-icon " + item.severity}>{item.severity === "critical" || item.severity === "high" ? "!" : "•"}</span><div className="activity-copy"><strong>{item.title}</strong><small>{titleCase(item.source_engine)} · {formatDate(item.last_seen_at)}</small></div><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></div>)}</div> : <EmptyState title="No findings yet" detail="Verified findings will be listed here." />}
-          </article>
-          <article className="panel"><div className="panel-heading"><div><p className="eyebrow">RESPONSE WORKFLOW</p><h3>Recent incidents</h3></div><button className="text-button" onClick={() => setView("incidents")}>View all <span>→</span></button></div>
-            {incidents.length ? <div className="activity-list">{incidents.slice(0, 5).map((item) => <div className="activity-row" key={item.id}><span className="incident-icon">↗</span><div className="activity-copy"><strong>{item.title}</strong><small>{titleCase(item.status)} · {formatDate(item.created_at)}</small></div><span className={severityClass(item.severity)}>{titleCase(item.severity)}</span></div>)}</div> : <EmptyState title="No incidents yet" detail="Incidents recorded by your team will appear here." />}
-          </article>
-        </section>
-        <section className="panel engine-panel"><div className="panel-heading"><div><p className="eyebrow">INTEGRATION LAYER</p><h3>Security engines</h3></div><button className="text-button" onClick={() => setView("integrations")}>Integration details <span>→</span></button></div><EngineCards wazuh={wazuh} wazuhManager={wazuhManager} crowdsec={crowdsec} canOperate={canOperate} refreshKey={refreshKey} /></section>
       </div>}
 
       {view !== "overview" && <div className={"page-content section-page section-page-" + view}>
