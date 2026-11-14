@@ -81,3 +81,35 @@ def test_admin_can_update_thresholds_and_audit_change(client, db_session):
     assert response.json()["collection_failure_rate_percent"] == 25
     assert "active_alerts" in response.json()
     assert db_session.query(AuditLog).filter_by(action="operations.thresholds.update").count() == 1
+
+def test_overview_activity_aggregates_persisted_events_without_exposing_indicator_values(client, analyst_headers, db_session):
+    now = datetime.now(timezone.utc)
+    db_session.add_all([
+        AuditLog(actor_user_id=None, action="threat_intel.enrich", target="ioc:41",
+                 detail='{"indicator_type":"ip","indicator_value":"203.0.113.9"}', created_at=now),
+        AuditLog(actor_user_id=None, action="threat_intel.enrich.cached", target="ioc:41",
+                 detail='{"indicator_type":"ip","indicator_value":"203.0.113.9"}', created_at=now - timedelta(minutes=2)),
+        AuditLog(actor_user_id=None, action="asset.create", target="asset:8",
+                 detail="type:server", created_at=now - timedelta(minutes=4)),
+        AuditLog(actor_user_id=None, action="demo.dataset.seed", target="demo:fixture",
+                 detail="synthetic_only:true", created_at=now - timedelta(minutes=1)),
+    ])
+    db_session.commit()
+
+    response = client.get("/api/v1/reports/operations/activity?days=30&limit=10", headers=analyst_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["section_counts"]["threat-intel"] == 2
+    assert body["section_counts"]["assets"] == 1
+    assert body["total_events"] == 3
+    assert len(body["daily"]) >= 30
+    assert body["daily"][-1]["total"] >= 3
+    assert body["recent"][0]["summary"] == "Threat intelligence lookup completed"
+    assert "203.0.113.9" not in response.text
+    assert "indicator_value" not in response.text
+
+
+def test_overview_activity_requires_authentication(client):
+    response = client.get("/api/v1/reports/operations/activity")
+    assert response.status_code in (401, 403)
+

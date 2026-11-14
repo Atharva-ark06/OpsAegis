@@ -1,90 +1,193 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Asset, Finding, Incident, OperationsReport, OperationsTrends } from "../../api";
-import { getOperationsReport, getOperationsTrends } from "../../api";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import type { Asset, Finding, Incident, OverviewActivity } from "../../api";
+import { getOverviewActivity } from "../../api";
 
 type Props = { assets: Asset[]; findings: Finding[]; incidents: Incident[]; refreshKey: number };
-const severities = ["critical", "high", "medium", "low", "informational", "unknown"];
-const label = (value: string) => value.replace(/_/g, " ").replace(/\\b\\w/g, (letter) => letter.toUpperCase());
-const formatDay = (value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-function Metric({ title, value, detail, tone }: { title: string; value: number; detail: string; tone: string }) {
-  return <article className={"overview-command-metric " + tone}><span>{title}</span><strong>{value.toLocaleString()}</strong><small>{detail}</small></article>;
+type Period = 7 | 30 | 365;
+const SECTIONS = [
+  { id: "assets", label: "Assets", color: "var(--ov-violet)" },
+  { id: "findings", label: "Findings", color: "var(--ov-blue)" },
+  { id: "vulnerabilities", label: "Vulnerabilities", color: "var(--ov-orange)" },
+  { id: "detections", label: "Detections", color: "var(--ov-cyan)" },
+  { id: "incidents", label: "Incidents", color: "var(--ov-red)" },
+  { id: "integrations", label: "Integrations", color: "var(--ov-green)" },
+  { id: "threat-intel", label: "Threat Intel", color: "var(--ov-lime)" },
+  { id: "playbooks", label: "Playbooks", color: "var(--ov-purple)" },
+  { id: "users", label: "Users & Roles", color: "var(--ov-pink)" },
+  { id: "reports", label: "Reports", color: "var(--ov-yellow)" },
+  { id: "settings", label: "Settings", color: "var(--ov-slate)" },
+] as const;
+const fmt = (n: number) => n.toLocaleString();
+const title = (value: string) => value.replace(/[-_.]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+const dateLabel = (value: string) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const clockLabel = (value: string) => new Date(value).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+const sum = (items: number[]) => items.reduce((total, value) => total + value, 0);
+
+function pathFor(values: number[], width: number, height: number, max: number) {
+  if (!values.length) return "";
+  return values.map((value, index) => {
+    const x = values.length === 1 ? width / 2 : index * width / (values.length - 1);
+    const y = height - (value / Math.max(1, max)) * (height - 8) - 4;
+    return (index === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
+  }).join(" ");
 }
-function Distribution({ title, values, total }: { title: string; values: [string, number][]; total: number }) {
-  return <section className="overview-command-card">
-    <div className="overview-command-card-head"><h3>{title}</h3><span>{total.toLocaleString()} records</span></div>
-    {values.map(([name, value]) => <div className="overview-distribution-row" key={name}>
-      <div><span><i className={"overview-severity-dot " + name} />{label(name)}</span><b>{value}</b></div>
-      <div className="overview-track"><i className={name} style={{ width: (total ? value / total * 100 : 0) + "%" }} /></div>
-    </div>)}
-    {!values.length && <p className="overview-empty">No records available from the API.</p>}
-  </section>;
+
+function Sparkline({ values, color = "var(--ov-cyan)" }: { values: number[]; color?: string }) {
+  const max = Math.max(1, ...values);
+  const path = pathFor(values, 440, 90, max);
+  const area = path ? path + " L440 90 L0 90 Z" : "";
+  return <svg className="ov-sparkline" viewBox="0 0 440 90" preserveAspectRatio="none" role="img" aria-label="Activity trend"><title>Daily persisted audit event count</title>
+    <defs><linearGradient id="ov-spark-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".24"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
+    {[22, 45, 68].map(y => <line key={y} x1="0" x2="440" y1={y} y2={y} className="ov-chart-gridline" />)}
+    {area && <path d={area} fill="url(#ov-spark-fill)" />}
+    {path && <path d={path} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>}
+  </svg>;
 }
+
+function MultiLineChart({ data }: { data: OverviewActivity["daily"] }) {
+  const series = ["threat-intel", "detections", "incidents", "findings"];
+  const colors = ["var(--ov-lime)", "var(--ov-cyan)", "var(--ov-red)", "var(--ov-violet)"];
+  const points = data.slice(-30);
+  const max = Math.max(1, ...points.flatMap(point => series.map(key => point.by_section[key] ?? 0)));
+  return <div className="ov-lines-wrap">
+    <svg className="ov-lines-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Daily activity by security section over the last 30 days">
+      {[30, 65, 100, 135].map(y => <line key={y} x1="0" x2="600" y1={y} y2={y} className="ov-chart-gridline" />)}
+      {series.map((key, index) => <path key={key} d={pathFor(points.map(point => point.by_section[key] ?? 0), 600, 140, max)} fill="none" stroke={colors[index]} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke"><title>{title(key)} activity trend</title></path>)}
+    </svg>
+    <div className="ov-chart-legend">{series.map((key, index) => <span key={key}><i style={{ background: colors[index] }}/>{title(key)}</span>)}</div>
+  </div>;
+}
+
+function RadarChart({ monthly }: { monthly: OverviewActivity["monthly"] }) {
+  const values = monthly.map(item => item.total);
+  const max = Math.max(1, ...values);
+  const center = 150;
+  const radius = 112;
+  const coords = values.map((value, index) => {
+    const angle = (Math.PI * 2 * index / 12) - Math.PI / 2;
+    const r = 22 + (value / max) * (radius - 22);
+    return [center + Math.cos(angle) * r, center + Math.sin(angle) * r] as const;
+  });
+  const polygon = coords.map(([x,y]) => x.toFixed(1) + "," + y.toFixed(1)).join(" ");
+  return <svg className="ov-radar" viewBox="0 0 300 300" role="img" aria-label="Monthly security activity pattern for the last 12 months">
+    {[28, 56, 84, 112].map(r => <circle key={r} cx={center} cy={center} r={r} className="ov-radar-ring" />)}
+    {monthly.map((item,index) => {
+      const angle = (Math.PI * 2 * index / 12) - Math.PI / 2;
+      const x = center + Math.cos(angle) * radius;
+      const y = center + Math.sin(angle) * radius;
+      return <g key={item.month}><line x1={center} y1={center} x2={x} y2={y} className="ov-radar-axis"/><text x={center + Math.cos(angle) * 132} y={center + Math.sin(angle) * 132 + 3} className="ov-radar-label" textAnchor="middle">{item.label}</text></g>;
+    })}
+    {polygon && <polygon points={polygon} className="ov-radar-area"/>}
+    {coords.map(([x,y],index) => <circle key={index} cx={x} cy={y} r="3" className="ov-radar-point"><title>{monthly[index]?.label}: {fmt(monthly[index]?.total ?? 0)} recorded events</title></circle>)}
+    <circle cx={center} cy={center} r="14" className="ov-radar-core"/>
+  </svg>;
+}
+
+function PanelHead({ eyebrow, heading, trailing }: { eyebrow?: string; heading: string; trailing?: ReactNode }) {
+  return <div className="ov-panel-head"><div>{eyebrow && <small>{eyebrow}</small>}<h3>{heading}</h3></div>{trailing}</div>;
+}
+
 export function SecurityOverviewBento({ assets, findings, incidents, refreshKey }: Props) {
-  const [trends, setTrends] = useState<OperationsTrends | null>(null);
-  const [report, setReport] = useState<OperationsReport | null>(null);
+  const [activity, setActivity] = useState<OverviewActivity | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>(30);
+  const [selectedYear, setSelectedYear] = useState(new Date().getUTCFullYear());
+
   useEffect(() => {
     let active = true;
-    const until = new Date();
-    const since = new Date(until.getTime() - 30 * 86400000);
-    setLoading(true);
-    Promise.all([
-      getOperationsTrends(since.toISOString(), until.toISOString(), "day"),
-      getOperationsReport(since.toISOString(), until.toISOString()),
-    ]).then(([trendData, reportData]) => {
-      if (active) { setTrends(trendData); setReport(reportData); setError(""); }
-    }).catch((reason: unknown) => {
-      if (active) setError(reason instanceof Error ? reason.message : "Security analytics could not be loaded.");
+    getOverviewActivity(730, 16).then(result => {
+      if (active) { setActivity(result); setError(""); }
+    }).catch(reason => {
+      if (active) setError(reason instanceof Error ? reason.message : "Overview activity could not be loaded.");
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [refreshKey]);
 
-  const severityRows = useMemo(() => severities.map((severity) =>
-    [severity, findings.filter((item) => item.severity === severity).length] as [string, number]
-  ).filter((row) => row[1] > 0), [findings]);
-  const statusRows = useMemo(() => ["new", "triaged", "accepted", "false_positive", "resolved"].map((status) =>
-    [status, findings.filter((item) => item.status === status).length] as [string, number]
-  ).filter((row) => row[1] > 0), [findings]);
-  const activeIncidents = incidents.filter((item) => ["open", "investigating", "contained"].includes(item.status));
-  const linkedAssetCounts = assets.map((asset) => ({
-    asset,
-    count: findings.filter((finding) => finding.asset_id === asset.id && ["new", "triaged", "accepted"].includes(finding.status)).length,
-  })).filter((row) => row.count > 0).sort((a,b) => b.count-a.count).slice(0,5);
-  const points = (trends?.points ?? []).slice(-14);
-  const maxActivity = Math.max(1, ...points.map((point) => point.detections + point.incidents));
-  const sourcesConfigured = report?.collection.sources_configured ?? 0;
-  const collectionState = loading ? "Syncing operational metrics…" : error ? "Analytics unavailable" : "Authenticated operational data";
-  return <section className="overview-command">
-    <div className="overview-command-heading"><div><small>SECURITY OPERATIONS · COMMAND CENTER</small><h2>Security posture at a glance</h2><p>One operational view across assets, findings, incidents and collection configuration.</p></div><span className="overview-command-state"><i />{collectionState}</span></div>
-    {error && <div className="error-banner" role="alert">{error}</div>}
-    <div className="overview-command-metrics">
-      <Metric title="Assets monitored" value={assets.length} detail="Registered asset records" tone="blue" />
-      <Metric title="Critical findings" value={findings.filter((item) => item.severity === "critical" && item.status !== "resolved").length} detail="Unresolved critical severity" tone="red" />
-      <Metric title="Active incidents" value={activeIncidents.length} detail="Open · investigating · contained" tone="orange" />
-      <Metric title="Sources configured" value={sourcesConfigured} detail="Reported by operations API" tone="green" />
-    </div>
-    <div className="overview-command-grid">
-      <Distribution title="Alert distribution" values={severityRows} total={findings.length} />
-      <Distribution title="Remediation status" values={statusRows} total={findings.length} />
-      <section className="overview-command-card overview-activity-card">
-        <div className="overview-command-card-head"><h3>Security activity</h3><span>Last 14 available days</span></div>
-        {points.length ? <div className="overview-activity-bars">{points.map((point) => {
-          const count = point.detections + point.incidents;
-          return <div key={point.start} title={formatDay(point.start) + ": " + count + " events"}>
-            <i style={{ height: Math.max(3, count / maxActivity * 100) + "%" }} />
-            <small>{new Date(point.start).toLocaleDateString(undefined, { day: "numeric" })}</small>
-          </div>;
-        })}</div> : <p className="overview-empty">{loading ? "Loading activity…" : "No persisted activity points were returned for this period."}</p>}
-        <div className="overview-activity-legend"><span><i className="detections" />Detections</span><span><i className="incidents" />Incidents</span></div>
+  const daily = activity?.daily ?? [];
+  const visibleDays = daily.slice(-period);
+  const previousDays = daily.slice(-period * 2, -period);
+  const currentTotal = sum(visibleDays.map(item => item.total));
+  const previousTotal = sum(previousDays.map(item => item.total));
+  const change = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : null;
+  const sectionTotals = useMemo(() => SECTIONS.map(section => ({
+    ...section,
+    count: sum(visibleDays.map(day => day.by_section[section.id] ?? 0)),
+  })), [visibleDays]);
+  const monthly = activity?.monthly ?? [];
+  const yearOptions = [...new Set(monthly.map(item => Number(item.month.slice(0, 4))))].sort((a,b) => b-a);
+  const activeYear = yearOptions.includes(selectedYear) ? selectedYear : (yearOptions[0] ?? selectedYear);
+  const selectedMonths = monthly.filter(item => Number(item.month.slice(0, 4)) === activeYear);
+  const monthlyTotal = sum(selectedMonths.map(item => item.total));
+  const monthsElapsed = activeYear === new Date().getUTCFullYear() ? new Date().getUTCMonth() + 1 : 12;
+  const monthlyAverage = monthsElapsed ? monthlyTotal / monthsElapsed : 0;
+  const threatLookups = sectionTotals.find(item => item.id === "threat-intel")?.count ?? 0;
+  const unresolvedFindings = findings.filter(item => item.status !== "resolved").length;
+  const activeIncidents = incidents.filter(item => ["open", "investigating", "contained"].includes(item.status)).length;
+  const eventFeed = activity?.recent ?? [];
+
+  return <section className="overview-bento">
+    <header className="ov-heading">
+      <div><span className="ov-kicker">OPSAEGIS / SECURITY OPERATIONS</span><h2>Overview</h2><p>Your security posture, activity and response signals in one view.</p></div>
+      <div className="ov-live-indicator"><i />{loading ? "SYNCING" : error ? "DATA DELAYED" : "LIVE DATA"}<span>15s refresh</span></div>
+    </header>
+
+    {error && <div className="error-banner" role="alert">Live activity feed unavailable: {error}. Existing section records remain visible where loaded.</div>}
+
+    <div className="ov-bento-grid">
+      <section className="ov-panel ov-panel-activity">
+        <div className="ov-hero-metric">
+          <div><span className="ov-label">Recorded security activity</span><strong>{fmt(currentTotal)}</strong><small>Audit events · last {period} days</small></div>
+          <div className={"ov-change " + (change !== null && change < 0 ? "down" : "")}>{change === null ? "—" : (change >= 0 ? "↑ " : "↓ ") + Math.abs(change).toFixed(1) + "%"}<small>vs previous period</small></div>
+        </div>
+        <div className="ov-spark-meta"><span>ACTIVITY TREND</span><span>{visibleDays.length ? dateLabel(visibleDays[0].date) + " — " + dateLabel(visibleDays[visibleDays.length - 1].date) : "No activity data"}</span></div>
+        <Sparkline values={visibleDays.map(item => item.total)} />
+        <div className="ov-quick-stats">
+          <div><span>Assets</span><strong>{fmt(assets.length)}</strong></div>
+          <div><span>Open findings</span><strong>{fmt(unresolvedFindings)}</strong></div>
+          <div><span>Active incidents</span><strong>{fmt(activeIncidents)}</strong></div>
+          <div><span>Threat lookups</span><strong>{fmt(threatLookups)}</strong></div>
+        </div>
       </section>
-      <section className="overview-command-card overview-asset-risk-card">
-        <div className="overview-command-card-head"><h3>Assets with linked open findings</h3><span>{linkedAssetCounts.length} shown</span></div>
-        {linkedAssetCounts.length ? linkedAssetCounts.map(({asset,count}) => <div className="overview-asset-risk-row" key={asset.id}>
-          <div><strong>{asset.name}</strong><small>{label(asset.asset_type)} · {label(asset.environment || "unknown")}</small></div><b>{count}</b>
-        </div>) : <p className="overview-empty">No assets currently have linked open findings.</p>}
+
+      <section className="ov-panel ov-panel-sessions">
+        <PanelHead eyebrow="SOURCE SIGNALS" heading="Activity by section" trailing={<span className="ov-subtle">30 DAYS</span>} />
+        <MultiLineChart data={daily} />
+        <div className="ov-section-summary">
+          {["threat-intel","detections","incidents"].map(id => {
+            const section = sectionTotals.find(item => item.id === id)!;
+            return <div key={id}><i style={{ background: section.color }}/><span>{section.label}</span><b>{fmt(section.count)}</b></div>;
+          })}
+        </div>
+      </section>
+
+      <section className="ov-panel ov-panel-category">
+        <PanelHead eyebrow="WORKSPACE BREAKDOWN" heading="Activity by category" trailing={
+          <div className="ov-period-switch" aria-label="Activity period">
+            {([7,30,365] as Period[]).map(value => <button key={value} type="button" className={period === value ? "active" : ""} aria-pressed={period === value} onClick={() => setPeriod(value)}>{value === 7 ? "Week" : value === 30 ? "Month" : "Year"}</button>)}
+          </div>
+        }/>
+        <div className="ov-treemap">
+          {sectionTotals.slice().sort((a,b) => b.count-a.count).map((item,index) => <div key={item.id} className={"ov-tile ov-tile-" + (index % 5)} data-empty={item.count === 0} style={{ flexGrow: Math.max(1,item.count), "--tile-color": item.color } as CSSProperties}>
+            <span>{item.label}</span><strong>{fmt(item.count)}</strong><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small>
+          </div>)}
+        </div>
+        <div className="ov-category-table">
+          <div><span>Section</span><span>Events</span><span>Share</span></div>
+          {sectionTotals.slice().sort((a,b) => b.count-a.count).slice(0,5).map(item => <div key={item.id}><span><i style={{background:item.color}}/>{item.label}</span><b>{fmt(item.count)}</b><small>{currentTotal ? ((item.count/currentTotal)*100).toFixed(1) : "0.0"}%</small></div>)}
+        </div>
+      </section>
+
+      <section className="ov-panel ov-panel-seasonality">
+        <PanelHead eyebrow="LONG-RANGE SIGNALS" heading="Activity rhythm" trailing={<div className="ov-year-switch" aria-label="Activity year">{yearOptions.map(year => <button key={year} type="button" className={activeYear === year ? "active" : ""} aria-pressed={activeYear === year} onClick={() => setSelectedYear(year)}>{year}</button>)}</div>} />
+        <div className="ov-radar-layout"><RadarChart monthly={selectedMonths}/><div className="ov-radar-stats"><div><small>Monthly average</small><strong>{fmt(Math.round(monthlyAverage))}</strong><span>Audited events / month</span></div><div><small>Year total</small><strong>{fmt(monthlyTotal)}</strong><span>Recorded activity · {activeYear}</span></div></div></div>
+        <div className="ov-recent-head"><span>RECENT ACTIVITY</span><span>{eventFeed.length} events</span></div>
+        <div className="ov-recent-list">
+          {eventFeed.slice(0,4).map(event => <div className="ov-event" key={event.id}><i className={"ov-event-dot " + event.section}/><div><strong>{event.summary}</strong><small>{title(event.section)}{event.record ? " · " + event.record : ""}</small></div><time>{clockLabel(event.occurred_at)}</time></div>)}
+          {!eventFeed.length && <p className="ov-no-activity">{loading ? "Loading recent events…" : "No recorded actions in the selected window."}</p>}
+        </div>
       </section>
     </div>
-    <p className="overview-command-footnote">Counts are derived from authenticated OpsAegis records. No synthetic risk score, MITRE mapping, mean response time or provider health is inferred when the backend does not supply it.</p>
+    <footer className="ov-footnote">Metrics are calculated from authenticated OpsAegis records and audit events. Read-only page visits are not counted as security activity.{activity?.rows_limited ? " Activity history reached the 10,000-record query limit." : ""}</footer>
   </section>;
 }
