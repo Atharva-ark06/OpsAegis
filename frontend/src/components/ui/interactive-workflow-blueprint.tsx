@@ -1,5 +1,7 @@
 "use client";
 
+// Adapted from the supplied 21st.dev Interactive Workflow Blueprint component.
+
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   ReactFlow, Handle, Position, getBezierPath, applyNodeChanges, applyEdgeChanges, useNodesInitialized, useReactFlow,
