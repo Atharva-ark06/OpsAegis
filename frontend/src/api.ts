@@ -374,6 +374,20 @@ export interface OperationsTrendPoint {
   start: string; collection_runs: number; collection_succeeded: number; collection_failed: number;
   detections: number; incidents: number; resolved_incidents: number;
 }
+export interface OverviewActivityEvent {
+  id: number; section: string; action: string; summary: string; record: string | null;
+  actor: string; occurred_at: string;
+}
+export interface OverviewActivity {
+  window: { since: string; until: string; timezone: "UTC" };
+  days: number; total_events: number; section_counts: Record<string, number>;
+  daily: { date: string; total: number; by_section: Record<string, number> }[];
+  monthly: { month: string; label: string; total: number }[];
+  recent: OverviewActivityEvent[]; rows_limited: boolean; limitations: string[];
+}
+export const getOverviewActivity = (days = 365, limit = 16): Promise<OverviewActivity> =>
+  request("/reports/operations/activity?" + new URLSearchParams({days: String(days), limit: String(limit)}).toString());
+
 export interface OperationsTrends {
   window: { since: string; until: string; timezone: "UTC" };
   bucket: "day" | "week"; points: OperationsTrendPoint[]; rows_limited: boolean; limitations: string[];
