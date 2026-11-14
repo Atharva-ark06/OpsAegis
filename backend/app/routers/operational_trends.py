@@ -212,7 +212,7 @@ def get_operational_trends(
 
 @router.get("/activity")
 def get_overview_activity(
-    days: int = Query(default=365, ge=30, le=365),
+    days: int = Query(default=730, ge=30, le=730),
     limit: int = Query(default=16, ge=1, le=50),
     db: Session = Depends(get_db),
     actor: User = Depends(get_current_user),
@@ -264,7 +264,7 @@ def get_overview_activity(
         cursor += timedelta(days=1)
     monthly = {}
     month_cursor = datetime(end.year, end.month, 1, tzinfo=timezone.utc)
-    for offset in range(11, -1, -1):
+    for offset in range(23, -1, -1):
         month_index = month_cursor.month - offset
         year = month_cursor.year + (month_index - 1) // 12
         month = (month_index - 1) % 12 + 1
