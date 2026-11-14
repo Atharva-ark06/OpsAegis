@@ -268,7 +268,7 @@ export default function WorkflowBlueprint({ initialGraph, apps, title = "Workflo
     <header className="wb-header">
       <span className="wb-mark" aria-hidden="true">+</span>
       <div className="wb-heading"><h2>{title}</h2><span>Build canvas</span></div>
-      <div className="wb-header-actions"><button type="button" onClick={() => add({ ...agentTemplate, label: agentTemplate?.label ?? "New AI agent", detail: agentTemplate?.detail ?? "Describe what this agent does.", kind: "agent" }, true)} disabled={graph.nodes.length >= 20}>+ Add agent</button><button type="button" onClick={() => { const previous = history.at(-1); if (previous) { changed.current = true; setGraph(previous); setHistory(h => h.slice(0, -1)); setSelected(""); setEditing(null); setMessage("Last edit undone."); } }} disabled={!history.length}>Undo edit</button><button type="button" className="wb-primary" onClick={download}>Export JSON <span aria-hidden="true">↗</span></button></div>
+      <div className="wb-header-actions"><button type="button" onClick={() => add({ ...agentTemplate, label: agentTemplate?.label ?? "New AI agent", detail: agentTemplate?.detail ?? "Describe what this agent does.", kind: "agent" }, true)} disabled={graph.nodes.length >= 20}>+ Add agent</button><button type="button" onClick={() => { const previous = history[history.length - 1]; if (previous) { changed.current = true; setGraph(previous); setHistory(h => h.slice(0, -1)); setSelected(""); setEditing(null); setMessage("Last edit undone."); } }} disabled={!history.length}>Undo edit</button><button type="button" className="wb-primary" onClick={download}>Export JSON <span aria-hidden="true">↗</span></button></div>
     </header>
     <div className="wb-workspace">
       <div className="wb-canvas-column">
