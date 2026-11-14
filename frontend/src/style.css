@@ -1610,3 +1610,23 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 @media(prefers-reduced-motion:reduce){
  .ops-section-heading-title span{filter:none!important;transform:none!important}
 }
+
+/* Lightweight blurred character reveal; no runtime animation dependency required. */
+.ops-blurred-stagger-char{
+  display:inline-block;
+  opacity:0;
+  filter:blur(8px);
+  transform:translateY(3px);
+  animation:ops-blurred-stagger-in .28s ease-out forwards;
+}
+@keyframes ops-blurred-stagger-in{
+  to{opacity:1;filter:blur(0);transform:translateY(0)}
+}
+@media(prefers-reduced-motion:reduce){
+  .ops-blurred-stagger-char{
+    opacity:1;
+    filter:none;
+    transform:none;
+    animation:none;
+  }
+}
