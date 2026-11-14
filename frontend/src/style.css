@@ -1493,6 +1493,11 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
   --ab-border:#26384d;
   --ab-popover:#17283b;
   --ab-ring:#63b6f4;
+  --oa-blue:#245f89;
+  --oa-cyan:#1b7188;
+  --oa-teal:#1c7167;
+  --oa-amber:#805a27;
+  --oa-steel:#4c6680;
 }
 :root[data-theme="light"]{
   --ab-background:#f3f6fa;
@@ -1537,7 +1542,7 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 .ops-analytics-status small{color:var(--aegis-muted);font-size:8px;font-weight:650;letter-spacing:0}
 @keyframes oa-pulse{50%{opacity:.45;box-shadow:0 0 0 2px #36bd8a10}}
 .ops-analytics-bento{min-width:0}
-.ops-analytics-component{--oa-blue:var(--oa-blue);--oa-cyan:var(--oa-cyan);--oa-teal:var(--oa-teal);--oa-amber:var(--oa-amber);--oa-steel:var(--oa-steel);min-width:0}
+.ops-analytics-component{min-width:0}
 .ops-analytics-component>div:first-child{gap:13px}
 .ops-analytics-component section{border-radius:21px!important;border-color:var(--ab-border)!important;background:linear-gradient(145deg,color-mix(in srgb,var(--ab-card) 96%,var(--ab-ring) 4%),var(--ab-card))!important;box-shadow:0 14px 36px #0000000a,0 1px 0 #ffffff08 inset!important}
 :root[data-theme="light"] .ops-analytics-component section{box-shadow:0 12px 30px #17324d0a,0 1px 0 #ffffff inset!important}
