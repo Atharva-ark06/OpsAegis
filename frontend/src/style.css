@@ -1579,3 +1579,34 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
  .ops-analytics-status-dot{animation:none}
  .ops-analytics-component section{transition:none!important;transform:none!important}
 }
+
+
+/* Section identity system — clear hierarchy, confident titles, and restrained motion. */
+.ops-section-heading{
+  position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  min-width:0;margin:0 0 18px;padding:8px 2px 19px;border-bottom:1px solid var(--aegis-border);
+}
+.ops-section-heading:after{
+  content:"";position:absolute;bottom:-1px;left:0;width:min(180px,34%);height:2px;
+  background:linear-gradient(90deg,var(--aegis-accent),color-mix(in srgb,var(--aegis-accent) 12%,transparent));
+}
+.ops-section-heading-copy{min-width:0;max-width:900px}
+.ops-section-heading-meta{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.ops-section-heading-index{display:grid;place-items:center;width:27px;height:24px;border:1px solid var(--aegis-border);border-radius:7px;color:var(--aegis-accent);font-size:10px;font-weight:900;font-variant-numeric:tabular-nums}
+.ops-section-heading-eyebrow{color:var(--aegis-accent);font-size:10px;font-weight:850;letter-spacing:.18em;line-height:1.4}
+.ops-section-heading-title{margin:0;color:var(--aegis-text);font-size:clamp(30px,3.4vw,43px);font-weight:900;letter-spacing:-.055em;line-height:1.03;overflow-wrap:anywhere}
+.ops-section-heading-copy>p{max-width:72ch;margin:10px 0 0;color:var(--aegis-muted);font-size:14px;font-weight:550;line-height:1.65}
+.ops-section-heading-mark{display:flex;align-items:flex-end;gap:8px;flex:0 0 auto;color:var(--aegis-muted);opacity:.78}
+.ops-section-heading-mark span{padding-bottom:4px;font-size:8px;font-weight:850;letter-spacing:.2em}
+.ops-section-heading-mark strong{color:var(--aegis-text);font-size:34px;font-weight:900;letter-spacing:-.07em;line-height:.85}
+.ops-section-heading-mark i{display:block;width:28px;height:3px;margin-bottom:3px;border-radius:5px;background:var(--aegis-accent);box-shadow:0 0 15px color-mix(in srgb,var(--aegis-accent) 45%,transparent)}
+.ops-analytics-title h2.ops-analytics-heading-text{margin:5px 0 3px;color:var(--aegis-text);font-size:clamp(30px,3vw,38px);font-weight:900;letter-spacing:-.06em;line-height:1.03}
+@media(max-width:760px){
+ .ops-section-heading{align-items:flex-start;gap:12px;padding:6px 1px 15px}
+ .ops-section-heading-title{font-size:clamp(28px,6vw,36px)}
+ .ops-section-heading-copy>p{font-size:13px;line-height:1.55}
+ .ops-section-heading-mark{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .ops-section-heading-title span{filter:none!important;transform:none!important}
+}
