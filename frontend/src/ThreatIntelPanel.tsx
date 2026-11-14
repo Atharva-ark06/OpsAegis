@@ -1,4 +1,5 @@
 import { FormEvent,useEffect,useState } from "react";
+import { useLiveRefresh } from "./live-refresh";
 import { ApiError,Finding,Incident,IOCType,ThreatIntelIOC,ThreatIntelProviders,enrichThreatIndicator,getFindings,getIncidents,getThreatIntelIOCs,getThreatIntelProviders } from "./api";
 
 function dateLabel(value:string|null):string {
