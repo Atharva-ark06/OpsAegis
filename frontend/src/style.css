@@ -1579,4 +1579,4 @@ html[data-theme="dark"] .aegis-shell .ioc-conflict-banner { color:#f0ca91; borde
 @media(prefers-reduced-motion:reduce){.ov-live-indicator i{animation:none}.ov-tile{transition:none}}
 :root[data-theme="light"] .overview-bento{--ov-violet:#8150d8;--ov-blue:#327bd0;--ov-cyan:#0b9eae;--ov-lime:#5b9f32;--ov-green:#16885e;--ov-orange:#c87528;--ov-red:#c84c5a;--ov-pink:#b84f91;--ov-yellow:#ad8116;--ov-purple:#8051c8}
 :root[data-theme="dark"] .overview-bento{--ov-violet:#a77af4;--ov-blue:#69a9f4;--ov-cyan:#39c6d4;--ov-lime:#9bdc62;--ov-green:#52c99a;--ov-orange:#f0a35c;--ov-red:#f07883;--ov-pink:#ed8ac1;--ov-yellow:#edc15b;--ov-purple:#b28bf5}
-
+.ov-tile[data-empty="true"]{opacity:.62}
