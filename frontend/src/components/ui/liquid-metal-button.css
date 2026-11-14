@@ -232,3 +232,9 @@
 @media (prefers-reduced-motion:reduce) {
   .liquid-metal-button-navigation .liquid-metal-button-rim { transition:none; }
 }
+/* Keep navigation labels and icons readable against the light theme surface. */
+:root[data-theme="light"] .liquid-metal-button-navigation .liquid-metal-button-navigation-content,
+:root[data-theme="light"] .liquid-metal-button-navigation:hover .liquid-metal-button-navigation-content,
+:root[data-theme="light"] .liquid-metal-button-navigation.is-active .liquid-metal-button-navigation-content {
+  color: #000;
+}
